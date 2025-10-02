@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach to order-command-api",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/src/commands/api",
+          "remoteRoot": "/app"
+        }
+      ]
+    },
+    {
+      "name": "Attach to order-command-handler",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5679
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/src/commands/handlers",
+          "remoteRoot": "/app"
+        }
+      ]
+    }
+  ]
+}

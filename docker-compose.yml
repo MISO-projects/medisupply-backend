@@ -1,0 +1,122 @@
+services:
+  pg_db:
+    container_name: pg_db
+    image: postgres:17.6
+    environment:
+      POSTGRES_DB: "medisupply-db"
+      POSTGRES_USER: "root"
+      POSTGRES_PASSWORD: "medisupply-pass"
+      POSTGRES_ROOT_PASSWORD: "medisupply-pass"
+    networks:
+      - medisupply-network
+    volumes:
+      - ./data/postgresql/:/var/lib/postgresql/data
+    ports:
+      - "5480:5432"
+
+  redis:
+    image: redis
+    volumes:
+      - ./data/redis:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - medisupply-network
+
+  order-command-api:
+    profiles: ["ordenes", "dev"]
+    build:
+      context: ./src/ordenes/commands/api
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+      - "5678:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - PUBSUB_TOPIC_NAME=create-order-command
+    volumes:
+      - ./src/ordenes/commands/api:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - pg_db
+
+  order-command-handler:
+    profiles: ["ordenes", "dev"]
+    build:
+      context: ./src/ordenes/commands/handlers
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+      - "5679:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3001 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - PUBSUB_TOPIC_NAME=order-created
+    volumes:
+      - ./src/ordenes/commands/handlers:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - pg_db
+
+  order-query-api:
+    profiles: ["ordenes", "dev"]
+    build:
+      context: ./src/ordenes/queries/api
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+      - "5680:5680"
+    command:
+      - sh
+      - -c
+      - |
+        python -m debugpy --listen 0.0.0.0:5680 -m fastapi run main.py --port 3002 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    volumes:
+      - ./src/ordenes/queries/api:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - pg_db
+      - redis
+
+  order-query-projection:
+    profiles: ["ordenes", "dev"]
+    build:
+      context: ./src/ordenes/queries/projection
+      dockerfile: Dockerfile
+    ports:
+      - "3003:3003"
+      - "5681:5681"
+    command:
+      - sh
+      - -c
+      - |
+        python -m debugpy --listen 0.0.0.0:5681 -m fastapi run main.py --port 3003 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+    volumes:
+      - ./src/ordenes/queries/projection:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - pg_db
+
+networks:
+  medisupply-network:
+    driver: bridge
