@@ -35,7 +35,7 @@ services:
       - sh
       - -c
       - |
-        python -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
       - PUBSUB_TOPIC_NAME=create-order-command
@@ -52,13 +52,13 @@ services:
       context: ./src/ordenes/commands/handlers
       dockerfile: Dockerfile
     ports:
-      - "3001:3001"
+      - "3001:3000"
       - "5679:5678"
     command:
       - sh
       - -c
       - |
-        python -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3001 --reload
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
       - PUBSUB_TOPIC_NAME=order-created
@@ -75,13 +75,13 @@ services:
       context: ./src/ordenes/queries/api
       dockerfile: Dockerfile
     ports:
-      - "3002:3002"
-      - "5680:5680"
+      - "3002:3000"
+      - "5680:5678"
     command:
       - sh
       - -c
       - |
-        python -m debugpy --listen 0.0.0.0:5680 -m fastapi run main.py --port 3002 --reload
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
       - REDIS_HOST=redis
@@ -101,13 +101,13 @@ services:
       context: ./src/ordenes/queries/projection
       dockerfile: Dockerfile
     ports:
-      - "3003:3003"
-      - "5681:5681"
+      - "3003:3000"
+      - "5681:5678"
     command:
       - sh
       - -c
       - |
-        python -m debugpy --listen 0.0.0.0:5681 -m fastapi run main.py --port 3003 --reload
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
     volumes:
@@ -116,6 +116,213 @@ services:
       - medisupply-network
     depends_on:
       - pg_db
+
+  productos-service:
+    profiles: ["productos", "dev"]
+    build:
+      context: ./src/productos
+      dockerfile: Dockerfile
+    ports:
+      - "3004:3000"
+      - "5690:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+    volumes:
+      - ./src/productos:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - pg_db
+      - redis
+
+  proveedores-service:
+    profiles: ["proveedores", "dev"]
+    build:
+      context: ./src/proveedores
+      dockerfile: Dockerfile
+    ports:
+      - "3005:3000"
+      - "5691:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+    volumes:
+      - ./src/proveedores:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - pg_db
+      - redis
+
+  reportes-service:
+    profiles: ["reportes", "dev"]
+    build:
+      context: ./src/reportes
+      dockerfile: Dockerfile
+    ports:
+      - "3006:3000"
+      - "5692:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+    volumes:
+      - ./src/reportes:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - pg_db
+      - redis
+
+  logistica-service:
+    profiles: ["logistica", "dev"]
+    build:
+      context: ./src/logistica
+      dockerfile: Dockerfile
+    ports:
+      - "3007:3000"
+      - "5693:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+    volumes:
+      - ./src/logistica:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - pg_db
+      - redis
+  
+  inventario-service:
+    profiles: ["inventario", "dev"]
+    build:
+      context: ./src/inventario
+      dockerfile: Dockerfile
+    ports:
+      - "3008:3000"
+      - "5694:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+    volumes:
+      - ./src/inventario:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - pg_db
+      - redis
+  
+  ventas-service:
+    profiles: ["ventas", "dev"]
+    build:
+      context: ./src/ventas
+      dockerfile: Dockerfile
+    ports:
+      - "3009:3000"
+      - "5695:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+    volumes:
+      - ./src/ventas:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - pg_db
+      - redis
+  
+  clientes-service:
+    profiles: ["clientes", "dev"]
+    build:
+      context: ./src/clientes
+      dockerfile: Dockerfile
+    ports:
+      - "3010:3000"
+      - "5696:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+    volumes:
+      - ./src/clientes:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - pg_db
+      - redis
+
+  auditoria-service:
+    profiles: ["auditoria", "dev"]
+    build:
+      context: ./src/auditoria
+      dockerfile: Dockerfile
+    ports:
+      - "3011:3000"
+      - "5697:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+    volumes:
+      - ./src/auditoria:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - pg_db
+      - redis
+  
+  autenticacion-service:
+    profiles: ["autenticacion", "dev"]
+    build:
+      context: ./src/autenticacion
+      dockerfile: Dockerfile
+    ports:
+      - "3012:3000"
+      - "5698:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+    volumes:
+      - ./src/autenticacion:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - pg_db
+      - redis
 
 networks:
   medisupply-network:

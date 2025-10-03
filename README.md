@@ -1,25 +1,34 @@
 # Medisupply
 
-## Configuración
+## Configuración del entorno de desarrollo
 
-Para iniciar la base de datos de PostgreSQL y Redis se debe ejecutar el siguiente comando:
+Para iniciar la base de datos de PostgreSQL, Redis y todos los microservicios, se debe ejecutar el siguiente comando en la raíz del proyecto:
 
 ```bash
-docker compose up 
+docker compose up --profile dev
 ```
 
-## Iniciar los servicios
-Se pueden utilizar los profiles para iniciar ciertos servicios.
+Se pueden utilizar profiles específicos para iniciar solo ciertos servicios. El siguiente comando inicia solo el servicio de productos además de la base de datos y Redis:
 
 ```sh
-docker compose up -d --profile ordenes
+docker compose up --profile ordenes
 ```
 
-Para iniciar todos los servicios se debe ejecutar el siguiente comando:
+de forma similar con el servicio de proveedores:
 
-```bash
-docker compose up -d --profile dev
+```sh
+docker compose up --profile proveedores
 ```
+
+Los profiles disponibles son:
+- dev
+- productos
+- ordenes
+- proveedores
+- reportes
+- ventas
+- clientes
+- auditoria
 
 ## Utilización de Pub/Sub
 Para utilizar Pub/Sub se debe tener un proyecto de Google Cloud y un topic de Pub/Sub.
