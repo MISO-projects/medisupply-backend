@@ -1,7 +1,29 @@
 from fastapi import FastAPI, Depends, HTTPException
 from services.health_service import HealthService, get_health_service
+from router.proveedor_router import proveedor_router
+from db.database import engine, Base
+from db.proveedor_model import Proveedor  # Import model to ensure it's registered with Base
+import logging
 
-app = FastAPI()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(
+    title="MediSupply - Proveedores Service",
+    description="API para la gestión de proveedores en MediSupply",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+Base.metadata.create_all(bind=engine)
+logger.info("Database tables created successfully")
+
+app.include_router(
+    proveedor_router,
+    prefix="/proveedores",
+    tags=["Proveedores"]
+)
 
 
 @app.get("/health")
