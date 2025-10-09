@@ -5,9 +5,11 @@ from fastapi import Depends, HTTPException
 from http import HTTPStatus
 from datetime import datetime, timezone
 import logging
+import json
 
 from db.database import get_db
 from db.proveedor_model import Proveedor
+from db.redis_client import get_redis_client
 from schemas.proveedor_schema import (
     CrearProveedorSchema,
     ActualizarProveedorSchema,
@@ -17,8 +19,57 @@ logger = logging.getLogger(__name__)
 
 
 class ProveedorService:
+    CACHE_TTL_PROVEEDOR = 3600  # 1 hour for individual provider
+    CACHE_TTL_LIST = 300  # 5 minutes for lists
+    CACHE_TTL_COUNT = 300  # 5 minutes for counts
+
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
+        self.redis_client = get_redis_client()
+
+    def _get_cache(self, key: str) -> Optional[Any]:
+        """Get data from cache"""
+        try:
+            if self.redis_client is None:
+                return None
+            cached_data = self.redis_client.get(key)
+            if cached_data:
+                return json.loads(cached_data)
+            return None
+        except Exception as e:
+            logger.warning(f"Error getting cache for key {key}: {e}")
+            return None
+
+    def _set_cache(self, key: str, value: Any, ttl: int) -> None:
+        """Set data in cache"""
+        try:
+            if self.redis_client is None:
+                return
+            self.redis_client.setex(key, ttl, json.dumps(value))
+        except Exception as e:
+            logger.warning(f"Error setting cache for key {key}: {e}")
+
+    def _delete_cache(self, pattern: str) -> None:
+        """Delete cache keys matching pattern"""
+        try:
+            if self.redis_client is None:
+                return
+            keys = self.redis_client.keys(pattern)
+            if keys:
+                self.redis_client.delete(*keys)
+        except Exception as e:
+            logger.warning(f"Error deleting cache for pattern {pattern}: {e}")
+
+    def _invalidate_proveedor_caches(self, proveedor_id: Optional[str] = None) -> None:
+        """Invalidate all proveedor-related caches"""
+        try:
+            if proveedor_id:
+                self._delete_cache(f"proveedor:{proveedor_id}")
+            # Invalidate list and count caches
+            self._delete_cache("proveedores:list:*")
+            self._delete_cache("proveedores:count:*")
+        except Exception as e:
+            logger.warning(f"Error invalidating caches: {e}")
 
     def crear_proveedor(self, proveedor_data: CrearProveedorSchema) -> Dict[str, Any]:
         """
@@ -70,6 +121,8 @@ class ProveedorService:
             self.db.commit()
             self.db.refresh(nuevo_proveedor)
             
+            self._invalidate_proveedor_caches()
+            
             logger.info(f"Proveedor creado exitosamente: {nuevo_proveedor.id}")
             
             return nuevo_proveedor.to_dict()
@@ -105,6 +158,14 @@ class ProveedorService:
             HTTPException: Si el proveedor no existe
         """
         try:
+            cache_key = f"proveedor:{proveedor_id}"
+            cached_data = self._get_cache(cache_key)
+            
+            if cached_data is not None:
+                logger.debug(f"Cache hit for proveedor {proveedor_id}")
+                return cached_data
+            
+            logger.debug(f"Cache miss for proveedor {proveedor_id}")
             proveedor = self.db.query(Proveedor).filter(
                 Proveedor.id == proveedor_id
             ).first()
@@ -115,7 +176,11 @@ class ProveedorService:
                     detail=f"Proveedor con ID {proveedor_id} no encontrado."
                 )
             
-            return proveedor.to_dict()
+            proveedor_dict = proveedor.to_dict()
+            
+            self._set_cache(cache_key, proveedor_dict, self.CACHE_TTL_PROVEEDOR)
+            
+            return proveedor_dict
             
         except HTTPException:
             raise
@@ -146,6 +211,14 @@ class ProveedorService:
             Lista de proveedores
         """
         try:
+            cache_key = f"proveedores:list:{pais or 'all'}:{tipo_proveedor or 'all'}:{skip}:{limit}"
+            cached_data = self._get_cache(cache_key)
+            
+            if cached_data is not None:
+                logger.debug(f"Cache hit for proveedores list")
+                return cached_data
+            
+            logger.debug(f"Cache miss for proveedores list")
             query = self.db.query(Proveedor)
             
             if pais:
@@ -158,7 +231,11 @@ class ProveedorService:
             
             proveedores = query.offset(skip).limit(limit).all()
             
-            return [proveedor.to_dict() for proveedor in proveedores]
+            proveedores_list = [proveedor.to_dict() for proveedor in proveedores]
+            
+            self._set_cache(cache_key, proveedores_list, self.CACHE_TTL_LIST)
+            
+            return proveedores_list
             
         except Exception as e:
             logger.error(f"Error al listar proveedores: {e}")
@@ -224,6 +301,8 @@ class ProveedorService:
             self.db.commit()
             self.db.refresh(proveedor)
             
+            self._invalidate_proveedor_caches(proveedor_id)
+            
             logger.info(f"Proveedor actualizado exitosamente: {proveedor_id}")
             
             return proveedor.to_dict()
@@ -272,6 +351,8 @@ class ProveedorService:
             self.db.delete(proveedor)
             self.db.commit()
             
+            self._invalidate_proveedor_caches(proveedor_id)
+            
             logger.info(f"Proveedor eliminado exitosamente: {proveedor_id}")
             
             return {"message": "Proveedor eliminado exitosamente"}
@@ -302,6 +383,14 @@ class ProveedorService:
             Número total de proveedores
         """
         try:
+            cache_key = f"proveedores:count:{pais or 'all'}:{tipo_proveedor or 'all'}"
+            cached_data = self._get_cache(cache_key)
+            
+            if cached_data is not None:
+                logger.debug(f"Cache hit for proveedores count")
+                return cached_data
+            
+            logger.debug(f"Cache miss for proveedores count")
             query = self.db.query(Proveedor)
             
             if pais:
@@ -310,7 +399,11 @@ class ProveedorService:
             if tipo_proveedor:
                 query = query.filter(Proveedor.tipo_proveedor == tipo_proveedor)
             
-            return query.count()
+            count = query.count()
+            
+            self._set_cache(cache_key, count, self.CACHE_TTL_COUNT)
+            
+            return count
             
         except Exception as e:
             logger.error(f"Error al contar proveedores: {e}")

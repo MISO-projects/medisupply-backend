@@ -5,7 +5,7 @@ from db.database import engine, Base
 from db.proveedor_model import Proveedor  # Import model to ensure it's registered with Base
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG, force=True)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
