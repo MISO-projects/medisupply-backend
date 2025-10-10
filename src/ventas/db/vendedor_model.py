@@ -18,7 +18,7 @@ class Vendedor(Base):
     plan_venta = Column(String, nullable=False)
     meta_venta = Column(Numeric(12, 2), nullable=True)
 
-    def __init__(self, nombre, documento_identidad, email, zona_asignada, plan_venta=None, meta_venta=None):
+    def __init__(self, nombre, documento_identidad, email, zona_asignada, plan_venta, meta_venta=None):
         now = datetime.now(timezone.utc)
         self.fecha_creacion = now
         self.fecha_actualizacion = now
