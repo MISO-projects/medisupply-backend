@@ -8,7 +8,7 @@ Para iniciar la base de datos de PostgreSQL, Redis y todos los microservicios, s
 docker compose up --profile dev
 ```
 
-Se pueden utilizar profiles específicos para iniciar solo ciertos servicios. El siguiente comando inicia solo el servicio de productos además de la base de datos y Redis:
+Se pueden utilizar profiles específicos para iniciar solo ciertos servicios. El siguiente comando inicia solo el servicio de productos además de la base de datos, Redis y los BFFs:
 
 ```sh
 docker compose up --profile ordenes
