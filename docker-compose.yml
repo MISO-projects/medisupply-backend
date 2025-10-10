@@ -24,7 +24,7 @@ services:
       - medisupply-network
 
   order-command-api:
-    profiles: ["ordenes", "dev"]
+    profiles: [ "ordenes", "dev" ]
     build:
       context: ./src/ordenes/commands/api
       dockerfile: Dockerfile
@@ -47,7 +47,7 @@ services:
       - pg_db
 
   order-command-handler:
-    profiles: ["ordenes", "dev"]
+    profiles: [ "ordenes", "dev" ]
     build:
       context: ./src/ordenes/commands/handlers
       dockerfile: Dockerfile
@@ -70,7 +70,7 @@ services:
       - pg_db
 
   order-query-api:
-    profiles: ["ordenes", "dev"]
+    profiles: [ "ordenes", "dev" ]
     build:
       context: ./src/ordenes/queries/api
       dockerfile: Dockerfile
@@ -96,7 +96,7 @@ services:
       - redis
 
   order-query-projection:
-    profiles: ["ordenes", "dev"]
+    profiles: [ "ordenes", "dev" ]
     build:
       context: ./src/ordenes/queries/projection
       dockerfile: Dockerfile
@@ -118,7 +118,7 @@ services:
       - pg_db
 
   productos-service:
-    profiles: ["productos", "dev"]
+    profiles: [ "productos", "dev" ]
     build:
       context: ./src/productos
       dockerfile: Dockerfile
@@ -141,7 +141,7 @@ services:
       - redis
 
   proveedores-service:
-    profiles: ["proveedores", "dev"]
+    profiles: [ "proveedores", "dev" ]
     build:
       context: ./src/proveedores
       dockerfile: Dockerfile
@@ -164,7 +164,7 @@ services:
       - redis
 
   reportes-service:
-    profiles: ["reportes", "dev"]
+    profiles: [ "reportes", "dev" ]
     build:
       context: ./src/reportes
       dockerfile: Dockerfile
@@ -187,7 +187,7 @@ services:
       - redis
 
   logistica-service:
-    profiles: ["logistica", "dev"]
+    profiles: [ "logistica", "dev" ]
     build:
       context: ./src/logistica
       dockerfile: Dockerfile
@@ -208,9 +208,9 @@ services:
     depends_on:
       - pg_db
       - redis
-  
+
   inventario-service:
-    profiles: ["inventario", "dev"]
+    profiles: [ "inventario", "dev" ]
     build:
       context: ./src/inventario
       dockerfile: Dockerfile
@@ -231,9 +231,9 @@ services:
     depends_on:
       - pg_db
       - redis
-  
+
   ventas-service:
-    profiles: ["ventas", "dev"]
+    profiles: [ "ventas", "dev" ]
     build:
       context: ./src/ventas
       dockerfile: Dockerfile
@@ -254,9 +254,9 @@ services:
     depends_on:
       - pg_db
       - redis
-  
+
   clientes-service:
-    profiles: ["clientes", "dev"]
+    profiles: [ "clientes", "dev" ]
     build:
       context: ./src/clientes
       dockerfile: Dockerfile
@@ -279,7 +279,7 @@ services:
       - redis
 
   auditoria-service:
-    profiles: ["auditoria", "dev"]
+    profiles: [ "auditoria", "dev" ]
     build:
       context: ./src/auditoria
       dockerfile: Dockerfile
@@ -300,9 +300,9 @@ services:
     depends_on:
       - pg_db
       - redis
-  
+
   autenticacion-service:
-    profiles: ["autenticacion", "dev"]
+    profiles: [ "autenticacion", "dev" ]
     build:
       context: ./src/autenticacion
       dockerfile: Dockerfile
@@ -323,6 +323,49 @@ services:
     depends_on:
       - pg_db
       - redis
+
+  bff-web:
+    profiles: [ "bff-web", "ordenes", "productos", "proveedores", "reportes", "logistica", "inventario", "ventas", "clientes", "auditoria", "autenticacion", "dev" ]
+    build:
+      context: ./src/bff-web
+      dockerfile: Dockerfile
+    ports:
+      - "3013:3000"
+      - "5699:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - AUDITORIA_SERVICE_URL=http://auditoria-service:3000
+      - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
+      - CLIENTES_SERVICE_URL=http://clientes-service:3000
+      - INVENTARIO_SERVICE_URL=http://inventario-service:3000
+      - LOGISTICA_SERVICE_URL=http://logistica-service:3000
+      - ORDENES_COMMANDS_SERVICE_URL=http://order-command-api:3000
+      - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
+      - PRODUCTOS_SERVICE_URL=http://productos-service:3000
+      - PROVEEDORES_SERVICE_URL=http://proveedores-service:3000
+      - REPORTES_SERVICE_URL=http://reportes-service:3000
+      - VENTAS_SERVICE_URL=http://ventas-service:3000
+    volumes:
+      - ./src/bff-web:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - auditoria-service
+      - autenticacion-service
+      - clientes-service
+      - inventario-service
+      - logistica-service
+      - order-command-api
+      - order-query-api
+      - productos-service
+      - proveedores-service
+      - reportes-service
+      - ventas-service
 
 networks:
   medisupply-network:
