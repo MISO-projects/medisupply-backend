@@ -9,8 +9,8 @@ class Vendedor(Base):
     __tablename__ = "vendedores"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    fecha_creacion = Column(DateTime, default=datetime.now())
-    fecha_actualizacion = Column(DateTime, default=datetime.now())
+    fecha_creacion = Column(DateTime, default=datetime.now)
+    fecha_actualizacion = Column(DateTime, default=datetime.now)
     nombre = Column(String(255), nullable=False)
     documento_identidad = Column(String, nullable=True)
     email = Column(String, nullable=False, unique=True)
