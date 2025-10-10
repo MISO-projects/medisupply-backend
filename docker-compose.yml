@@ -366,6 +366,35 @@ services:
       - proveedores-service
       - reportes-service
       - ventas-service
+    
+  bff-movil:
+    profiles: [ "bff-movil", "ordenes", "autenticacion", "clientes", "dev" ]
+    build:
+      context: ./src/bff-movil
+      dockerfile: Dockerfile
+    ports:
+      - "3014:3000"
+      - "5700:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
+      - CLIENTES_SERVICE_URL=http://clientes-service:3000
+      - ORDENES_COMMANDS_SERVICE_URL=http://order-command-api:3000
+      - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
+    volumes:
+      - ./src/bff-movil:/app
+    networks:
+      - medisupply-network
+    depends_on:
+      - autenticacion-service
+      - clientes-service
+      - order-command-api
+      - order-query-api
 
 networks:
   medisupply-network:
