@@ -111,3 +111,19 @@ jobs:
           TESTING: "1"
         run: |
           pytest -q
+
+  tests-complete:
+    name: All Tests Passed
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test matrix status
+        if: needs.test.result != 'success'
+        run: |
+          echo "One or more tests failed or were cancelled"
+          exit 1
+      
+      - name: Tests passed
+        run: |
+          echo "All tests completed successfully"
