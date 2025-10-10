@@ -354,18 +354,6 @@ services:
       - ./src/bff-web:/app
     networks:
       - medisupply-network
-    depends_on:
-      - auditoria-service
-      - autenticacion-service
-      - clientes-service
-      - inventario-service
-      - logistica-service
-      - order-command-api
-      - order-query-api
-      - productos-service
-      - proveedores-service
-      - reportes-service
-      - ventas-service
     
   bff-movil:
     profiles: [ "bff-movil", "ordenes", "autenticacion", "clientes", "dev" ]
@@ -390,11 +378,6 @@ services:
       - ./src/bff-movil:/app
     networks:
       - medisupply-network
-    depends_on:
-      - autenticacion-service
-      - clientes-service
-      - order-command-api
-      - order-query-api
 
 networks:
   medisupply-network:
