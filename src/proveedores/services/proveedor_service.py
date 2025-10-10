@@ -287,7 +287,7 @@ class ProveedorService:
                     )
             
             # Actualizar solo los campos que se proporcionaron
-            update_data = proveedor_data.model_dump(exclude_unset=True)
+            update_data = proveedor_data.model_dump(exclude_unset=True, exclude_none=True)
             
             for field, value in update_data.items():
                 if value is not None:

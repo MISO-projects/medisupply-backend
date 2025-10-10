@@ -9,8 +9,8 @@ class Proveedor(Base):
     __tablename__ = "proveedores"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    fecha_creacion = Column(DateTime, default=datetime.now())
-    fecha_actualizacion = Column(DateTime, default=datetime.now())
+    fecha_creacion = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    fecha_actualizacion = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     nombre = Column(String(255), nullable=False)
     id_tributario = Column(String, nullable=False, unique=True)
     tipo_proveedor = Column(String, nullable=False)
