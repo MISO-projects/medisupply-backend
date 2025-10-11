@@ -24,7 +24,7 @@ jobs:
       - name: List candidate services
         id: list
         run: |
-          echo "services=auditoria autenticacion clientes inventario logistica ordenes/commands/api ordenes/commands/handlers ordenes/queries/api ordenes/queries/projection productos proveedores reportes ventas" >> $GITHUB_OUTPUT
+          echo "services=auditoria autenticacion bff-movil bff-web clientes inventario logistica ordenes/commands/api ordenes/commands/handlers ordenes/queries/api ordenes/queries/projection productos proveedores reportes ventas" >> $GITHUB_OUTPUT
 
       - name: Detect changed paths
         id: changed
