@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-      - develop
-      - release/**
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -103,17 +101,7 @@ jobs:
         run: |
           SERVICE_TAG=$(echo "${{ matrix.service }}" | tr '/' '-')
           echo "service_tag=${SERVICE_TAG}" >> $GITHUB_OUTPUT
-          
-          # Determine environment tag based on branch
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "env_tag=production" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-            echo "env_tag=develop" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == refs/heads/release/* ]]; then
-            echo "env_tag=staging" >> $GITHUB_OUTPUT
-          else
-            echo "env_tag=latest" >> $GITHUB_OUTPUT
-          fi
+          echo "env_tag=latest" >> $GITHUB_OUTPUT
 
       - name: Build and Push Docker Image
         env:
@@ -131,10 +119,10 @@ jobs:
             src/${SERVICE_NAME}
           
           # Push both tags
-          docker push ${IMAGE_NAME}:${ENV_TAG}
+          docker push ${IMAGE_NAME}:latest
           docker push ${IMAGE_NAME}:${{ github.sha }}
           
-          echo "✅ Published ${SERVICE_TAG}:${ENV_TAG}"
+          echo "✅ Published ${SERVICE_TAG}:latest"
           echo "✅ Published ${SERVICE_TAG}:${{ github.sha }}"
 
   deploy-complete:

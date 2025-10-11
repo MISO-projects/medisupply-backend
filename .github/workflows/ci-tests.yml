@@ -4,8 +4,6 @@ on:
   pull_request:
     branches:
       - main
-      - develop
-      - release/**
 
 concurrency:
   group: pr-tests-${{ github.event.pull_request.number || github.ref }}
