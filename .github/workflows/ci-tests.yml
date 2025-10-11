@@ -4,8 +4,6 @@ on:
   pull_request:
     branches:
       - main
-      - develop
-      - release/**
 
 concurrency:
   group: pr-tests-${{ github.event.pull_request.number || github.ref }}
@@ -26,7 +24,7 @@ jobs:
       - name: List candidate services
         id: list
         run: |
-          echo "services=auditoria autenticacion clientes inventario logistica ordenes/commands/api ordenes/commands/handlers ordenes/queries/api ordenes/queries/projection productos proveedores reportes ventas" >> $GITHUB_OUTPUT
+          echo "services=auditoria autenticacion bff-movil bff-web clientes inventario logistica ordenes/commands/api ordenes/commands/handlers ordenes/queries/api ordenes/queries/projection productos proveedores reportes ventas" >> $GITHUB_OUTPUT
 
       - name: Detect changed paths
         id: changed
@@ -112,9 +110,34 @@ jobs:
         run: |
           pytest -q
 
-  tests-complete:
-    name: All Tests Passed
-    needs: test
+  build:
+    name: Build ${{ matrix.service }}
+    needs: [determine-services, test]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.determine-services.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        env:
+          SERVICE_NAME: ${{ matrix.service }}
+        run: |
+          # Replace slashes in service name for Docker tag
+          SERVICE_TAG=$(echo "${SERVICE_NAME}" | tr '/' '-')
+          
+          # Build the image (don't push)
+          docker build -f src/${SERVICE_NAME}/Dockerfile \
+            -t medisupply/${SERVICE_TAG}:pr-${{ github.event.pull_request.number }} \
+            src/${SERVICE_NAME}
+          
+          echo "✅ Successfully built ${SERVICE_TAG}"
+
+  pr-checks-complete:
+    name: All PR Checks Passed
+    needs: [test, build]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -124,6 +147,12 @@ jobs:
           echo "One or more tests failed or were cancelled"
           exit 1
       
-      - name: Tests passed
+      - name: Check build matrix status
+        if: needs.build.result != 'success'
         run: |
-          echo "All tests completed successfully"
+          echo "One or more builds failed or were cancelled"
+          exit 1
+      
+      - name: All checks passed
+        run: |
+          echo "✅ All tests and builds completed successfully"

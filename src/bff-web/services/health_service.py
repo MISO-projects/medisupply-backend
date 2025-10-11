@@ -58,10 +58,6 @@ class HealthService:
         
         return health_status
     
-
-
-
 def get_health_service() -> HealthService:
     """Dependency function to get health service instance"""
     return HealthService()
-
