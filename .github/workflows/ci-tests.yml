@@ -111,3 +111,50 @@ jobs:
           TESTING: "1"
         run: |
           pytest -q
+
+  build:
+    name: Build ${{ matrix.service }}
+    needs: [determine-services, test]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.determine-services.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        env:
+          SERVICE_NAME: ${{ matrix.service }}
+        run: |
+          # Replace slashes in service name for Docker tag
+          SERVICE_TAG=$(echo "${SERVICE_NAME}" | tr '/' '-')
+          
+          # Build the image (don't push)
+          docker build -f src/${SERVICE_NAME}/Dockerfile \
+            -t medisupply/${SERVICE_TAG}:pr-${{ github.event.pull_request.number }} \
+            src/${SERVICE_NAME}
+          
+          echo "✅ Successfully built ${SERVICE_TAG}"
+
+  pr-checks-complete:
+    name: All PR Checks Passed
+    needs: [test, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test matrix status
+        if: needs.test.result != 'success'
+        run: |
+          echo "One or more tests failed or were cancelled"
+          exit 1
+      
+      - name: Check build matrix status
+        if: needs.build.result != 'success'
+        run: |
+          echo "One or more builds failed or were cancelled"
+          exit 1
+      
+      - name: All checks passed
+        run: |
+          echo "✅ All tests and builds completed successfully"
