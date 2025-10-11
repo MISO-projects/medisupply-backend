@@ -33,5 +33,3 @@ class ProveedoresService:
 def get_proveedores_service() -> ProveedoresService:
     """Dependency function to get proveedores service instance"""
     return ProveedoresService()
-
-

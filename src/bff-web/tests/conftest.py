@@ -68,5 +68,3 @@ def failing_cache_deps():
         "redis_client": FakeRedisClient(should_fail=False, connected=False),
     }
 
-
-
