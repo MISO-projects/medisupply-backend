@@ -414,6 +414,173 @@
 								}
 							},
 							"response": []
+						},
+						{
+							"name": "crear vendedor",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"const id = response.data?.id",
+											"pm.collectionVariables.set(\"id_vendedor\", id);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"documento_identidad\": \"{{$randomInt}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Perú\",\n\t\"plan_venta\": \"plan-{{$randomInt}}\",\n\t\"meta_venta\": 50000.00\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/vendedores",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"vendedores"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "listar vendedores",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/vendedores",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"vendedores"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "obtener vendedor",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/vendedores/:id",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"vendedores",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{id_vendedor}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "actualizar vendedor",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Colombia\",\n\t\"meta_venta\": 75000.00\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/vendedores/:id",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"vendedores",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{id_vendedor}}"
+										}
+									]
+								}
+							},
+							"response": []
 						}
 					]
 				},
@@ -1534,6 +1701,169 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "crear vendedor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"const id = response.data?.id",
+									"pm.collectionVariables.set(\"id_vendedor\", id);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"documento_identidad\": \"{{$randomInt}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Perú\",\n\t\"plan_venta\": \"plan-{{$randomInt}}\",\n\t\"meta_venta\": 50000.00\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ _.ventas_url }}/vendedores",
+							"host": [
+								"{{ _.ventas_url }}"
+							],
+							"path": [
+								"vendedores"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "listar vendedores",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.ventas_url }}/vendedores",
+							"host": [
+								"{{ _.ventas_url }}"
+							],
+							"path": [
+								"vendedores"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "obtener vendedor",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.ventas_url }}/vendedores/:id",
+							"host": [
+								"{{ _.ventas_url }}"
+							],
+							"path": [
+								"vendedores",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{id_vendedor}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "actualizar vendedor",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Colombia\",\n\t\"meta_venta\": 75000.00\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ _.ventas_url }}/vendedores/:id",
+							"host": [
+								"{{ _.ventas_url }}"
+							],
+							"path": [
+								"vendedores",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{id_vendedor}}"
+								}
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -1716,6 +2046,10 @@
 		},
 		{
 			"key": "id_proveedor",
+			"value": ""
+		},
+		{
+			"key": "id_vendedor",
 			"value": ""
 		}
 	]
