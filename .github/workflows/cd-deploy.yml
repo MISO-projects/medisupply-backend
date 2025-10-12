@@ -1,7 +1,7 @@
 name: Build & Deploy
 
 on:
-  push:
+  pull_request:
     branches:
       - main
 
@@ -139,25 +139,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Install GKE Auth Plugin
-        run: |
-          gcloud components install gke-gcloud-auth-plugin
-
-      - name: Configure kubectl
-        run: |
-          gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER_NAME }} \
-            --region=${{ secrets.GKE_REGION }} \
-            --project=${{ secrets.GCP_PROJECT_ID }}
-
       - name: Determine service manifest
         id: manifest
         run: |
@@ -172,6 +153,29 @@ jobs:
             echo "manifest_exists=false" >> $GITHUB_OUTPUT
             echo "⚠️  No manifest found at ${MANIFEST_PATH}"
           fi
+
+      - name: Authenticate to Google Cloud
+        if: steps.manifest.outputs.manifest_exists == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        if: steps.manifest.outputs.manifest_exists == 'true'
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install GKE Auth Plugin
+        if: steps.manifest.outputs.manifest_exists == 'true'
+        run: |
+          gcloud components install gke-gcloud-auth-plugin
+
+      - name: Configure kubectl
+        if: steps.manifest.outputs.manifest_exists == 'true'
+        run: |
+          gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER_NAME }} \
+            --region=${{ secrets.GKE_REGION }} \
+            --project=${{ secrets.GCP_PROJECT_ID }}
 
       - name: Deploy to GKE
         if: steps.manifest.outputs.manifest_exists == 'true'
