@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: scaler-sa
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: deployment-scaler
+  namespace: default
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "deployments/scale"]
+    verbs: ["get", "list", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: scaler-binding
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: scaler-sa
+    namespace: default
+roleRef:
+  kind: Role
+  name: deployment-scaler
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: scale-down-services
+  namespace: default
+  annotations:
+    description: "Automatically scales down services at night. Can be manually triggered with: kubectl create job --from=cronjob/scale-down-services manual-scale-down-$(date +%s)"
+spec:
+  # Run at 11 PM UTC every day (adjust timezone as needed)
+  # For Colombia (UTC-5), 11 PM UTC = 6 PM local time
+  # For 11 PM Colombia time, use: "0 4 * * *" (4 AM UTC)
+  schedule: "0 4 * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: scaler-sa
+          restartPolicy: OnFailure
+          containers:
+            - name: scaler
+              image: bitnami/kubectl:latest
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  echo "🌙 Scaling down services at $(date)"
+                  
+                  # List of services to scale down (exclude critical services like redis, postgres)
+                  SERVICES=(
+                    "proveedores-service"
+                    "productos-service"
+                    "inventario-service"
+                    "clientes-service"
+                    "ventas-service"
+                    "logistica-service"
+                    "auditoria-service"
+                    "reportes-service"
+                    "bff-movil-service"
+                    "bff-web-service"
+                    "redis"
+                  )
+                  
+                  for service in "${SERVICES[@]}"; do
+                    echo "⬇️  Scaling down $service to 0 replicas"
+                    kubectl scale deployment/$service --replicas=0 -n default || echo "⚠️  Failed to scale $service"
+                  done
+                  
+                  echo "✅ Scale down complete"
+                  kubectl get deployments -n default
