@@ -14,46 +14,6 @@
 					"name": "proveedores",
 					"item": [
 						{
-							"name": "crear proveedor",
-							"protocolProfileBehavior": {
-								"followRedirects": true,
-								"disableUrlEncoding": false,
-								"disableCookies": false
-							},
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "User-Agent",
-										"value": "insomnia/11.6.1"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n\t\"nombre\": \"{% faker 'randomCompanyName' %}\",\n\t\"id_tributario\": \"20163456789\",\n\t\"tipo_proveedor\": \"Fabricante\",\n\t\"email\": \"{% faker 'randomEmail' %}\",\n\t\"pais\": \"Perú\",\n\t\"contacto1\": \"Juan Pérez - +51 999 888 777\",\n\t\"condiciones_entrega1\": \"Entrega en 5 días hábiles, cobertura nacional\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{ _.bff_web_url }}/proveedores",
-									"host": [
-										"{{ _.bff_web_url }}"
-									],
-									"path": [
-										"proveedores"
-									]
-								}
-							},
-							"response": []
-						},
-						{
 							"name": "health",
 							"protocolProfileBehavior": {
 								"followRedirects": true,
@@ -76,6 +36,73 @@
 									"path": [
 										"proveedores",
 										"health"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "crear proveedor",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"id_tributario = (Math.floor(Math.random() * 9e10) + 1e10).toString();",
+											"pm.collectionVariables.set(\"id_tributario\", id_tributario);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"const id = response.data?.id",
+											"pm.collectionVariables.set(\"id_proveedor\", id);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"id_tributario\": \"{{id_tributario}}\",\n\t\"tipo_proveedor\": \"Fabricante\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"pais\": \"Perú\",\n\t\"contacto1\": \"Juan Pérez - +51 999 888 777\",\n\t\"condiciones_entrega1\": \"Entrega en 5 días hábiles, cobertura nacional\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/proveedores",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"proveedores"
 									]
 								}
 							},
@@ -124,7 +151,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{ _.bff_web_url }}/proveedores/:id?=",
+									"raw": "{{ _.bff_web_url }}/proveedores/:id",
 									"host": [
 										"{{ _.bff_web_url }}"
 									],
@@ -132,16 +159,57 @@
 										"proveedores",
 										":id"
 									],
-									"query": [
+									"variable": [
 										{
-											"key": "",
-											"value": ""
+											"key": "id",
+											"value": "{{id_proveedor}}"
 										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "actualizar proveedor",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"id_tributario\": \"{{id_tributario}}\",\n\t\"tipo_proveedor\": \"Fabricante\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"pais\": \"Perú\",\n\t\"contacto\": \"Juan Pérez - +51 999 888 777\",\n\t\"condiciones_entrega\": \"Entrega en 5 días hábiles, cobertura nacional\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/proveedores/:id",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"proveedores",
+										":id"
 									],
 									"variable": [
 										{
 											"key": "id",
-											"value": "{% response 'body', 'req_abd2bbabbd6b4dd9919f61916dc3d817', 'b64::JC5kYXRhWzBdLmlk::46b', 'no-history', 60 %}"
+											"value": "{{id_proveedor}}"
 										}
 									]
 								}
@@ -175,54 +243,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "{% response 'body', 'req_abd2bbabbd6b4dd9919f61916dc3d817', 'b64::JC5kYXRhWzBdLmlk::46b', 'always', 60 %}"
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "actualizar proveedor",
-							"protocolProfileBehavior": {
-								"followRedirects": true,
-								"disableUrlEncoding": false,
-								"disableCookies": false
-							},
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "User-Agent",
-										"value": "insomnia/11.6.1"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n\t\"nombre\": \"{% faker 'randomCompanyName' %}\",\n\t\"id_tributario\": \"20143456789\",\n\t\"tipo_proveedor\": \"Fabricante\",\n\t\"email\": \"{% faker 'randomEmail' %}\",\n\t\"pais\": \"Perú\",\n\t\"contacto\": \"Juan Pérez - +51 999 888 777\",\n\t\"condiciones_entrega\": \"Entrega en 5 días hábiles, cobertura nacional\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{ _.bff_web_url }}/proveedores/:id",
-									"host": [
-										"{{ _.bff_web_url }}"
-									],
-									"path": [
-										"proveedores",
-										":id"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": "{% response 'body', 'req_abd2bbabbd6b4dd9919f61916dc3d817', 'b64::JC5kYXRhWzBdLmlk::46b', 'no-history', 60 %}"
+											"value": "{{id_proveedor}}"
 										}
 									]
 								}
@@ -1179,6 +1200,33 @@
 				},
 				{
 					"name": "crear proveedor",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"id_tributario = (Math.floor(Math.random() * 9e10) + 1e10).toString();",
+									"pm.collectionVariables.set(\"id_tributario\", id_tributario);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"const id = response.data?.id",
+									"pm.collectionVariables.set(\"id_proveedor\", id);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
 					"protocolProfileBehavior": {
 						"followRedirects": true,
 						"disableUrlEncoding": false,
@@ -1198,7 +1246,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"nombre\": \"{% faker 'randomCompanyName' %}\",\n\t\"id_tributario\": \"20153456789\",\n\t\"tipo_proveedor\": \"Fabricante\",\n\t\"email\": \"{% faker 'randomEmail' %}\",\n\t\"pais\": \"Perú\",\n\t\"contacto1\": \"Juan Pérez - +51 999 888 777\",\n\t\"condiciones_entrega1\": \"Entrega en 5 días hábiles, cobertura nacional\"\n}",
+							"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"id_tributario\": \"{{id_tributario}}\",\n\t\"tipo_proveedor\": \"Fabricante\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"pais\": \"Perú\",\n\t\"contacto1\": \"Juan Pérez - +51 999 888 777\",\n\t\"condiciones_entrega1\": \"Entrega en 5 días hábiles, cobertura nacional\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1260,7 +1308,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{ _.proveedores_url }}/proveedores/:id?=",
+							"raw": "{{ _.proveedores_url }}/proveedores/:id",
 							"host": [
 								"{{ _.proveedores_url }}"
 							],
@@ -1268,16 +1316,10 @@
 								"proveedores",
 								":id"
 							],
-							"query": [
-								{
-									"key": "",
-									"value": ""
-								}
-							],
 							"variable": [
 								{
 									"key": "id",
-									"value": "{% response 'body', 'req_abd2bbabbd6b4dd9919f61916dc3d817', 'b64::JC5kYXRhWzBdLmlk::46b', 'no-history', 60 %}"
+									"value": "{{id_proveedor}}"
 								}
 							]
 						}
@@ -1305,7 +1347,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"nombre\": \"{% faker 'randomCompanyName' %}\",\n\t\"id_tributario\": \"20143456789\",\n\t\"tipo_proveedor\": \"Fabricante\",\n\t\"email\": \"{% faker 'randomEmail' %}\",\n\t\"pais\": \"Perú\",\n\t\"contacto\": \"Juan Pérez - +51 999 888 777\",\n\t\"condiciones_entrega\": \"Entrega en 5 días hábiles, cobertura nacional\"\n}",
+							"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"id_tributario\": \"{{id_tributario}}\",\n\t\"tipo_proveedor\": \"Fabricante\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"pais\": \"Perú\",\n\t\"contacto\": \"Juan Pérez - +51 999 888 777\",\n\t\"condiciones_entrega\": \"Entrega en 5 días hábiles, cobertura nacional\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1324,7 +1366,7 @@
 							"variable": [
 								{
 									"key": "id",
-									"value": "{% response 'body', 'req_abd2bbabbd6b4dd9919f61916dc3d817', 'b64::JC5kYXRhWzBdLmlk::46b', 'no-history', 60 %}"
+									"value": "{{id_proveedor}}"
 								}
 							]
 						}
@@ -1358,7 +1400,7 @@
 							"variable": [
 								{
 									"key": "id",
-									"value": "{% response 'body', 'req_abd2bbabbd6b4dd9919f61916dc3d817', 'b64::JC5kYXRhWzBdLmlk::46b', 'always', 60 %}"
+									"value": "{{id_proveedor}}"
 								}
 							]
 						}
@@ -1667,6 +1709,14 @@
 			"key": " _.autenticacion_url ",
 			"value": "",
 			"type": "default"
+		},
+		{
+			"key": "id_tributario",
+			"value": ""
+		},
+		{
+			"key": "id_proveedor",
+			"value": ""
 		}
 	]
 }

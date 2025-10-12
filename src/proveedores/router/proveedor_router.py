@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, status
 from typing import Optional
 import logging
 
-from services.proveedores_service import ProveedoresService, get_proveedores_service
+from services.proveedor_service import ProveedorService, get_proveedor_service
 from schemas.proveedor_schema import (
     CrearProveedorSchema,
     ActualizarProveedorSchema,
@@ -14,9 +14,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 proveedor_router = APIRouter()
-@proveedor_router.get("/health")
-def health_check(proveedores_service: ProveedoresService = Depends(get_proveedores_service)):
-    return proveedores_service.health_check()
+
 
 @proveedor_router.post(
     "/",
@@ -47,7 +45,7 @@ def health_check(proveedores_service: ProveedoresService = Depends(get_proveedor
 )
 async def crear_proveedor(
     proveedor: CrearProveedorSchema,
-    proveedores_service: ProveedoresService = Depends(get_proveedores_service)
+    proveedor_service: ProveedorService = Depends(get_proveedor_service)
 ):
     """
     Crea un nuevo proveedor con los siguientes datos:
@@ -60,8 +58,11 @@ async def crear_proveedor(
     - **contacto**: Información de contacto (opcional, máximo 255 caracteres)
     - **condiciones_entrega**: Condiciones de entrega (opcional, máximo 500 caracteres)
     """
-    data = await proveedores_service.crear_proveedor(proveedor.model_dump())
-    return data
+    data = proveedor_service.crear_proveedor(proveedor)
+    return {
+        "message": "Creación exitosa",
+        "data": data
+    }
 
 
 @proveedor_router.get(
@@ -99,7 +100,7 @@ async def listar_proveedores(
     tipo_proveedor: Optional[TipoProveedorEnum] = Query(None, description="Filtrar por tipo de proveedor"),
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
-    proveedores_service: ProveedoresService = Depends(get_proveedores_service)
+    proveedor_service: ProveedorService = Depends(get_proveedor_service)
 ):
     """
     Lista todos los proveedores con opciones de:
@@ -108,17 +109,30 @@ async def listar_proveedores(
     - **Paginación**: Con page (número de página) y page_size (tamaño)
     - **Ordenamiento**: Por fecha de creación (más recientes primero)
     """
+    skip = (page - 1) * page_size
+    
     pais_value = pais.value if pais else None
     tipo_value = tipo_proveedor.value if tipo_proveedor else None
     
-    data = await proveedores_service.listar_proveedores(
+    proveedores = proveedor_service.listar_proveedores(
         pais=pais_value,
         tipo_proveedor=tipo_value,
-        page=page,
-        page_size=page_size
+        skip=skip,
+        limit=page_size
     )
     
-    return data
+    total = proveedor_service.contar_proveedores(
+        pais=pais_value,
+        tipo_proveedor=tipo_value
+    )
+    
+    return {
+        "data": proveedores,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size if total > 0 else 0
+    }
 
 
 @proveedor_router.get(
@@ -133,13 +147,15 @@ async def listar_proveedores(
 )
 async def obtener_proveedor(
     proveedor_id: str,
-    proveedores_service: ProveedoresService = Depends(get_proveedores_service)
+    proveedor_service: ProveedorService = Depends(get_proveedor_service)
 ):
     """
     Obtiene toda la información de un proveedor específico por su ID.
     """
-    data = await proveedores_service.obtener_proveedor(proveedor_id)
-    return data
+    data = proveedor_service.obtener_proveedor(proveedor_id)
+    return {
+        "data": data
+    }
 
 
 @proveedor_router.put(
@@ -157,7 +173,7 @@ async def obtener_proveedor(
 async def actualizar_proveedor(
     proveedor_id: str,
     proveedor: ActualizarProveedorSchema,
-    proveedores_service: ProveedoresService = Depends(get_proveedores_service)
+    proveedor_service: ProveedorService = Depends(get_proveedor_service)
 ):
     """
     Actualiza un proveedor existente.
@@ -166,11 +182,11 @@ async def actualizar_proveedor(
     - No se puede cambiar el ID tributario ni el país
     - El email debe ser único si se actualiza
     """
-    data = await proveedores_service.actualizar_proveedor(
-        proveedor_id,
-        proveedor.model_dump(exclude_unset=True)
-    )
-    return data
+    data = proveedor_service.actualizar_proveedor(proveedor_id, proveedor)
+    return {
+        "message": "Proveedor actualizado exitosamente",
+        "data": data
+    }
 
 
 @proveedor_router.delete(
@@ -186,12 +202,13 @@ async def actualizar_proveedor(
 )
 async def eliminar_proveedor(
     proveedor_id: str,
-    proveedores_service: ProveedoresService = Depends(get_proveedores_service)
+    proveedor_service: ProveedorService = Depends(get_proveedor_service)
 ):
     """
     Elimina un proveedor del sistema.
     
     **Precaución**: Esta operación no se puede deshacer.
     """
-    result = await proveedores_service.eliminar_proveedor(proveedor_id)
+    result = proveedor_service.eliminar_proveedor(proveedor_id)
     return result
+
