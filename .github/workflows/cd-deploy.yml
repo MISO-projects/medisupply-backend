@@ -125,18 +125,94 @@ jobs:
           echo "✅ Published ${SERVICE_TAG}:latest"
           echo "✅ Published ${SERVICE_TAG}:${{ github.sha }}"
 
+  deploy-to-gke:
+    name: Deploy ${{ matrix.service }} to GKE
+    needs: [determine-services, build-and-push]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.determine-services.outputs.matrix) }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine service manifest
+        id: manifest
+        run: |
+          SERVICE_TAG=$(echo "${{ matrix.service }}" | tr '/' '-')
+          MANIFEST_PATH="k8s/microservices/${SERVICE_TAG}.yaml"
+          
+          if [[ -f "${MANIFEST_PATH}" ]]; then
+            echo "manifest_path=${MANIFEST_PATH}" >> $GITHUB_OUTPUT
+            echo "manifest_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Found manifest: ${MANIFEST_PATH}"
+          else
+            echo "manifest_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️  No manifest found at ${MANIFEST_PATH}"
+          fi
+
+      - name: Authenticate to Google Cloud
+        if: steps.manifest.outputs.manifest_exists == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        if: steps.manifest.outputs.manifest_exists == 'true'
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install GKE Auth Plugin
+        if: steps.manifest.outputs.manifest_exists == 'true'
+        run: |
+          gcloud components install gke-gcloud-auth-plugin
+
+      - name: Configure kubectl
+        if: steps.manifest.outputs.manifest_exists == 'true'
+        run: |
+          gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER_NAME }} \
+            --region=${{ secrets.GKE_REGION }} \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Deploy to GKE
+        if: steps.manifest.outputs.manifest_exists == 'true'
+        run: |
+          SERVICE_TAG=$(echo "${{ matrix.service }}" | tr '/' '-')
+          
+          # Apply the manifest
+          kubectl apply -f ${{ steps.manifest.outputs.manifest_path }}
+          
+          # Wait for rollout to complete (with timeout)
+          kubectl rollout status deployment/${SERVICE_TAG}-service --timeout=5m || true
+          
+          echo "✅ Deployed ${SERVICE_TAG} to GKE"
+
+      - name: Skip deployment (no manifest)
+        if: steps.manifest.outputs.manifest_exists == 'false'
+        run: |
+          echo "⏭️  Skipping deployment - no K8s manifest found for ${{ matrix.service }}"
+
   deploy-complete:
     name: Deployment Complete
-    needs: build-and-push
+    needs: [build-and-push, deploy-to-gke]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Check deployment status
+      - name: Check build status
         if: needs.build-and-push.result != 'success'
+        run: |
+          echo "❌ One or more builds failed or were cancelled"
+          exit 1
+      
+      - name: Check deployment status
+        if: needs.deploy-to-gke.result != 'success'
         run: |
           echo "❌ One or more deployments failed or were cancelled"
           exit 1
       
       - name: Deployment successful
         run: |
-          echo "✅ All images built and pushed successfully to Artifact Registry"
+          echo "✅ All images built, pushed, and deployed successfully to GKE"

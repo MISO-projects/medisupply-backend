@@ -34,3 +34,12 @@ Los profiles disponibles son:
 Para utilizar Pub/Sub se debe tener un proyecto de Google Cloud y un topic de Pub/Sub.
 Se debe crear un archivo `credentials.json` en la raíz del servicio que se esté utilizando.
 Este archivo tendra las credenciales del service account para utilizar Pub/Sub.
+
+
+# Deploy en Kubernetes
+
+El despliegue se realiza mediante un pipeline de GitHub Actions.
+
+La configuración de los secrets se debe hacer tomando como ejemplo el archivo `k8s/secrets-template.yaml`, y se debe crear el archivo `k8s/secrets.yaml` con los valores correspondientes, luego se debe aplicar el archivo `k8s/secrets.yaml` con el comando `kubectl apply -f k8s/secrets.yaml`.
+
+El archivo `k8s/redis-deployment.yaml` contiene la configuración de Redis.
