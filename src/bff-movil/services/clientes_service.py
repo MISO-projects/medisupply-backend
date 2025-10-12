@@ -1,6 +1,6 @@
 import httpx
 import os
-from typing import Dict, Any
+from typing import Dict, Any, List
 from fastapi import HTTPException
 import logging
 
@@ -27,6 +27,70 @@ class ClientesService:
         except Exception as e:
             logger.error(f"Unexpected error checking Clientes health: {e}")
             raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
+
+    def get_clientes_asignados(self, authorization_header: str) -> Dict[str, Any]:
+        try:
+            headers = {
+                "Authorization": authorization_header,
+                "Content-Type": "application/json"
+            }
+            
+            response = httpx.get(
+                f"{self.base_url}/api/clientes/asignados",
+                headers=headers,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            
+            logger.info(f"Successfully retrieved clientes asignados from service")
+            return response.json()
+            
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error getting clientes asignados: {e}")
+            if e.response.status_code == 401:
+                raise HTTPException(status_code=401, detail="Token de autorización inválido o expirado")
+            elif e.response.status_code == 404:
+                raise HTTPException(status_code=404, detail="No se encontraron clientes asignados")
+            else:
+                raise HTTPException(status_code=e.response.status_code, detail=f"Error del servicio de clientes: {e}")
+        except httpx.RequestError as e:
+            logger.error(f"Failed to connect to Clientes microservice: {e}")
+            raise HTTPException(status_code=503, detail="No se puede conectar con el servicio de clientes")
+        except Exception as e:
+            logger.error(f"Unexpected error getting clientes asignados: {e}")
+            raise HTTPException(status_code=500, detail="Error interno del servidor")
+
+    def get_cliente_asignado(self, cliente_id: str, authorization_header: str) -> Dict[str, Any]:
+        try:
+            headers = {
+                "Authorization": authorization_header,
+                "Content-Type": "application/json"
+            }
+            
+            response = httpx.get(
+                f"{self.base_url}/api/clientes/asignados/{cliente_id}",
+                headers=headers,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            
+            logger.info(f"Successfully retrieved cliente {cliente_id} from service")
+            return response.json()
+            
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error getting cliente {cliente_id}: {e}")
+            if e.response.status_code == 401:
+                raise HTTPException(status_code=401, detail="Token de autorización inválido o expirado")
+            elif e.response.status_code == 404:
+                raise HTTPException(status_code=404, detail=f"Cliente {cliente_id} no encontrado o no asignado al vendedor")
+            else:
+                raise HTTPException(status_code=e.response.status_code, detail=f"Error del servicio de clientes: {e}")
+        except httpx.RequestError as e:
+            logger.error(f"Failed to connect to Clientes microservice: {e}")
+            raise HTTPException(status_code=503, detail="No se puede conectar con el servicio de clientes")
+        except Exception as e:
+            logger.error(f"Unexpected error getting cliente {cliente_id}: {e}")
+            raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 def get_clientes_service() -> ClientesService:
     return ClientesService()

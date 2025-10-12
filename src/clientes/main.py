@@ -1,7 +1,15 @@
 from fastapi import FastAPI, Depends, HTTPException
 from services.health_service import HealthService, get_health_service
+from router.cliente_router import router as cliente_router
 
-app = FastAPI()
+app = FastAPI(
+    title="MediSupply Clientes Service",
+    description="Servicio para gestión de clientes institucionales",
+    version="1.0.0"
+)
+
+# Incluir routers
+app.include_router(cliente_router)
 
 
 @app.get("/health")
