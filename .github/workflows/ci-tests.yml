@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_services: ${{ steps.set-matrix.outputs.has_services }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,20 +57,23 @@ jobs:
             done
           fi
 
-          # If no specific services changed, run all services
-          if [[ ${#selected[@]} -eq 0 ]]; then
-            selected=("${candidates[@]}")
-          fi
-
           # Build JSON array properly
-          json_services=$(printf '"%s",' "${selected[@]}")
-          json_services="[${json_services%,}]"
-          echo "Matrix services: ${json_services}"
-          echo "matrix={\"service\": ${json_services}}" >> $GITHUB_OUTPUT
+          if [[ ${#selected[@]} -eq 0 ]]; then
+            echo "No service changes detected"
+            echo "matrix={\"service\": []}" >> $GITHUB_OUTPUT
+            echo "has_services=false" >> $GITHUB_OUTPUT
+          else
+            json_services=$(printf '"%s",' "${selected[@]}")
+            json_services="[${json_services%,}]"
+            echo "Matrix services: ${json_services}"
+            echo "matrix={\"service\": ${json_services}}" >> $GITHUB_OUTPUT
+            echo "has_services=true" >> $GITHUB_OUTPUT
+          fi
 
   test:
     name: Test ${{ matrix.service }}
     needs: determine-services
+    if: needs.determine-services.outputs.has_services == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -113,6 +117,7 @@ jobs:
   build:
     name: Build ${{ matrix.service }}
     needs: [determine-services, test]
+    if: needs.determine-services.outputs.has_services == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -137,22 +142,27 @@ jobs:
 
   pr-checks-complete:
     name: All PR Checks Passed
-    needs: [test, build]
+    needs: [determine-services, test, build]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Check test matrix status
-        if: needs.test.result != 'success'
+      - name: Check if services were changed
+        if: needs.determine-services.outputs.has_services == 'false'
         run: |
-          echo "One or more tests failed or were cancelled"
+          echo "ℹ️  No service changes detected - skipping tests and builds"
+      
+      - name: Check test matrix status
+        if: needs.determine-services.outputs.has_services == 'true' && needs.test.result != 'success'
+        run: |
+          echo "❌ One or more tests failed or were cancelled"
           exit 1
       
       - name: Check build matrix status
-        if: needs.build.result != 'success'
+        if: needs.determine-services.outputs.has_services == 'true' && needs.build.result != 'success'
         run: |
-          echo "One or more builds failed or were cancelled"
+          echo "❌ One or more builds failed or were cancelled"
           exit 1
       
       - name: All checks passed
         run: |
-          echo "✅ All tests and builds completed successfully"
+          echo "✅ All PR checks completed successfully"
