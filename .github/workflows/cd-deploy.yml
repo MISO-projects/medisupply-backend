@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_services: ${{ steps.set-matrix.outputs.has_services }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,20 +59,23 @@ jobs:
             done
           fi
 
-          # If no specific services changed, run all services
-          if [[ ${#selected[@]} -eq 0 ]]; then
-            selected=("${candidates[@]}")
-          fi
-
           # Build JSON array properly
-          json_services=$(printf '"%s",' "${selected[@]}")
-          json_services="[${json_services%,}]"
-          echo "Matrix services: ${json_services}"
-          echo "matrix={\"service\": ${json_services}}" >> $GITHUB_OUTPUT
+          if [[ ${#selected[@]} -eq 0 ]]; then
+            echo "No service changes detected"
+            echo "matrix={\"service\": []}" >> $GITHUB_OUTPUT
+            echo "has_services=false" >> $GITHUB_OUTPUT
+          else
+            json_services=$(printf '"%s",' "${selected[@]}")
+            json_services="[${json_services%,}]"
+            echo "Matrix services: ${json_services}"
+            echo "matrix={\"service\": ${json_services}}" >> $GITHUB_OUTPUT
+            echo "has_services=true" >> $GITHUB_OUTPUT
+          fi
 
   build-and-push:
     name: Build & Push ${{ matrix.service }}
     needs: determine-services
+    if: needs.determine-services.outputs.has_services == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -128,6 +132,7 @@ jobs:
   deploy-to-gke:
     name: Deploy ${{ matrix.service }} to GKE
     needs: [determine-services, build-and-push]
+    if: needs.determine-services.outputs.has_services == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -197,22 +202,27 @@ jobs:
 
   deploy-complete:
     name: Deployment Complete
-    needs: [build-and-push, deploy-to-gke]
+    needs: [determine-services, build-and-push, deploy-to-gke]
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Check if services were changed
+        if: needs.determine-services.outputs.has_services == 'false'
+        run: |
+          echo "ℹ️  No service changes detected - skipping builds and deployments"
+      
       - name: Check build status
-        if: needs.build-and-push.result != 'success'
+        if: needs.determine-services.outputs.has_services == 'true' && needs.build-and-push.result != 'success'
         run: |
           echo "❌ One or more builds failed or were cancelled"
           exit 1
       
       - name: Check deployment status
-        if: needs.deploy-to-gke.result != 'success'
+        if: needs.determine-services.outputs.has_services == 'true' && needs.deploy-to-gke.result != 'success'
         run: |
           echo "❌ One or more deployments failed or were cancelled"
           exit 1
       
       - name: Deployment successful
         run: |
-          echo "✅ All images built, pushed, and deployed successfully to GKE"
+          echo "✅ Deployment workflow completed successfully"
