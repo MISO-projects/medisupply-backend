@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from services.health_service import HealthService, get_health_service
 from router.cliente_router import router as cliente_router
+from router.mock_router import router as mock_router
 
 app = FastAPI(
     title="MediSupply Clientes Service",
@@ -10,6 +11,7 @@ app = FastAPI(
 
 # Incluir routers
 app.include_router(cliente_router)
+app.include_router(mock_router)
 
 
 @app.get("/health")
