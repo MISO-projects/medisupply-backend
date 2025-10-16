@@ -356,7 +356,7 @@ services:
       - medisupply-network
     
   bff-movil:
-    profiles: [ "bff-movil", "ordenes", "autenticacion", "clientes", "dev" ]
+    profiles: [ "bff-movil", "ordenes", "autenticacion", "clientes", "productos", "dev" ]
     build:
       context: ./src/bff-movil
       dockerfile: Dockerfile
@@ -372,6 +372,7 @@ services:
       - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
       - CLIENTES_SERVICE_URL=http://clientes-service:3000
+      - PRODUCTOS_SERVICE_URL=http://productos-service:3000
       - ORDENES_COMMANDS_SERVICE_URL=http://order-command-api:3000
       - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
     volumes:
