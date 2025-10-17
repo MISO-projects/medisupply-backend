@@ -1,0 +1,45 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: medisupply-ingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.allow-http: "false"
+    networking.gke.io/managed-certificates: "medisupply-cert"
+    ingress.gke.io/redirect-to-https: "true"
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /web
+            pathType: Prefix
+            backend:
+              service:
+                name: bff-web-service
+                port:
+                  number: 80
+          - path: /movil
+            pathType: Prefix
+            backend:
+              service:
+                name: bff-movil-service
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-web-service
+                port:
+                  number: 80
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: medisupply-cert
+  namespace: default
+spec:
+  domains:
+    - medisupply.tech
+    - www.medisupply.tech

@@ -1,5 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from services.health_service import HealthService, get_health_service
 from router.auditoria import auditoria_router
 from router.autenticacion import autenticacion_router
@@ -17,18 +20,40 @@ import logging
 logging.basicConfig(level=logging.DEBUG, force=True)
 logger = logging.getLogger(__name__)
 
+
+class HTTPSRedirectMiddleware(BaseHTTPMiddleware):
+    """Middleware to ensure all redirects use HTTPS"""
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        
+        # If it's a redirect, ensure the Location header uses https
+        if response.status_code in (301, 302, 303, 307, 308):
+            location = response.headers.get("location", "")
+            if location.startswith("http://"):
+                logger.info(f"Rewriting redirect from HTTP to HTTPS: {location}")
+                response.headers["location"] = location.replace("http://", "https://", 1)
+        
+        return response
+
+
 app = FastAPI(
     title="MediSupply - BFF Web",
     description="Backend for Frontend - API Gateway para MediSupply Web",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    root_path="/web",
+    redirect_slashes=False  # Disable automatic slash redirects
 )
+
+app.add_middleware(HTTPSRedirectMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:4200",
+        "https://medisupply.tech",
+        "https://www.medisupply.tech"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -53,9 +78,6 @@ def health_check(
     health_service: HealthService = Depends(get_health_service)
 ):
     health_status = health_service.check_overall_health(include_details=details)
-    
-    if health_status["status"] != "healthy":
-        raise HTTPException(status_code=503, detail=health_status)
     
     return health_status
 
