@@ -22,7 +22,8 @@ app = FastAPI(
     description="Backend for Frontend - API Gateway para MediSupply Web",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    root_path="/web"
 )
 
 app.add_middleware(
