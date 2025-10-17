@@ -3,6 +3,9 @@ import sys
 from pathlib import Path
 import pytest
 from types import SimpleNamespace
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from fastapi.testclient import TestClient
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(_PROJECT_ROOT) not in sys.path:
@@ -66,6 +69,68 @@ def failing_cache_deps():
     return {
         "db": FakeDB(should_fail=False),
         "redis_client": FakeRedisClient(should_fail=False, connected=False),
+    }
+
+
+# Fixtures para tests de productos
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test_productos.db"
+
+@pytest.fixture(scope="function")
+def test_db():
+    """Crea una base de datos de prueba en memoria"""
+    from db.database import Base
+    
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        connect_args={"check_same_thread": False}
+    )
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    
+    # Crear las tablas
+    Base.metadata.create_all(bind=engine)
+    
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+        # Limpiar la base de datos después de cada test
+        Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(scope="function")
+def client(test_db):
+    """Cliente de prueba de FastAPI con la base de datos de test"""
+    from main import app
+    from db.database import get_db
+    
+    def override_get_db():
+        try:
+            yield test_db
+        finally:
+            pass
+    
+    app.dependency_overrides[get_db] = override_get_db
+    
+    with TestClient(app) as test_client:
+        yield test_client
+    
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def producto_ejemplo():
+    """Producto de ejemplo para tests"""
+    return {
+        "nombre": "Paracetamol 500mg Test",
+        "descripcion": "Analgésico de prueba",
+        "categoria": "MEDICAMENTOS",
+        "imagen_url": "https://example.com/test.jpg",
+        "precio_unitario": 15.50,
+        "stock_disponible": 100,
+        "disponible": True,
+        "unidad_medida": "CAJA",
+        "sku": "TEST-PAR-500"
     }
 
 
