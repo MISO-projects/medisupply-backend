@@ -14,7 +14,8 @@ app = FastAPI(
     description="Backend for Frontend - API Gateway para MediSupply Movil",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    root_path="/movil"
 )
 
 app.include_router(autenticacion_router, prefix="/autenticacion", tags=["autenticacion"])
