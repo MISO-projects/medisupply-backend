@@ -5,8 +5,9 @@ metadata:
   namespace: default
   annotations:
     kubernetes.io/ingress.class: "gce"
-    kubernetes.io/ingress.allow-http: "true"
+    kubernetes.io/ingress.allow-http: "false"
     networking.gke.io/managed-certificates: "medisupply-cert"
+    ingress.gke.io/redirect-to-https: "true"
 spec:
   rules:
     - http:
