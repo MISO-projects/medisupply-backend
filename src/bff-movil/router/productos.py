@@ -29,17 +29,8 @@ def get_productos_disponibles(
         None,
         description="Filtrar por categoría específica (ej: MEDICAMENTOS, INSUMOS, EQUIPOS)"
     ),
-    skip: int = Query(
-        0,
-        ge=0,
-        description="Número de registros a saltar para paginación"
-    ),
-    limit: int = Query(
-        100,
-        ge=1,
-        le=500,
-        description="Cantidad máxima de productos a retornar"
-    ),
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
     productos_service: ProductosService = Depends(get_productos_service)
 ):
 
@@ -52,8 +43,8 @@ def get_productos_disponibles(
         result = productos_service.get_productos_disponibles(
             solo_con_stock=solo_con_stock,
             categoria=categoria,
-            skip=skip,
-            limit=limit
+            page=page,
+            page_size=page_size
         )
         
         logger.info(f"BFF Móvil: Retornando {result.get('total', 0)} productos disponibles")

@@ -28,13 +28,15 @@ class ProductosService:
         except Exception as e:
             logger.error(f"Unexpected error checking Productos health: {e}")
             raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
+
+    
     
     def get_productos_disponibles(
         self,
         solo_con_stock: bool = True,
         categoria: Optional[str] = None,
-        skip: int = 0,
-        limit: int = 100
+        page: int = 1,
+        page_size: int = 20,
     ) -> Dict[str, Any]:
         """
         Obtiene la lista de productos disponibles con stock
@@ -42,17 +44,17 @@ class ProductosService:
         Args:
             solo_con_stock: Si True, solo retorna productos con stock > 0
             categoria: Filtro opcional por categoría
-            skip: Número de registros a saltar (paginación)
-            limit: Número máximo de registros a retornar
+            page: Número de página
+            page_size: Tamaño de página
             
         Returns:
-            Diccionario con 'total' y 'productos'
+            Diccionario con 'total', 'page', 'page_size', 'total_pages' y 'productos'
         """
         try:
             params = {
                 "solo_con_stock": solo_con_stock,
-                "skip": skip,
-                "limit": limit
+                "page": page,
+                "page_size": page_size,
             }
             
             if categoria:
