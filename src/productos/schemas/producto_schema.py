@@ -27,7 +27,7 @@ class ProductoCreate(BaseModel):
     categoria: str
     imagen_url: Optional[str] = None
     precio_unitario: Decimal
-    stock_disponible: int
+    stock_disponible: Optional[int] = Field(None, ge=0)
     disponible: bool
     unidad_medida: str
     sku: Optional[str] = None
@@ -75,6 +75,7 @@ class ProductoConStock(BaseModel):
     tipo_almacenamiento: str
     observaciones: Optional[str] = None
     proveedor_id: UUID
+    proveedor_nombre: str
 
     class Config:
         from_attributes = True
