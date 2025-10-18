@@ -1,25 +1,75 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from typing import List, Optional
+from typing import List, Optional, Union
 from models.producto import Producto
-from schemas.producto_schema import ProductoCreate, ProductoUpdate, ProductoConStock
+from schemas.producto_schema import ProductoCreate, ProductoUpdate, ProductoConStock, ProductoResponse
 from fastapi import HTTPException
 import logging
 import httpx
 import os
 from http import HTTPStatus
 from typing import Dict, Any
+import json
+
+from db.redis_client import get_redis_client
 
 logger = logging.getLogger(__name__)
 
 
 class ProductosService:
+    CACHE_TTL_PRODUCTO = 3600  # 1 hour for individual product
+    CACHE_TTL_LIST = 300  # 5 minutes for lists
+    CACHE_TTL_COUNT = 300  # 5 minutes for counts
 
     def __init__(self, db: Session):
         self.db = db
+        self.redis_client = get_redis_client()
         self.proveedores_service_url = os.getenv(
             "PROVEEDORES_SERVICE_URL", "http://proveedores-service:3000"
         )
+
+    def _get_cache(self, key: str) -> Optional[Any]:
+        """Get data from cache"""
+        try:
+            if self.redis_client is None:
+                return None
+            cached_data = self.redis_client.get(key)
+            if cached_data:
+                return json.loads(cached_data)
+            return None
+        except Exception as e:
+            logger.warning(f"Error getting cache for key {key}: {e}")
+            return None
+
+    def _set_cache(self, key: str, value: Any, ttl: int) -> None:
+        """Set data in cache"""
+        try:
+            if self.redis_client is None:
+                return
+            self.redis_client.setex(key, ttl, json.dumps(value, default=str))
+        except Exception as e:
+            logger.warning(f"Error setting cache for key {key}: {e}")
+
+    def _delete_cache(self, pattern: str) -> None:
+        """Delete cache keys matching pattern"""
+        try:
+            if self.redis_client is None:
+                return
+            keys = self.redis_client.keys(pattern)
+            if keys:
+                self.redis_client.delete(*keys)
+        except Exception as e:
+            logger.warning(f"Error deleting cache for pattern {pattern}: {e}")
+
+    def _invalidate_producto_caches(self, producto_id: Optional[str] = None) -> None:
+        """Invalidate all producto-related caches"""
+        try:
+            if producto_id:
+                self._delete_cache(f"producto:{producto_id}")
+            # Invalidate list caches
+            self._delete_cache("productos:list:*")
+        except Exception as e:
+            logger.warning(f"Error invalidating caches: {e}")
 
     def get_productos_disponibles(
         self,
@@ -41,6 +91,17 @@ class ProductosService:
             Tupla con (lista de productos, total de productos)
         """
         try:
+            cache_key = f"productos:list:{solo_con_stock}:{categoria or 'all'}:{skip}:{limit}"
+            cached_data = self._get_cache(cache_key)
+            
+            if cached_data is not None:
+                logger.debug(f"Cache hit for productos list")
+                # Return cached productos and total
+                productos_list = [ProductoConStock(**p) for p in cached_data.get('productos', [])]
+                return productos_list, cached_data.get('total', 0)
+            
+            logger.debug(f"Cache miss for productos list")
+            
             # Construir query base
             query = self.db.query(Producto)
 
@@ -66,6 +127,12 @@ class ProductosService:
                 ProductoConStock.model_validate(producto) for producto in productos
             ]
 
+            cache_data = {
+                'productos': [p.model_dump(mode='json') for p in productos_response],
+                'total': total
+            }
+            self._set_cache(cache_key, cache_data, self.CACHE_TTL_LIST)
+
             logger.info(f"Se encontraron {total} productos disponibles")
             return productos_response, total
 
@@ -75,8 +142,11 @@ class ProductosService:
                 status_code=500, detail="Error al obtener productos disponibles"
             )
 
-    def get_producto_by_id(self, producto_id: str) -> Optional[Producto]:
-        """Obtiene un producto por su ID"""
+    def _get_producto_model_by_id(self, producto_id: str) -> Producto:
+        """
+        Obtiene el modelo SQLAlchemy de un producto por su ID (para uso interno).
+        No usa cache porque se necesita el objeto de la sesión para operaciones de escritura.
+        """
         try:
             producto = (
                 self.db.query(Producto).filter(Producto.id == producto_id).first()
@@ -87,6 +157,29 @@ class ProductosService:
                     detail=f"Producto con ID {producto_id} no encontrado",
                 )
             return producto
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error al obtener producto {producto_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error al obtener producto")
+
+    def get_producto_by_id(self, producto_id: str) -> ProductoResponse:
+        """Obtiene un producto por su ID (con cache)"""
+        try:
+            cache_key = f"producto:{producto_id}"
+            cached_data = self._get_cache(cache_key)
+            
+            if cached_data is not None:
+                logger.debug(f"Cache hit for producto {producto_id}")
+                return ProductoResponse(**cached_data)
+            
+            logger.debug(f"Cache miss for producto {producto_id}")
+            producto = self._get_producto_model_by_id(producto_id)
+            
+            producto_dict = producto.to_dict()
+            self._set_cache(cache_key, producto_dict, self.CACHE_TTL_PRODUCTO)
+            
+            return ProductoResponse.model_validate(producto)
         except HTTPException:
             raise
         except Exception as e:
@@ -175,6 +268,8 @@ class ProductosService:
             self.db.commit()
             self.db.refresh(nuevo_producto)
 
+            self._invalidate_producto_caches()
+
             logger.info(
                 f"Producto creado: {nuevo_producto.id} - {nuevo_producto.nombre}"
             )
@@ -192,7 +287,7 @@ class ProductosService:
     ) -> Producto:
         """Actualiza un producto existente"""
         try:
-            producto = self.get_producto_by_id(producto_id)
+            producto = self._get_producto_model_by_id(producto_id)
 
             # Actualizar solo los campos proporcionados
             update_data = producto_data.model_dump(exclude_unset=True)
@@ -218,6 +313,8 @@ class ProductosService:
             self.db.commit()
             self.db.refresh(producto)
 
+            self._invalidate_producto_caches(producto_id)
+
             logger.info(f"Producto actualizado: {producto.id}")
             return producto
 
@@ -231,9 +328,11 @@ class ProductosService:
     def eliminar_producto(self, producto_id: str) -> bool:
         """Elimina un producto (soft delete marcándolo como no disponible)"""
         try:
-            producto = self.get_producto_by_id(producto_id)
+            producto = self._get_producto_model_by_id(producto_id)
             producto.disponible = False
             self.db.commit()
+
+            self._invalidate_producto_caches(producto_id)
 
             logger.info(f"Producto marcado como no disponible: {producto_id}")
             return True
@@ -248,7 +347,7 @@ class ProductosService:
     def actualizar_stock(self, producto_id: str, cantidad: int) -> Producto:
         """Actualiza el stock de un producto"""
         try:
-            producto = self.get_producto_by_id(producto_id)
+            producto = self._get_producto_model_by_id(producto_id)
 
             nuevo_stock = producto.stock_disponible + cantidad
             if nuevo_stock < 0:
@@ -259,6 +358,8 @@ class ProductosService:
             producto.stock_disponible = nuevo_stock
             self.db.commit()
             self.db.refresh(producto)
+
+            self._invalidate_producto_caches(producto_id)
 
             logger.info(f"Stock actualizado para producto {producto_id}: {nuevo_stock}")
             return producto

@@ -104,7 +104,7 @@ def get_producto(
         service = ProductosService(db)
         producto = service.get_producto_by_id(producto_id)
         
-        return ProductoResponse.model_validate(producto)
+        return producto
         
     except Exception as e:
         logger.error(f"Error al consultar producto {producto_id}: {str(e)}")
