@@ -5,6 +5,10 @@ from models.producto import Producto
 from schemas.producto_schema import ProductoCreate, ProductoUpdate, ProductoConStock
 from fastapi import HTTPException
 import logging
+import httpx
+import os
+from http import HTTPStatus
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +17,10 @@ class ProductosService:
     
     def __init__(self, db: Session):
         self.db = db
+        self.proveedores_service_url = os.getenv(
+            "PROVEEDORES_SERVICE_URL",
+            "http://proveedores-service:3000"
+        )
     
     def get_productos_disponibles(
         self,
@@ -87,10 +95,50 @@ class ProductosService:
                 status_code=500,
                 detail="Error al obtener producto"
             )
+
+
+    async def _verificar_proveedor_activo(self, proveedor_id: str) -> Dict[str, Any]:
+        """
+        Verifica que el proveedor existe y está activo.
+        
+        Args:
+            proveedor_id: ID del proveedor
+            
+        Returns:
+            Dict con los datos del proveedor
+            
+        Raises:
+            HTTPException: Si el proveedor no existe o no está disponible
+        """
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(
+                    f"{self.proveedores_service_url}/proveedores/{proveedor_id}"
+                )
+                
+                if response.status_code == 404:
+                    raise HTTPException(
+                        status_code=HTTPStatus.BAD_REQUEST,
+                        detail=f"El proveedor con ID {proveedor_id} no existe en el sistema."
+                    )
+                elif response.status_code != 200:
+                    raise HTTPException(
+                        status_code=HTTPStatus.BAD_REQUEST,
+                        detail="No se pudo verificar el proveedor. Intente nuevamente."
+                    )
+                
+                data = response.json()
+                return data.get("data", {})
+                
+        except httpx.RequestError as e:
+            logger.error(f"Error al verificar proveedor {proveedor_id}: {e}")
+            return {"id": proveedor_id, "nombre": "Proveedor (no verificado)"}
     
-    def crear_producto(self, producto_data: ProductoCreate) -> Producto:
+    async def crear_producto(self, producto_data: ProductoCreate) -> Dict[str, Any]:
         """Crea un nuevo producto"""
         try:
+
+            proveedor_info = await self._verificar_proveedor_activo(producto_data.proveedor_id)
             # Verificar si ya existe un producto con el mismo SKU
             if producto_data.sku:
                 existing = self.db.query(Producto).filter(Producto.sku == producto_data.sku).first()
@@ -100,7 +148,21 @@ class ProductosService:
                         detail=f"Ya existe un producto con el SKU {producto_data.sku}"
                     )
             
-            nuevo_producto = Producto(**producto_data.model_dump())
+            nuevo_producto = Producto(
+                nombre=producto_data.nombre,
+                descripcion=producto_data.descripcion,
+                categoria=producto_data.categoria,
+                imagen_url=producto_data.imagen_url,
+                precio_unitario=producto_data.precio_unitario,
+                stock_disponible=producto_data.stock_disponible,
+                disponible=producto_data.disponible,
+                unidad_medida=producto_data.unidad_medida,
+                sku=producto_data.sku,
+                tipo_almacenamiento=producto_data.tipo_almacenamiento,
+                observaciones=producto_data.observaciones,
+                proveedor_id=producto_data.proveedor_id,
+                proveedor_nombre=proveedor_info.get("nombre", "Proveedor (no verificado)"),
+            )
             self.db.add(nuevo_producto)
             self.db.commit()
             self.db.refresh(nuevo_producto)
