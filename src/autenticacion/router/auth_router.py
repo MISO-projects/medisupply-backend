@@ -1,25 +1,21 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import logging
-
-from services.autenticacion_service import AutenticacionService, get_autenticacion_service
+from sqlalchemy.orm import Session
+from db.database import get_db
+from services.auth_service import AuthService, get_auth_service
 from schemas.auth_schema import RegisterRequest, LoginRequest, TokenResponse, UserResponse
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-autenticacion_router = APIRouter()
+# Configurar router
+router = APIRouter(
+    prefix="/auth",
+    tags=["Autenticación"]
+)
 
 # Configurar esquema de seguridad Bearer (para tokens JWT)
 security = HTTPBearer()
 
 
-@autenticacion_router.get("/health")
-def health_check(autenticacion_service: AutenticacionService = Depends(get_autenticacion_service)):
-    return autenticacion_service.health_check()
-
-
-@autenticacion_router.post(
+@router.post(
     "/register",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
@@ -28,14 +24,16 @@ def health_check(autenticacion_service: AutenticacionService = Depends(get_auten
 )
 def register(
     register_data: RegisterRequest,
-    autenticacion_service: AutenticacionService = Depends(get_autenticacion_service)
+    db: Session = Depends(get_db),
+    auth_service: AuthService = Depends(get_auth_service)
 ):
     """
     Endpoint para registrar un nuevo usuario
 
     Args:
         register_data: Datos de registro (email, username, password)
-        autenticacion_service: Servicio de autenticación (inyectado)
+        db: Sesión de base de datos (inyectada)
+        auth_service: Servicio de autenticación (inyectado)
 
     Returns:
         UserResponse: Información del usuario creado
@@ -43,10 +41,10 @@ def register(
     Raises:
         HTTPException 400: Si el email ya está registrado
     """
-    return autenticacion_service.register_user(register_data.model_dump())
+    return auth_service.register_user(db, register_data)
 
 
-@autenticacion_router.post(
+@router.post(
     "/login",
     response_model=TokenResponse,
     status_code=status.HTTP_200_OK,
@@ -55,14 +53,16 @@ def register(
 )
 def login(
     login_data: LoginRequest,
-    autenticacion_service: AutenticacionService = Depends(get_autenticacion_service)
+    db: Session = Depends(get_db),
+    auth_service: AuthService = Depends(get_auth_service)
 ):
     """
     Endpoint para iniciar sesión
 
     Args:
         login_data: Credenciales de login (email, password)
-        autenticacion_service: Servicio de autenticación (inyectado)
+        db: Sesión de base de datos (inyectada)
+        auth_service: Servicio de autenticación (inyectado)
 
     Returns:
         TokenResponse: Token JWT de acceso
@@ -71,10 +71,10 @@ def login(
         HTTPException 401: Si las credenciales son inválidas
         HTTPException 403: Si el usuario está inactivo
     """
-    return autenticacion_service.login_user(login_data.model_dump())
+    return auth_service.authenticate_user(db, login_data)
 
 
-@autenticacion_router.get(
+@router.get(
     "/me",
     response_model=UserResponse,
     status_code=status.HTTP_200_OK,
@@ -83,7 +83,8 @@ def login(
 )
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    autenticacion_service: AutenticacionService = Depends(get_autenticacion_service)
+    db: Session = Depends(get_db),
+    auth_service: AuthService = Depends(get_auth_service)
 ):
     """
     Endpoint para obtener información del usuario actual
@@ -93,7 +94,8 @@ def get_current_user(
 
     Args:
         credentials: Credenciales HTTP Bearer (token JWT)
-        autenticacion_service: Servicio de autenticación (inyectado)
+        db: Sesión de base de datos (inyectada)
+        auth_service: Servicio de autenticación (inyectado)
 
     Returns:
         UserResponse: Información del usuario autenticado
@@ -103,5 +105,4 @@ def get_current_user(
         HTTPException 403: Si el usuario está inactivo
     """
     token = credentials.credentials
-    return autenticacion_service.get_current_user(token)
-
+    return auth_service.get_current_user(db, token)
