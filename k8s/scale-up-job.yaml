@@ -33,6 +33,7 @@ spec:
                 "reportes-service"
                 "bff-movil-service"
                 "bff-web-service"
+                "frontend-web"
               )
               
               for service in "${SERVICES[@]}"; do
