@@ -4,6 +4,7 @@ Tests para el servicio de inicialización de productos
 import pytest
 from models.producto import Producto
 from services.init_service import InitService
+from uuid import uuid4
 
 
 class TestInitService:
@@ -50,12 +51,17 @@ class TestInitService:
         # Crear un producto manual
         producto_manual = Producto(
             nombre="Producto Manual",
+            descripcion="Producto de prueba manual",
             categoria="MEDICAMENTOS",
+            imagen_url="http://test.com/manual.jpg",
             precio_unitario=10.00,
             stock_disponible=50,
             disponible=True,
             unidad_medida="UNIDAD",
-            sku="MANUAL-001"
+            sku="MANUAL-001",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=uuid4(),
+            proveedor_nombre="Proveedor Manual"
         )
         test_db.add(producto_manual)
         test_db.commit()

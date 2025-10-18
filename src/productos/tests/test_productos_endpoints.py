@@ -3,6 +3,8 @@ Tests para los endpoints del microservicio de productos
 """
 import pytest
 from decimal import Decimal
+from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 
 class TestProductosDisponiblesEndpoint:
@@ -100,21 +102,24 @@ class TestProductosDisponiblesEndpoint:
             producto["sku"] = f"TEST-PROD-{i}"
             client.post("/api/productos/", json=producto)
         
-        # Obtener primeros 2
-        response = client.get("/api/productos/disponibles?skip=0&limit=2")
+        # Obtener primeros 2 (page=1, page_size=2)
+        response = client.get("/api/productos/disponibles?page=1&page_size=2")
         
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 5
         assert len(data["productos"]) == 2
+        assert data["page"] == 1
+        assert data["page_size"] == 2
         
-        # Obtener siguientes 2
-        response = client.get("/api/productos/disponibles?skip=2&limit=2")
+        # Obtener siguientes 2 (page=2, page_size=2)
+        response = client.get("/api/productos/disponibles?page=2&page_size=2")
         
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 5
         assert len(data["productos"]) == 2
+        assert data["page"] == 2
 
 
 class TestCrearProductoEndpoint:
@@ -131,13 +136,32 @@ class TestCrearProductoEndpoint:
         assert "id" in data
         assert data["disponible"] is True
     
-    def test_crear_producto_sku_duplicado(self, client, producto_ejemplo):
+    def test_crear_producto_sku_duplicado(self, client):
         """Test: Error al crear producto con SKU duplicado"""
+        # Create product with fixed SKU
+        producto_1 = {
+            "nombre": "Producto 1",
+            "descripcion": "Test",
+            "categoria": "MEDICAMENTOS",
+            "imagen_url": "https://example.com/test.jpg",
+            "precio_unitario": 15.50,
+            "stock_disponible": 100,
+            "disponible": True,
+            "unidad_medida": "CAJA",
+            "sku": "TEST-SKU-DUP-001",
+            "tipo_almacenamiento": "AMBIENTE",
+            "observaciones": "Producto de prueba",
+            "proveedor_id": str(uuid4())
+        }
+        
         # Crear primer producto
-        client.post("/api/productos/", json=producto_ejemplo)
+        response1 = client.post("/api/productos/", json=producto_1)
+        assert response1.status_code == 201
         
         # Intentar crear producto con mismo SKU
-        response = client.post("/api/productos/", json=producto_ejemplo)
+        producto_2 = producto_1.copy()
+        producto_2["nombre"] = "Producto 2"  # Different name but same SKU
+        response = client.post("/api/productos/", json=producto_2)
         
         assert response.status_code == 400
         assert "SKU" in response.json()["detail"]

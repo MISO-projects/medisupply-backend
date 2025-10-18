@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
+from uuid import uuid4
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(_PROJECT_ROOT) not in sys.path:
@@ -79,6 +80,8 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./test_productos.db"
 def test_db():
     """Crea una base de datos de prueba en memoria"""
     from db.database import Base
+    # Import models to ensure they're registered with Base
+    from models.producto import Producto
     
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,
@@ -99,10 +102,12 @@ def test_db():
 
 
 @pytest.fixture(scope="function")
-def client(test_db):
+def client(test_db, monkeypatch):
     """Cliente de prueba de FastAPI con la base de datos de test"""
     from main import app
     from db.database import get_db
+    from unittest.mock import AsyncMock, patch
+    import httpx
     
     def override_get_db():
         try:
@@ -110,10 +115,20 @@ def client(test_db):
         finally:
             pass
     
+    # Mock the httpx client for provider verification
+    async def mock_httpx_get(*args, **kwargs):
+        class MockResponse:
+            status_code = 200
+            def json(self):
+                return {"data": {"id": str(uuid4()), "nombre": "Proveedor Test"}}
+        return MockResponse()
+    
     app.dependency_overrides[get_db] = override_get_db
     
-    with TestClient(app) as test_client:
-        yield test_client
+    with patch('httpx.AsyncClient') as mock_client:
+        mock_client.return_value.__aenter__.return_value.get = AsyncMock(side_effect=mock_httpx_get)
+        with TestClient(app) as test_client:
+            yield test_client
     
     app.dependency_overrides.clear()
 
@@ -130,8 +145,17 @@ def producto_ejemplo():
         "stock_disponible": 100,
         "disponible": True,
         "unidad_medida": "CAJA",
-        "sku": "TEST-PAR-500"
+        "sku": "TEST-PAR-500",
+        "tipo_almacenamiento": "AMBIENTE",
+        "observaciones": "Producto de prueba",
+        "proveedor_id": str(uuid4())
     }
+
+
+@pytest.fixture
+def proveedor_id():
+    """ID de proveedor para tests"""
+    return uuid4()
 
 
 

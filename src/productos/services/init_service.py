@@ -3,6 +3,7 @@ from sqlalchemy import and_
 from models.producto import Producto
 from typing import Dict, Any
 import logging
+from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,10 @@ class InitService:
         self.db = db
     
     def get_productos_ejemplo(self) -> list[Producto]:
+        # Use a fixed proveedor_id for all example products
+        proveedor_id = uuid4()
+        proveedor_nombre = "Proveedor Demo"
+        
         return [
             Producto(
                 nombre="Paracetamol 500mg",
@@ -23,7 +28,10 @@ class InitService:
                 stock_disponible=250,
                 disponible=True,
                 unidad_medida="CAJA",
-                sku="MED-PAR-500-100"
+                sku="MED-PAR-500-100",
+                tipo_almacenamiento="AMBIENTE",
+                proveedor_id=proveedor_id,
+                proveedor_nombre=proveedor_nombre
             ),
             Producto(
                 nombre="Ibuprofeno 400mg",
@@ -34,7 +42,10 @@ class InitService:
                 stock_disponible=180,
                 disponible=True,
                 unidad_medida="CAJA",
-                sku="MED-IBU-400-50"
+                sku="MED-IBU-400-50",
+                tipo_almacenamiento="AMBIENTE",
+                proveedor_id=proveedor_id,
+                proveedor_nombre=proveedor_nombre
             ),
             Producto(
                 nombre="Amoxicilina 500mg",
@@ -45,7 +56,10 @@ class InitService:
                 stock_disponible=95,
                 disponible=True,
                 unidad_medida="CAJA",
-                sku="MED-AMO-500-21"
+                sku="MED-AMO-500-21",
+                tipo_almacenamiento="REFRIGERADO",
+                proveedor_id=proveedor_id,
+                proveedor_nombre=proveedor_nombre
             ),
             Producto(
                 nombre="Omeprazol 20mg",
@@ -56,7 +70,10 @@ class InitService:
                 stock_disponible=140,
                 disponible=True,
                 unidad_medida="CAJA",
-                sku="MED-OME-20-28"
+                sku="MED-OME-20-28",
+                tipo_almacenamiento="AMBIENTE",
+                proveedor_id=proveedor_id,
+                proveedor_nombre=proveedor_nombre
             ),
             # Insumos médicos
             Producto(
@@ -68,7 +85,10 @@ class InitService:
                 stock_disponible=320,
                 disponible=True,
                 unidad_medida="CAJA",
-                sku="INS-GLV-LAT-M-100"
+                sku="INS-GLV-LAT-M-100",
+                tipo_almacenamiento="AMBIENTE",
+                proveedor_id=proveedor_id,
+                proveedor_nombre=proveedor_nombre
             ),
             Producto(
                 nombre="Jeringas 10ml con aguja",
@@ -79,7 +99,10 @@ class InitService:
                 stock_disponible=200,
                 disponible=True,
                 unidad_medida="CAJA",
-                sku="INS-JER-10ML-100"
+                sku="INS-JER-10ML-100",
+                tipo_almacenamiento="AMBIENTE",
+                proveedor_id=proveedor_id,
+                proveedor_nombre=proveedor_nombre
             ),
             Producto(
                 nombre="Gasas estériles 10x10cm",
@@ -90,7 +113,10 @@ class InitService:
                 stock_disponible=175,
                 disponible=True,
                 unidad_medida="CAJA",
-                sku="INS-GAS-10X10-100"
+                sku="INS-GAS-10X10-100",
+                tipo_almacenamiento="AMBIENTE",
+                proveedor_id=proveedor_id,
+                proveedor_nombre=proveedor_nombre
             ),
             Producto(
                 nombre="Alcohol en gel 500ml",
@@ -101,7 +127,10 @@ class InitService:
                 stock_disponible=450,
                 disponible=True,
                 unidad_medida="UNIDAD",
-                sku="INS-ALC-GEL-500"
+                sku="INS-ALC-GEL-500",
+                tipo_almacenamiento="AMBIENTE",
+                proveedor_id=proveedor_id,
+                proveedor_nombre=proveedor_nombre
             ),
             Producto(
                 nombre="Tensiómetro digital de brazo",
@@ -112,7 +141,10 @@ class InitService:
                 stock_disponible=45,
                 disponible=True,
                 unidad_medida="UNIDAD",
-                sku="EQU-TEN-DIG-BR"
+                sku="EQU-TEN-DIG-BR",
+                tipo_almacenamiento="AMBIENTE",
+                proveedor_id=proveedor_id,
+                proveedor_nombre=proveedor_nombre
             ),
             Producto(
                 nombre="Termómetro digital infrarrojo",
@@ -123,7 +155,10 @@ class InitService:
                 stock_disponible=68,
                 disponible=True,
                 unidad_medida="UNIDAD",
-                sku="EQU-TER-INF"
+                sku="EQU-TER-INF",
+                tipo_almacenamiento="AMBIENTE",
+                proveedor_id=proveedor_id,
+                proveedor_nombre=proveedor_nombre
             ),
             Producto(
                 nombre="Nebulizador ultrasónico",
@@ -134,7 +169,10 @@ class InitService:
                 stock_disponible=28,
                 disponible=True,
                 unidad_medida="UNIDAD",
-                sku="EQU-NEB-ULT"
+                sku="EQU-NEB-ULT",
+                tipo_almacenamiento="AMBIENTE",
+                proveedor_id=proveedor_id,
+                proveedor_nombre=proveedor_nombre
             ),
             # Productos sin stock (para testing)
             Producto(
@@ -146,7 +184,10 @@ class InitService:
                 stock_disponible=0,
                 disponible=True,
                 unidad_medida="CAJA",
-                sku="MED-INS-GLA-100"
+                sku="MED-INS-GLA-100",
+                tipo_almacenamiento="REFRIGERADO",
+                proveedor_id=proveedor_id,
+                proveedor_nombre=proveedor_nombre
             ),
             Producto(
                 nombre="Vacuna contra Influenza",
@@ -157,7 +198,10 @@ class InitService:
                 stock_disponible=0,
                 disponible=False,
                 unidad_medida="DOSIS",
-                sku="MED-VAC-INF-TRI"
+                sku="MED-VAC-INF-TRI",
+                tipo_almacenamiento="REFRIGERADO",
+                proveedor_id=proveedor_id,
+                proveedor_nombre=proveedor_nombre
             ),
         ]
     

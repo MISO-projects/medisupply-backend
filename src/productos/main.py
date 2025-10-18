@@ -5,7 +5,7 @@ from router.productos_router import productos_router
 import logging
 import os
 
-logging.basicConfig(level=logging.INFO, force=True)
+logging.basicConfig(level=logging.DEBUG, force=True)
 logger = logging.getLogger(__name__)
 
 # Crear las tablas en la base de datos solo si no estamos en modo testing

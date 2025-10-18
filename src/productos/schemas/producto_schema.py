@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal
+from uuid import UUID
 
 
 class ProductoBase(BaseModel):
@@ -14,10 +15,26 @@ class ProductoBase(BaseModel):
     disponible: bool = Field(True, description="Indica si el producto está disponible para venta")
     unidad_medida: str = Field("UNIDAD", max_length=50, description="Unidad de medida (UNIDAD, CAJA, LITRO, etc)")
     sku: Optional[str] = Field(None, max_length=100, description="SKU del producto")
+    tipo_almacenamiento: str = Field("AMBIENTE", max_length=50, description="Tipo de almacenamiento (AMBIENTE, REFRIGERADO, CONGELADO, etc)")
+    observaciones: Optional[str] = Field(None, description="Observaciones adicionales del producto")
+    proveedor_id: UUID = Field(..., description="ID del proveedor")
+    proveedor_nombre: str = Field(..., description="Nombre del proveedor")
 
 
-class ProductoCreate(ProductoBase):
-    pass
+class ProductoCreate(BaseModel):
+    nombre: str
+    descripcion: Optional[str] = None
+    categoria: str
+    imagen_url: Optional[str] = None
+    precio_unitario: Decimal
+    stock_disponible: Optional[int] = Field(None, ge=0)
+    disponible: bool
+    unidad_medida: str
+    sku: Optional[str] = None
+    tipo_almacenamiento: str
+    observaciones: Optional[str] = None
+    proveedor_id: UUID
+
 
 
 class ProductoUpdate(BaseModel):
@@ -30,6 +47,9 @@ class ProductoUpdate(BaseModel):
     disponible: Optional[bool] = None
     unidad_medida: Optional[str] = Field(None, max_length=50)
     sku: Optional[str] = Field(None, max_length=100)
+    tipo_almacenamiento: Optional[str] = Field(None, max_length=50)
+    observaciones: Optional[str] = None
+    proveedor_id: Optional[UUID] = None
 
 
 class ProductoResponse(ProductoBase):
@@ -51,6 +71,11 @@ class ProductoConStock(BaseModel):
     precio_unitario: Decimal
     unidad_medida: str
     descripcion: Optional[str] = None
+    sku: Optional[str] = None
+    tipo_almacenamiento: str
+    observaciones: Optional[str] = None
+    proveedor_id: UUID
+    proveedor_nombre: str
 
     class Config:
         from_attributes = True
@@ -58,5 +83,8 @@ class ProductoConStock(BaseModel):
 
 class ProductosListResponse(BaseModel):
     total: int
+    page: int
+    page_size: int
+    total_pages: int
     productos: list[ProductoConStock]
 

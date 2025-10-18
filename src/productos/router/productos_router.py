@@ -42,17 +42,8 @@ def get_productos_disponibles(
         None,
         description="Filtrar por categoría específica"
     ),
-    skip: int = Query(
-        0,
-        ge=0,
-        description="Número de registros a saltar (paginación)"
-    ),
-    limit: int = Query(
-        100,
-        ge=1,
-        le=500,
-        description="Número máximo de registros a retornar"
-    ),
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
     db: Session = Depends(get_db)
 ):
     """
@@ -70,19 +61,24 @@ def get_productos_disponibles(
     """
     try:
         logger.info(f"Consultando productos disponibles - solo_con_stock: {solo_con_stock}, categoria: {categoria}")
+
+        skip = (page - 1) * page_size
         
         service = ProductosService(db)
         productos, total = service.get_productos_disponibles(
             solo_con_stock=solo_con_stock,
             categoria=categoria,
             skip=skip,
-            limit=limit
+            limit=page_size
         )
         
         logger.info(f"Retornando {len(productos)} productos de un total de {total}")
         
         return ProductosListResponse(
             total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=(total + page_size - 1) // page_size if total > 0 else 0,
             productos=productos
         )
         
@@ -108,7 +104,7 @@ def get_producto(
         service = ProductosService(db)
         producto = service.get_producto_by_id(producto_id)
         
-        return ProductoResponse.model_validate(producto)
+        return producto
         
     except Exception as e:
         logger.error(f"Error al consultar producto {producto_id}: {str(e)}")
@@ -122,7 +118,7 @@ def get_producto(
     summary="Crear un nuevo producto",
     description="Crea un nuevo producto en el sistema"
 )
-def crear_producto(
+async def crear_producto(
     producto_data: ProductoCreate,
     db: Session = Depends(get_db)
 ):
@@ -131,7 +127,7 @@ def crear_producto(
         logger.info(f"Creando nuevo producto: {producto_data.nombre}")
         
         service = ProductosService(db)
-        producto = service.crear_producto(producto_data)
+        producto = await service.crear_producto(producto_data)
         
         return ProductoResponse.model_validate(producto)
         
