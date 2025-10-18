@@ -14,6 +14,7 @@ class ProductosService:
         self.timeout = 30.0
     
     def health_check(self) -> Dict[str, Any]:
+        """Verifica el estado del servicio de productos"""
         try:
             response = httpx.get(f"{self.base_url}/health", timeout=self.timeout)
             response.raise_for_status()
@@ -114,49 +115,9 @@ class ProductosService:
         except Exception as e:
             logger.error(f"Unexpected error getting producto {producto_id}: {e}")
             raise HTTPException(status_code=500, detail="Error interno del servidor")
-    
-    async def crear_producto(self, producto_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Crea un nuevo producto en el sistema
-        
-        Args:
-            producto_data: Diccionario con los datos del producto a crear
-            
-        Returns:
-            Diccionario con la información del producto creado
-        """
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(
-                    f"{self.base_url}/api/productos/",
-                    json=producto_data
-                )
-                response.raise_for_status()
-                
-                logger.info(f"Successfully created producto: {producto_data.get('nombre')}")
-                return response.json()
-                
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error creating producto: {e}")
-            error_detail = "Error al crear producto"
-            try:
-                error_data = e.response.json()
-                error_detail = error_data.get("detail", error_detail)
-            except:
-                pass
-            
-            if e.response.status_code == 400:
-                raise HTTPException(status_code=400, detail=error_detail)
-            else:
-                raise HTTPException(status_code=e.response.status_code, detail=f"Error del servicio de productos: {error_detail}")
-        except httpx.RequestError as e:
-            logger.error(f"Failed to connect to Productos microservice: {e}")
-            raise HTTPException(status_code=503, detail="No se puede conectar con el servicio de productos")
-        except Exception as e:
-            logger.error(f"Unexpected error creating producto: {e}")
-            raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 
 def get_productos_service() -> ProductosService:
+    """Dependency para inyectar el servicio de productos"""
     return ProductosService()
 

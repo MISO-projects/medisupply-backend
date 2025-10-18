@@ -3,61 +3,16 @@ from typing import Optional
 import logging
 
 from services.productos_service import ProductosService, get_productos_service
-from schemas.producto_schema import CrearProductoSchema
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 productos_router = APIRouter()
 
+
 @productos_router.get("/health")
 def health_check(productos_service: ProductosService = Depends(get_productos_service)):
     return productos_service.health_check()
-
-@productos_router.post(
-    "/",
-    status_code=201,
-    summary="Crear un nuevo producto",
-    description="Crea un nuevo producto en el sistema"
-)
-async def crear_producto(
-    producto: CrearProductoSchema,
-    productos_service: ProductosService = Depends(get_productos_service)
-):
-    """
-    Crea un nuevo producto en el sistema.
-    
-    Requiere:
-    - **nombre**: Nombre del producto (obligatorio, máximo 255 caracteres)
-    - **descripcion**: Descripción del producto (opcional)
-    - **categoria**: Categoría del producto (obligatorio, máximo 100 caracteres)
-    - **imagen_url**: URL de la imagen del producto (opcional, máximo 500 caracteres)
-    - **precio_unitario**: Precio unitario del producto (obligatorio, debe ser mayor a 0)
-    - **stock_disponible**: Cantidad disponible en stock (obligatorio, debe ser >= 0)
-    - **disponible**: Indica si el producto está disponible para venta (obligatorio)
-    - **unidad_medida**: Unidad de medida (obligatorio, ej: UNIDAD, CAJA, LITRO)
-    - **sku**: SKU del producto (opcional, máximo 100 caracteres)
-    - **tipo_almacenamiento**: Tipo de almacenamiento (obligatorio, ej: AMBIENTE, REFRIGERADO, CONGELADO)
-    - **observaciones**: Observaciones adicionales del producto (opcional)
-    - **proveedor_id**: ID del proveedor (obligatorio, UUID)
-    """
-    try:
-        logger.info(f"BFF Web: Solicitud de creación de producto - nombre: {producto.nombre}")
-        
-        result = await productos_service.crear_producto(producto.model_dump(mode='json'))
-        
-        logger.info(f"BFF Web: Producto creado exitosamente - ID: {result.get('id')}")
-        return result
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"BFF Web: Error interno al procesar solicitud de creación de producto: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail="Error interno del servidor BFF web"
-        )
-
 
 
 @productos_router.get(

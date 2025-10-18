@@ -316,6 +316,9 @@ services:
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - JWT_SECRET_KEY=medisupply-secret-key
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRATION_MINUTES=60
     volumes:
       - ./src/autenticacion:/app
     networks:
@@ -356,7 +359,7 @@ services:
       - medisupply-network
     
   bff-movil:
-    profiles: [ "bff-movil", "ordenes", "autenticacion", "clientes", "dev" ]
+    profiles: [ "bff-movil", "ordenes", "autenticacion", "clientes", "productos", "dev" ]
     build:
       context: ./src/bff-movil
       dockerfile: Dockerfile
@@ -372,6 +375,7 @@ services:
       - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
       - CLIENTES_SERVICE_URL=http://clientes-service:3000
+      - PRODUCTOS_SERVICE_URL=http://productos-service:3000
       - ORDENES_COMMANDS_SERVICE_URL=http://order-command-api:3000
       - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
     volumes:

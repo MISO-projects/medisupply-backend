@@ -51,7 +51,7 @@ spec:
   healthCheck:
     checkIntervalSec: 30
     timeoutSec: 5
-    requestPath: "/health"
+    requestPath: "/movil/health"
     type: HTTP
     port: 8000
 ---

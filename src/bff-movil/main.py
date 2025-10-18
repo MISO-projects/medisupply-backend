@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from services.health_service import HealthService, get_health_service
 from router.autenticacion import autenticacion_router
 from router.clientes import clientes_router
+from router.productos import productos_router
 from router.ordenes_commands import ordenes_commands_router
 from router.ordenes_queries import ordenes_queries_router
 import logging
@@ -14,11 +15,13 @@ app = FastAPI(
     description="Backend for Frontend - API Gateway para MediSupply Movil",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    root_path="/movil"
 )
 
 app.include_router(autenticacion_router, prefix="/autenticacion", tags=["autenticacion"])
 app.include_router(clientes_router, prefix="/clientes", tags=["clientes"])
+app.include_router(productos_router, prefix="/productos", tags=["productos"])
 app.include_router(ordenes_commands_router, prefix="/ordenes/commands", tags=["ordenes-commands"])
 app.include_router(ordenes_queries_router, prefix="/ordenes/queries", tags=["ordenes-queries"])
 
@@ -28,9 +31,6 @@ def health_check(
     health_service: HealthService = Depends(get_health_service)
 ):
     health_status = health_service.check_overall_health(include_details=details)
-    
-    if health_status["status"] != "healthy":
-        raise HTTPException(status_code=503, detail=health_status)
-    
+
     return health_status
 
