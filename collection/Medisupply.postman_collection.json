@@ -984,6 +984,149 @@
                 }
               },
               "response": []
+            },
+            {
+              "name": "registrar usuario",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const response = pm.response.json();",
+                      "pm.collectionVariables.set(\"bff_movil_user_id\", response.id);",
+                      "pm.collectionVariables.set(\"bff_movil_user_email\", response.email);"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": true,
+                "disableUrlEncoding": false,
+                "disableCookies": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "User-Agent",
+                    "value": "insomnia/11.6.1"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"email\": \"{{$randomEmail}}\",\n\t\"username\": \"{{$randomFullName}}\",\n\t\"password\": \"Password123!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{ _.bff_web_movil }}/autenticacion/register",
+                  "host": [
+                    "{{ _.bff_web_movil }}"
+                  ],
+                  "path": [
+                    "autenticacion",
+                    "register"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "iniciar sesion",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const response = pm.response.json();",
+                      "pm.collectionVariables.set(\"bff_movil_access_token\", response.access_token);"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": true,
+                "disableUrlEncoding": false,
+                "disableCookies": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "User-Agent",
+                    "value": "insomnia/11.6.1"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"email\": \"{{bff_movil_user_email}}\",\n\t\"password\": \"Password123!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{ _.bff_web_movil }}/autenticacion/login",
+                  "host": [
+                    "{{ _.bff_web_movil }}"
+                  ],
+                  "path": [
+                    "autenticacion",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "obtener usuario actual",
+              "protocolProfileBehavior": {
+                "followRedirects": true,
+                "disableUrlEncoding": false,
+                "disableCookies": false
+              },
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bff_movil_access_token}}"
+                  },
+                  {
+                    "key": "User-Agent",
+                    "value": "insomnia/11.6.1"
+                  }
+                ],
+                "url": {
+                  "raw": "{{ _.bff_web_movil }}/autenticacion/me",
+                  "host": [
+                    "{{ _.bff_web_movil }}"
+                  ],
+                  "path": [
+                    "autenticacion",
+                    "me"
+                  ]
+                }
+              },
+              "response": []
             }
           ]
         },
@@ -2360,6 +2503,18 @@
     },
     {
       "key": "bff_access_token",
+      "value": ""
+    },
+    {
+      "key": "bff_movil_user_id",
+      "value": ""
+    },
+    {
+      "key": "bff_movil_user_email",
+      "value": ""
+    },
+    {
+      "key": "bff_movil_access_token",
       "value": ""
     }
   ]
