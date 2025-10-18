@@ -130,6 +130,7 @@ class AuthService:
             email=register_data.email,
             username=register_data.username,
             hashed_password=hashed_password,
+            role=register_data.role if register_data.role else 'seller',
             is_active=True
         )
 
