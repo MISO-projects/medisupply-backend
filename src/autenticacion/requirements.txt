@@ -7,3 +7,5 @@ debugpy==1.8.16
 SQLAlchemy==2.0.43
 psycopg2-binary==2.9.10
 redis==5.0.1
+pwdlib[argon2]==0.2.1
+PyJWT==2.8.0

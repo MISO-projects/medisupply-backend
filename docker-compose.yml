@@ -316,6 +316,9 @@ services:
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - JWT_SECRET_KEY=medisupply-secret-key
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRATION_MINUTES=60
     volumes:
       - ./src/autenticacion:/app
     networks:
