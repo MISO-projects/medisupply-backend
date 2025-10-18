@@ -1,3 +1,6 @@
+"""
+Servicio para generar datos mock del servicio de clientes.
+"""
 from sqlalchemy.orm import Session
 from models.cliente_institucional_model import ClienteInstitucional
 from typing import Dict, List
