@@ -1,11 +1,15 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError
+from fastapi import HTTPException, status
 from typing import List, Optional
 import logging
 from db.redis_client import RedisClient
 from models.cliente_institucional_model import ClienteInstitucional
 from schemas.cliente_schema import ClienteAsignadoResponse, ClienteAsignadoListResponse
 import json
+from schemas.cliente_schema import RegisterRequest, ClientResponse
+
 
 logger = logging.getLogger(__name__)
 
@@ -119,3 +123,36 @@ class ClienteService:
         except Exception as e:
             logger.error(f"Error al obtener cliente {cliente_id} para vendedor {vendedor_id}: {str(e)}")
             raise
+
+
+    def register_client(self, db: Session, register_data: RegisterRequest) -> ClientResponse:
+        new_client = ClienteInstitucional(
+            nombre=register_data.nombre,
+            nit=register_data.nit,
+            id_vendedor=getattr(register_data, 'id_vendedor', None),
+            address=register_data.address,
+            logo_url=getattr(register_data, 'logoUrl', None)
+        )
+
+        try:
+            db.add(new_client)
+            db.commit()
+            db.refresh(new_client)
+            user_dict = new_client.to_dict()
+            return ClientResponse(**user_dict)
+
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El nit ya está registrado"
+            )
+
+def get_client_service() -> ClienteService:
+    """
+    Función de dependencia para inyectar el servicio de cliente
+
+    Returns:
+        AuthService: Instancia del servicio de cleinte
+    """
+    return ClienteService()

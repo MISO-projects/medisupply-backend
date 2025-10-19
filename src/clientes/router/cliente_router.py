@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, status
 from sqlalchemy.orm import Session
 from typing import Optional
 import logging
-
+from schemas.cliente_schema import ClientResponse, RegisterRequest
 from db.database import get_db
 from db.redis_client import RedisClient
 from services.cliente_service import ClienteService
@@ -113,3 +113,32 @@ async def get_cliente_asignado(
             status_code=500,
             detail="Error interno del servidor al obtener cliente"
         )
+
+@router.post(
+    "/",
+    response_model=ClientResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar nuevo cliente institucional",
+    description="Registra un nuevo cliente institucional en el sistema"
+)
+def register(
+    register_data: RegisterRequest,
+    db: Session = Depends(get_db),
+    client_service: ClienteService = Depends(get_cliente_service)
+):
+    """
+    Endpoint para registrar un nuevo cliente institucional
+
+    Args:
+        register_data: Datos de registro del cliente institucional
+        db: Sesión de base de datos (inyectada)
+        client_service: Servicio de clientes (inyectado)
+
+    Returns:
+        ClientResponse: Información del cliente institucional creado
+
+    Raises:
+        HTTPException 400: Si el cliente ya está registrado
+    """
+
+    return client_service.register_client(db, register_data)
