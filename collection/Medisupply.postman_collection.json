@@ -682,7 +682,7 @@
 							"response": []
 						},
 						{
-							"name": "registrar usuario",
+							"name": "registrar usuario-seller",
 							"event": [
 								{
 									"listen": "test",
@@ -986,7 +986,7 @@
 							"response": []
 						},
 						{
-							"name": "registrar usuario",
+							"name": "registrar usuario-seller",
 							"event": [
 								{
 									"listen": "test",
@@ -2450,81 +2450,81 @@
 		}
 	],
 	"variable": [
-    {
-      "key": " _.bff_web_url ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.bff_web_movil ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.command_order_url ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.handle_order_url ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.query_order_url ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.order_projection_handler_url ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.productos_url ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.proveedores_url ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.reportes_url ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.logistica_url ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.inventario_url ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.ventas_url ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.clientes_url ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.auditoria_url ",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": " _.autenticacion_url ",
-      "value": "",
-      "type": "default"
-    },
+		{
+			"key": " _.bff_web_url ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.bff_web_movil ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.command_order_url ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.handle_order_url ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.query_order_url ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.order_projection_handler_url ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.productos_url ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.proveedores_url ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.reportes_url ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.logistica_url ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.inventario_url ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.ventas_url ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.clientes_url ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.auditoria_url ",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": " _.autenticacion_url ",
+			"value": "",
+			"type": "default"
+		},
 		{
 			"key": "id_tributario",
 			"value": ""
