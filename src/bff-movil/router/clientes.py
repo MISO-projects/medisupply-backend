@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, status
 from typing import Optional
 import logging
 
 from services.clientes_service import ClientesService, get_clientes_service
+from schemas.cliente_schema import ClientResponse, RegisterRequest
+from services.clientes_service import get_clientes_service, ClientesService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -69,4 +71,21 @@ def get_cliente_asignado(
             status_code=500,
             detail="Error interno del servidor BFF móvil"
         )
+
+@clientes_router.post(
+    "/",
+    response_model=ClientResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar nuevo cliente institucional",
+    description="Registra un nuevo cliente institucional en el sistema"
+)
+async def register(  # <-- 1. AÑADIR ASYNC AQUÍ
+    register_data: RegisterRequest,
+    client_service: ClientesService = Depends(get_clientes_service)
+):
+    """
+    Endpoint para registrar un nuevo cliente institucional
+    """
+    # 2. AÑADIR AWAIT y convertir el Pydantic model a dict
+    return await client_service.register_client(register_data.model_dump())
 
