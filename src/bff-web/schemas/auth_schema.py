@@ -15,6 +15,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr = Field(..., description="Email del usuario")
     username: str = Field(..., min_length=2, max_length=100, description="Nombre para mostrar")
     password: str = Field(..., min_length=8, description="Contraseña (mínimo 8 caracteres)")
+    role: Optional[str] = 'seller'
 
     model_config = {
         "json_schema_extra": {
@@ -92,6 +93,7 @@ class UserResponse(BaseModel):
     id: str = Field(..., description="UUID del usuario")
     email: str = Field(..., description="Email del usuario")
     username: str = Field(..., description="Nombre para mostrar")
+    role: Optional[str] = Field(None, description="Rol del usuario (ej: 'seller', 'client')")
     is_active: bool = Field(..., description="Si el usuario está activo")
     created_at: datetime = Field(..., description="Fecha de creación")
     updated_at: datetime = Field(..., description="Fecha de última actualización")

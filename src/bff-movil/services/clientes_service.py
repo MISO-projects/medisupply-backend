@@ -91,7 +91,39 @@ class ClientesService:
         except Exception as e:
             logger.error(f"Unexpected error getting cliente {cliente_id}: {e}")
             raise HTTPException(status_code=500, detail="Error interno del servidor")
+        
+    async def register_client(self, register_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Llama al endpoint de registro del servicio de Clientes.
+        Este endpoint es público y no requiere token.
 
+        Args:
+            register_data: Datos del nuevo cliente (nombre, nit, etc.).
+
+        Returns:
+            Dict con la información del cliente creado.
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}/api/clientes/",
+                    json=register_data,
+                    timeout=self.timeout
+                )
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Error registering client: {e.response.text}")
+            detail = e.response.json().get("detail", "Error en el registro")
+            raise HTTPException(status_code=e.response.status_code, detail=detail)
+        except httpx.RequestError as e:
+            logger.error(f"Failed to connect to Clientes microservice: {e}")
+            raise HTTPException(status_code=503, detail="No se puede conectar al servicio de clientes")
+        except Exception as e:
+            logger.error(f"Unexpected error during client registration: {e}")
+            raise HTTPException(status_code=500, detail="Error inesperado durante el registro del cliente")
+
+# Función de dependencia para inyectar el servicio en los endpoints del BFF
 def get_clientes_service() -> ClientesService:
     return ClientesService()
 

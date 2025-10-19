@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, status
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 import logging
-
+from schemas.cliente_schema import ClientResponse, RegisterRequest
 from db.database import get_db
 from db.redis_client import RedisClient
 from services.cliente_service import ClienteService
@@ -19,6 +19,19 @@ def get_cliente_service(
 ) -> ClienteService:
     return ClienteService(db=db, redis_client=redis_client)
 
+@router.get(
+    "/",
+    response_model=List[ClientResponse],
+    summary="Obtener lista de clientes",
+    description="Retorna la lista de todos los clientes creados"
+)
+def get_clientes(
+    db: Session = Depends(get_db),
+    client_service: ClienteService = Depends(get_cliente_service)
+):
+    return client_service.get_all_clients(db)
+
+# ... (el resto del código del archivo cliente_router.py)
 
 def get_vendedor_id_from_auth(authorization: Optional[str] = Header(None)) -> str:
 
@@ -113,3 +126,32 @@ async def get_cliente_asignado(
             status_code=500,
             detail="Error interno del servidor al obtener cliente"
         )
+
+@router.post(
+    "/",
+    response_model=ClientResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar nuevo cliente institucional",
+    description="Registra un nuevo cliente institucional en el sistema"
+)
+def register(
+    register_data: RegisterRequest,
+    db: Session = Depends(get_db),
+    client_service: ClienteService = Depends(get_cliente_service)
+):
+    """
+    Endpoint para registrar un nuevo cliente institucional
+
+    Args:
+        register_data: Datos de registro del cliente institucional
+        db: Sesión de base de datos (inyectada)
+        client_service: Servicio de clientes (inyectado)
+
+    Returns:
+        ClientResponse: Información del cliente institucional creado
+
+    Raises:
+        HTTPException 400: Si el cliente ya está registrado
+    """
+
+    return client_service.register_client(db, register_data)

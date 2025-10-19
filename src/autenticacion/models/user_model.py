@@ -23,12 +23,13 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String, unique=True, nullable=False)
     username = Column(String, nullable=False)
+    role = Column(String, nullable=True, default='seller')
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    def __init__(self, email, username, hashed_password, is_active=True):
+    def __init__(self, email, username, hashed_password, role='seller', is_active=True):
         """
         Constructor del modelo User
 
@@ -45,6 +46,7 @@ class User(Base):
         self.username = username
         self.hashed_password = hashed_password
         self.is_active = is_active
+        self.role = role
 
     def to_dict(self):
         """Convierte la instancia de User a diccionario"""
@@ -52,6 +54,7 @@ class User(Base):
             "id": str(self.id),
             "email": self.email,
             "username": self.username,
+            "role": self.role,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

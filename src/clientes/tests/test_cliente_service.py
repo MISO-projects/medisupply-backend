@@ -8,6 +8,7 @@ from services.cliente_service import ClienteService
 from models.cliente_institucional_model import ClienteInstitucional
 from schemas.cliente_schema import ClienteAsignadoResponse, ClienteAsignadoListResponse
 from db.redis_client import RedisClient
+from schemas.cliente_schema import RegisterRequest
 
 
 class TestClienteService:
@@ -36,7 +37,8 @@ class TestClienteService:
             nombre="Hospital General",
             nit="901234567-8",
             id_vendedor=vendedor_id,
-            logo_url="https://storage.googleapis.com/logos/hospital-general.png"
+            logo_url="https://storage.googleapis.com/logos/hospital-general.png",
+            address="Calle 45 #10-20, Cartagena" 
         )
         cliente.id = uuid.UUID(cliente_id)
         return cliente, vendedor_id
@@ -171,3 +173,58 @@ class TestClienteService:
         # Verificar que no se intentó usar Redis
         mock_redis_client.client.get.assert_not_called()
         mock_redis_client.client.setex.assert_not_called()
+
+    def test_get_all_clients_success(self, mock_db):
+        cliente = Mock()
+        cliente.id = uuid.uuid4()
+        cliente.nombre = "Clinica ABC"
+        cliente.nit = "900111222-3"
+        cliente.logo_url = "https://example.com/logo.png"
+        cliente.address = "Cra 10 #20-30"
+        cliente.fecha_creacion = "2025-01-01"
+        cliente.fecha_actualizacion = "2025-02-01"
+        cliente.id_vendedor = uuid.uuid4()
+
+        mock_db.query.return_value.all.return_value = [cliente]
+        service = ClienteService(db=mock_db, redis_client=Mock())
+
+        result = service.get_all_clients(mock_db)
+        assert len(result) == 1
+        assert result[0].nombre == "Clinica ABC"
+
+    def test_get_all_clients_error(self, mock_db):
+        mock_db.query.side_effect = Exception("DB error")
+        service = ClienteService(db=mock_db, redis_client=Mock())
+
+        with pytest.raises(Exception):
+            service.get_all_clients(mock_db)
+
+    
+    def test_register_client_success(self, mock_db):
+        data = RegisterRequest(
+            nombre="Nuevo Cliente",
+            nit="900555666-7",
+            address="Cra 1 #1-1",
+            logoUrl="https://logo.com"
+        )
+        new_client = Mock()
+        new_client.to_dict.return_value = {
+            "id": str(uuid.uuid4()),
+            "nombre": data.nombre,
+            "nit": data.nit,
+            "logoUrl": data.logoUrl,
+            "address": data.address,
+            "id_vendedor": None,
+            "fecha_creacion": "2025-01-01T00:00:00Z",  
+            "fecha_actualizacion": "2025-01-01T00:00:00Z"  
+        }
+
+        mock_db.refresh.side_effect = lambda x: x.__setattr__('to_dict', new_client.to_dict)
+        service = ClienteService(db=mock_db, redis_client=Mock())
+        
+        result = service.register_client(mock_db, data)
+        assert result.nombre == data.nombre
+        mock_db.add.assert_called_once()
+        mock_db.commit.assert_called_once()
+
+
