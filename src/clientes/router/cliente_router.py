@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 import logging
 from schemas.cliente_schema import ClientResponse, RegisterRequest
 from db.database import get_db
@@ -19,6 +19,19 @@ def get_cliente_service(
 ) -> ClienteService:
     return ClienteService(db=db, redis_client=redis_client)
 
+@router.get(
+    "/",
+    response_model=List[ClientResponse],
+    summary="Obtener lista de clientes",
+    description="Retorna la lista de todos los clientes creados"
+)
+def get_clientes(
+    db: Session = Depends(get_db),
+    client_service: ClienteService = Depends(get_cliente_service)
+):
+    return client_service.get_all_clients(db)
+
+# ... (el resto del código del archivo cliente_router.py)
 
 def get_vendedor_id_from_auth(authorization: Optional[str] = Header(None)) -> str:
 

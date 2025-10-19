@@ -81,7 +81,7 @@ class ClientResponse(BaseModel):
     address: str = Field(..., description="Dirección del cliente institucional")
     fecha_creacion: datetime = Field(..., description=  "Fecha de creación")
     fecha_actualizacion: datetime = Field(..., description="Fecha de última actualización")
-    id_vendedor: str = Field(..., description="Id del vendedor asignado")
+    id_vendedor: Optional[str] = Field(None, description="Id del vendedor asignado")
 
     model_config = {
         "json_schema_extra": {

@@ -6,9 +6,9 @@ from typing import List, Optional
 import logging
 from db.redis_client import RedisClient
 from models.cliente_institucional_model import ClienteInstitucional
-from schemas.cliente_schema import ClienteAsignadoResponse, ClienteAsignadoListResponse
+from schemas.cliente_schema import ClienteAsignadoResponse, ClienteAsignadoListResponse, ClientResponse
 import json
-from schemas.cliente_schema import RegisterRequest, ClientResponse
+from schemas.cliente_schema import RegisterRequest
 
 
 logger = logging.getLogger(__name__)
@@ -18,6 +18,28 @@ class ClienteService:
     def __init__(self, db: Session, redis_client: RedisClient):
         self.db = db
         self.redis_client = redis_client
+
+    def get_all_clients(self, db: Session) -> List[ClientResponse]:
+        try:
+            clientes_db = db.query(ClienteInstitucional).all()
+            clientes_response = [
+                ClientResponse(
+                    id=str(cliente.id),
+                    nombre=cliente.nombre,
+                    nit=cliente.nit,
+                    logoUrl=cliente.logo_url,
+                    address=cliente.address,
+                    fecha_creacion=cliente.fecha_creacion,
+                    fecha_actualizacion=cliente.fecha_actualizacion,
+                    id_vendedor=str(cliente.id_vendedor) if cliente.id_vendedor else None
+                )
+                for cliente in clientes_db
+            ]
+            return clientes_response
+        except Exception as e:
+            logger.error(f"Error al obtener lista de clientes: {str(e)}")
+            raise
+    
 
     def get_clientes_asignados(self, vendedor_id: str, use_cache: bool = True) -> ClienteAsignadoListResponse:
 
