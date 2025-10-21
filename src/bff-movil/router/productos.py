@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request
+from fastapi.responses import RedirectResponse
 from typing import Optional
 import logging
 
@@ -10,15 +11,34 @@ logger = logging.getLogger(__name__)
 productos_router = APIRouter()
 
 
+@productos_router.get("/", summary="Redirigir a productos disponibles")
+def redirect_to_disponibles(request: Request):
+    """
+    Redirige la ruta raíz de productos a la ruta de productos disponibles
+    """
+    base_url = str(request.base_url).rstrip('/')
+    redirect_url = f"{base_url}/productos/disponibles"
+    return RedirectResponse(url=redirect_url, status_code=302)
+
+
 @productos_router.get("/health")
 def health_check(productos_service: ProductosService = Depends(get_productos_service)):
     return productos_service.health_check()
 
 
+@productos_router.get("/disponibles/", summary="Redirigir a productos disponibles (sin barra final)")
+def redirect_disponibles_with_slash(request: Request):
+    """
+    Redirige /disponibles/ a /disponibles para evitar problemas de redirect
+    """
+    base_url = str(request.base_url).rstrip('/')
+    redirect_url = f"{base_url}/productos/disponibles"
+    return RedirectResponse(url=redirect_url, status_code=301)
+
+
 @productos_router.get(
     "/disponibles",
     summary="Consultar productos con stock disponible",
-
 )
 def get_productos_disponibles(
     solo_con_stock: bool = Query(
