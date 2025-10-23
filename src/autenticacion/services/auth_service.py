@@ -131,6 +131,7 @@ class AuthService:
             username=register_data.username,
             hashed_password=hashed_password,
             role=register_data.role if register_data.role else 'seller',
+            id_client=register_data.id_client if register_data.id_client else None,
             is_active=True
         )
 
