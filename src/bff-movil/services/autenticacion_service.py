@@ -2,6 +2,7 @@ import httpx
 import os
 from typing import Dict, Any
 from fastapi import HTTPException
+from fastapi.encoders import jsonable_encoder
 import logging
 
 logger = logging.getLogger(__name__)
@@ -42,9 +43,10 @@ class AutenticacionService:
             HTTPException: Si hay un error en el registro
         """
         try:
+            encoded_data = jsonable_encoder(register_data)
             response = httpx.post(
                 f"{self.base_url}/auth/register",
-                json=register_data,
+                json=encoded_data,
                 timeout=self.timeout
             )
             response.raise_for_status()
