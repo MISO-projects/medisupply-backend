@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
+import os
 from typing import List, Optional
 import logging
 from db.redis_client import RedisClient
@@ -9,8 +10,10 @@ from models.cliente_institucional_model import ClienteInstitucional
 from schemas.cliente_schema import ClienteAsignadoResponse, ClienteAsignadoListResponse, ClientResponse
 import json
 from schemas.cliente_schema import RegisterRequest
+import httpx  
+import random  
 
-
+AUTENTICACION_PATH = os.getenv("AUTENTICACION_SERVICE_URL", "http://autenticacion-service:3000")
 logger = logging.getLogger(__name__)
 
 
@@ -146,12 +149,31 @@ class ClienteService:
             logger.error(f"Error al obtener cliente {cliente_id} para vendedor {vendedor_id}: {str(e)}")
             raise
 
+    # 🚀 Aquí es donde cambiamos la lógica
+    def register_client(self, db: Session, register_data: RegisterRequest) -> ClientResponse: 
+        # 1️⃣ Llamar al servicio de autenticación para traer los vendedores activos
+        try:
+            response = httpx.get(f"{AUTENTICACION_PATH}/auth/sellers", timeout=10.0)
+            response.raise_for_status()
+            sellers = response.json()
+        except Exception as e:
+            logger.error(f"Error al obtener vendedores activos: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="No se pudieron obtener los vendedores activos"
+            )
 
-    def register_client(self, db: Session, register_data: RegisterRequest) -> ClientResponse:
+        # 2️⃣ Escoger uno al azar
+        if not sellers:
+            raise HTTPException(status_code=400, detail="No hay vendedores activos disponibles")
+        random_seller = random.choice(sellers)
+        id_vendedor = random_seller
+
+        # 3️⃣ Crear el cliente con ese vendedor
         new_client = ClienteInstitucional(
             nombre=register_data.nombre,
             nit=register_data.nit,
-            id_vendedor=getattr(register_data, 'id_vendedor', None),
+            id_vendedor=id_vendedor,
             address=register_data.address,
             logo_url=getattr(register_data, 'logoUrl', None)
         )

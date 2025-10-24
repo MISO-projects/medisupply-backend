@@ -270,6 +270,7 @@ services:
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
     volumes:
       - ./src/clientes:/app
     networks:
