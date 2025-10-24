@@ -199,8 +199,16 @@ class TestClienteService:
         with pytest.raises(Exception):
             service.get_all_clients(mock_db)
 
-    
-    def test_register_client_success(self, mock_db):
+    @patch("services.cliente_service.httpx.get")
+    def test_register_client_success(self, mock_httpx_get, mock_db):
+        """Test exitoso para registrar un cliente institucional (mockeando llamada externa)"""
+        # Mockear llamada al servicio externo
+        mock_httpx_get.return_value = Mock(status_code=200)
+        mock_httpx_get.return_value.json.return_value = [
+            {"id": str(uuid.uuid4()), "nombre": "Vendedor 1"}
+        ]
+
+        # Datos simulados
         data = RegisterRequest(
             nombre="Nuevo Cliente",
             nit="900555666-7",
@@ -214,7 +222,7 @@ class TestClienteService:
             "nit": data.nit,
             "logoUrl": data.logoUrl,
             "address": data.address,
-            "id_vendedor": None,
+            "id_vendedor": str(uuid.uuid4()),
             "fecha_creacion": "2025-01-01T00:00:00Z",  
             "fecha_actualizacion": "2025-01-01T00:00:00Z"  
         }
@@ -226,5 +234,4 @@ class TestClienteService:
         assert result.nombre == data.nombre
         mock_db.add.assert_called_once()
         mock_db.commit.assert_called_once()
-
-
+        mock_httpx_get.assert_called_once()
