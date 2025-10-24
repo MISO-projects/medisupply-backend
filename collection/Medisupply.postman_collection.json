@@ -1010,6 +1010,20 @@
 						},
 						{
 							"name": "Crear clientes",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"pm.collectionVariables.set(\"id_clienteInstitucional\", response.id);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
 							"protocolProfileBehavior": {
 								"followRedirects": true,
 								"disableUrlEncoding": false,
@@ -1033,12 +1047,13 @@
 									}
 								},
 								"url": {
-									"raw": "{{ _.bff_web_movil }}/clientes",
+									"raw": "{{ _.bff_web_movil }}/clientes/",
 									"host": [
 										"{{ _.bff_web_movil }}"
 									],
 									"path": [
-										"clientes"
+										"clientes",
+										""
 									]
 								}
 							},
@@ -1169,7 +1184,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n\t\"email\": \"{{$randomEmail}}\",\n\t\"username\": \"{{$randomFullName}}\",\n    \"role\":\"client\",\n\t\"password\": \"Password123!\",\n    \"nombre\": \"Hospital General\",\n    \"nit\": \"901234567-8\",\n    \"logoUrl\": \"https://storage.googleapis.com/logos/hospital-general.png\",\n    \"address\": \"dirección\"\n}",
+									"raw": "{\n\t\"email\": \"{{$randomEmail}}\",\n\t\"username\": \"{{$randomFullName}}\",\n    \"role\":\"client\",\n\t\"password\": \"Password123!\",\n    \"id_client\":\"{{id_clienteInstitucional}}\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2306,6 +2321,20 @@
 			"item": [
 				{
 					"name": "Crear clientes",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"pm.collectionVariables.set(\"id_clienteInstitucional\", response.id);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
 					"protocolProfileBehavior": {
 						"followRedirects": true,
 						"disableUrlEncoding": false,
@@ -2554,7 +2583,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"email\": \"{{$randomEmail}}\",\n\t\"username\": \"{{$randomFullName}}\",\n    \"role\":\"client\",\n\t\"password\": \"Password123!\",\n    \"nombre\": \"Hospital General\",\n    \"nit\": \"901234567-8\",\n    \"logoUrl\": \"https://storage.googleapis.com/logos/hospital-general.png\",\n    \"address\": \"dirección\"\n}",
+							"raw": "{\n\t\"email\": \"{{$randomEmail}}\",\n\t\"username\": \"{{$randomFullName}}\",\n    \"role\":\"client\",\n\t\"password\": \"Password123!\",\n    \"id_client\":\"{{id_clienteInstitucional}}\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2786,6 +2815,10 @@
 		},
 		{
 			"key": "bff_movil_access_token",
+			"value": ""
+		},
+		{
+			"key": "id_clienteInstitucional",
 			"value": ""
 		}
 	]

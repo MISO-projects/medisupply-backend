@@ -131,6 +131,7 @@ class AuthService:
             username=register_data.username,
             hashed_password=hashed_password,
             role=register_data.role if register_data.role else 'seller',
+            id_client=register_data.id_client if register_data.id_client else None,
             is_active=True
         )
 
@@ -238,6 +239,15 @@ class AuthService:
         # Convertir a UserResponse
         user_dict = user.to_dict()
         return UserResponse(**user_dict)
+    
+    def get_active_seller_ids(self, db: Session):
+        """
+        Obtiene lista de IDs de usuarios con role='seller' y is_active=True
+        (endpoint público, sin JWT)
+        """
+        sellers = db.query(User.id).filter(User.role == "seller", User.is_active == True).all()
+        return [s.id for s in sellers]
+
 
 
 # Dependency injection para FastAPI

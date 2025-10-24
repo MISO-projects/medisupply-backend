@@ -106,3 +106,19 @@ def get_current_user(
     """
     token = credentials.credentials
     return auth_service.get_current_user(db, token)
+
+
+@router.get(
+    "/sellers",
+    status_code=status.HTTP_200_OK,
+    summary="Obtener IDs de vendedores activos",
+    description="Devuelve una lista con los IDs de los usuarios con role='seller' y is_active=True. No requiere autenticación."
+)
+def get_sellers(
+    db: Session = Depends(get_db),
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """
+    Endpoint público para obtener lista de IDs de vendedores activos.
+    """
+    return auth_service.get_active_seller_ids(db)
