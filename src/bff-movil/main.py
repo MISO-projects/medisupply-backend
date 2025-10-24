@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from services.health_service import HealthService, get_health_service
 from router.autenticacion import autenticacion_router
 from router.clientes import clientes_router
@@ -17,6 +18,20 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     root_path="/movil"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3014",
+        "https://medisupply.tech",
+        "https://www.medisupply.tech",
+        "*"
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 app.include_router(autenticacion_router, prefix="/autenticacion", tags=["autenticacion"])

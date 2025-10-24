@@ -16,6 +16,32 @@ def health_check(clientes_service: ClientesService = Depends(get_clientes_servic
     return clientes_service.health_check()
 
 @clientes_router.get(
+    "/",
+    summary="Obtener clientes asignados al vendedor autenticado",
+    description="Retorna la lista de clientes institucionales asignados al vendedor autenticado"
+)
+def get_clientes(
+    clientes_service: ClientesService = Depends(get_clientes_service),
+    authorization: str = Header(..., alias="Authorization")
+):
+    try:
+        logger.info("BFF Móvil: Solicitud de clientes recibida")
+        
+        result = clientes_service.get_clientes_asignados(authorization)
+        
+        logger.info(f"BFF Móvil: Retornando {result.get('total', 0)} clientes asignados")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"BFF Móvil: Error interno al procesar solicitud de clientes: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error interno del servidor BFF móvil"
+        )
+
+@clientes_router.get(
     "/asignados",
     summary="Obtener clientes asignados al vendedor autenticado",
     description="Retorna la lista de clientes institucionales asignados al vendedor autenticado"
@@ -27,14 +53,12 @@ def get_clientes_asignados(
     try:
         logger.info("BFF Móvil: Solicitud de clientes asignados recibida")
         
-        # Reenviar la solicitud al servicio de clientes
         result = clientes_service.get_clientes_asignados(authorization)
         
         logger.info(f"BFF Móvil: Retornando {result.get('total', 0)} clientes asignados")
         return result
         
     except HTTPException:
-        # Re-lanzar excepciones HTTP del servicio
         raise
     except Exception as e:
         logger.error(f"BFF Móvil: Error interno al procesar solicitud de clientes asignados: {str(e)}")
@@ -56,14 +80,12 @@ def get_cliente_asignado(
     try:
         logger.info(f"BFF Móvil: Solicitud de cliente {cliente_id} recibida")
         
-        # Reenviar la solicitud al servicio de clientes
         result = clientes_service.get_cliente_asignado(cliente_id, authorization)
         
         logger.info(f"BFF Móvil: Cliente {cliente_id} encontrado y retornado")
         return result
         
     except HTTPException:
-        # Re-lanzar excepciones HTTP del servicio
         raise
     except Exception as e:
         logger.error(f"BFF Móvil: Error interno al procesar solicitud de cliente {cliente_id}: {str(e)}")
@@ -79,13 +101,12 @@ def get_cliente_asignado(
     summary="Registrar nuevo cliente institucional",
     description="Registra un nuevo cliente institucional en el sistema"
 )
-async def register(  # <-- 1. AÑADIR ASYNC AQUÍ
+async def register(
     register_data: RegisterRequest,
     client_service: ClientesService = Depends(get_clientes_service)
 ):
     """
     Endpoint para registrar un nuevo cliente institucional
     """
-    # 2. AÑADIR AWAIT y convertir el Pydantic model a dict
     return await client_service.register_client(register_data.model_dump())
 
