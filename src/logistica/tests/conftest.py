@@ -1,4 +1,8 @@
 import os
+
+# Establecer variable de entorno ANTES de cualquier otra importación
+os.environ["TESTING"] = "1"
+
 import sys
 from pathlib import Path
 import pytest

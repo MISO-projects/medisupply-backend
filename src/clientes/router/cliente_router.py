@@ -155,3 +155,4 @@ def register(
     """
 
     return client_service.register_client(db, register_data)
+
