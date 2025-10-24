@@ -1,8 +1,10 @@
 from fastapi import FastAPI, Depends, HTTPException
 from services.health_service import HealthService, get_health_service
 from router.vendedor_router import vendedor_router
+from router.plan_venta_router import plan_venta_router
 from db.database import engine, Base
-from db.vendedor_model import Vendedor  # Importar el modelo para registrarlo con Base
+from db.vendedor_model import Vendedor # Importar el modelo para registrarlo con Base
+from db.plan_venta_model import PlanVenta # Importar el modelo para registrarlo con Base
 import logging
 
 logging.basicConfig(level=logging.DEBUG, force=True)
@@ -10,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="MediSupply - Ventas Service",
-    description="API para la gestión de vendedores en MediSupply",
+    description="API para la gestión de ventas en MediSupply",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -23,6 +25,13 @@ app.include_router(
     vendedor_router,
     prefix="/vendedores",
     tags=["Vendedores"]
+)
+
+# Registrar el router de planes de venta
+app.include_router(
+    plan_venta_router,
+    prefix="/planes-venta",
+    tags=["Planes de Venta"]
 )
 
 
