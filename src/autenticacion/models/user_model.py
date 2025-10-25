@@ -29,8 +29,9 @@ class User(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     id_client = Column(UUID(as_uuid=True), nullable=True)
+    id_seller = Column(UUID(as_uuid=True), nullable=True)
 
-    def __init__(self, email, username, hashed_password, role='seller', is_active=True, id_client=None):
+    def __init__(self, email, username, hashed_password, role='seller', is_active=True, id_client=None, id_seller=None):
         """
         Constructor del modelo User
 
@@ -38,7 +39,10 @@ class User(Base):
             email: Email del usuario (único)
             username: Nombre para mostrar
             hashed_password: Contraseña ya hasheada
+            role: Rol del usuario ('seller' o 'client')
             is_active: Si el usuario está activo (default: True)
+            id_client: ID del cliente (requerido si role='client')
+            id_seller: ID del vendedor (requerido si role='seller')
         """
         now = datetime.now(timezone.utc)
         self.created_at = now
@@ -49,6 +53,7 @@ class User(Base):
         self.is_active = is_active
         self.role = role
         self.id_client = id_client
+        self.id_seller = id_seller
 
     def to_dict(self):
         """Convierte la instancia de User a diccionario"""
@@ -60,5 +65,6 @@ class User(Base):
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-             "id_client": self.id_client
+            "id_client": self.id_client,
+            "id_seller": self.id_seller
         }

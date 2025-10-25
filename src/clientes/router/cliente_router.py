@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, status
 from sqlalchemy.orm import Session
 from typing import Optional, List
 import logging
+import jwt
 from schemas.cliente_schema import ClientResponse, RegisterRequest, GetClientesByIdsRequest
 from db.database import get_db
 from db.redis_client import RedisClient
@@ -41,26 +42,47 @@ def get_vendedor_id_from_auth(authorization: Optional[str] = Header(None)) -> st
             detail="Token de autorización requerido"
         )
     
-    # TODO: Implementar validación real del JWT
-
-    try:
-        token = authorization.replace("Bearer ", "")
-        
-        vendedor_id = token
-        
-        if not vendedor_id:
-            raise HTTPException(
-                status_code=401,
-                detail="Token inválido o expirado"
-            )
-            
-        return vendedor_id
-        
-    except Exception as e:
-        logger.error(f"Error al procesar token de autorización: {str(e)}")
+    if not authorization.lower().startswith("bearer "):
         raise HTTPException(
             status_code=401,
-            detail="Token de autorización inválido"
+            detail="Formato de token inválido. Debe ser 'Bearer <token>'"
+        )
+
+    try:
+        token = authorization[7:].strip()
+        
+        payload = jwt.decode(token, options={"verify_signature": False})
+        
+        role = payload.get("role")
+        if role != "seller":
+            raise HTTPException(
+                status_code=403,
+                detail="Acceso denegado. Solo usuarios con rol 'seller' pueden acceder a este recurso"
+            )
+        
+        id_seller = payload.get("id_seller")
+        
+        if not id_seller:
+            raise HTTPException(
+                status_code=401,
+                detail="Token no contiene id_seller"
+            )
+            
+        return id_seller
+        
+    except jwt.DecodeError as e:
+        logger.error(f"Error al decodificar token: {str(e)}")
+        raise HTTPException(
+            status_code=401,
+            detail="Token mal formado o inválido"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error inesperado al procesar token de autorización: {str(e)}")
+        raise HTTPException(
+            status_code=401,
+            detail="Error al procesar token de autorización"
         )
 
 
