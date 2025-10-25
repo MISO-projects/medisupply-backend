@@ -100,6 +100,10 @@ for i in $(seq 0 $((subs_count - 1))); do
   push_endpoint=$(jq -r ".subscriptions[$i].pushEndpoint" "$CONFIG_FILE")
   ack_deadline=$(jq -r ".subscriptions[$i].ackDeadlineSeconds // 60" "$CONFIG_FILE")
   
+  # Always use retry policy with defaults if not specified
+  min_backoff=$(jq -r ".subscriptions[$i].retryPolicy.minimumBackoff // \"10s\"" "$CONFIG_FILE")
+  max_backoff=$(jq -r ".subscriptions[$i].retryPolicy.maximumBackoff // \"600s\"" "$CONFIG_FILE")
+  
   curl -s -X PUT "http://${EMULATOR_HOST}/v1/projects/${PROJECT_ID}/subscriptions/${sub_name}" \
     -H "Content-Type: application/json" \
     -d '{
@@ -107,9 +111,13 @@ for i in $(seq 0 $((subs_count - 1))); do
       "pushConfig": {
         "pushEndpoint": "http://'${push_endpoint}'/"
       },
-      "ackDeadlineSeconds": '${ack_deadline}'
+      "ackDeadlineSeconds": '${ack_deadline}',
+      "retryPolicy": {
+        "minimumBackoff": "'${min_backoff}'",
+        "maximumBackoff": "'${max_backoff}'"
+      }
     }' \
-    > /dev/null 2>&1 && echo "✓ Subscription '${sub_name}' created (${topic} → ${push_endpoint})" || echo "✓ Subscription '${sub_name}' already exists"
+    > /dev/null 2>&1 && echo "✓ Subscription '${sub_name}' created with retry policy (min: ${min_backoff}, max: ${max_backoff})" || echo "✓ Subscription '${sub_name}' already exists"
 done
 
 # Verify setup
