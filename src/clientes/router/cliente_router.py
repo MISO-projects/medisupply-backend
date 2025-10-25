@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, status
 from sqlalchemy.orm import Session
 from typing import Optional, List
 import logging
-from schemas.cliente_schema import ClientResponse, RegisterRequest
+from schemas.cliente_schema import ClientResponse, RegisterRequest, GetClientesByIdsRequest
 from db.database import get_db
 from db.redis_client import RedisClient
 from services.cliente_service import ClienteService
@@ -126,6 +126,36 @@ async def get_cliente_asignado(
             status_code=500,
             detail="Error interno del servidor al obtener cliente"
         )
+
+@router.post(
+    "/by-ids",
+    response_model=List[ClientResponse],
+    summary="Obtener clientes por lista de IDs",
+    description="Obtiene los detalles completos de múltiples clientes dados sus IDs"
+)
+def get_clientes_by_ids(
+    request: GetClientesByIdsRequest,
+    client_service: ClienteService = Depends(get_cliente_service)
+):
+    """
+    Obtiene la información de múltiples clientes por sus IDs.
+    
+    Args:
+        request: Objeto con la lista de IDs de clientes a consultar
+        client_service: Servicio de clientes (inyectado)
+    
+    Returns:
+        List[ClientResponse]: Lista con la información completa de los clientes encontrados
+    
+    Raises:
+        HTTPException 500: Error interno del servidor
+    
+    Note:
+        - Si algún ID no existe, simplemente no se incluye en el resultado
+        - La lista de respuesta puede ser más corta que la lista de IDs solicitados
+    """
+    return client_service.get_clientes_by_ids(request.ids)
+
 
 @router.post(
     "/",
