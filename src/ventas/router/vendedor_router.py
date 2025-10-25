@@ -123,6 +123,29 @@ async def listar_vendedores(
 
 
 @vendedor_router.get(
+    "/by-email/{email}",
+    response_model=dict,
+    summary="Obtener vendedor por email",
+    description="Obtiene los detalles completos de un vendedor por su email",
+    responses={
+        200: {"description": "Vendedor encontrado"},
+        404: {"description": "Vendedor no encontrado"}
+    }
+)
+async def obtener_vendedor_por_email(
+    email: str,
+    vendedor_service: VendedorService = Depends(get_vendedor_service)
+):
+    """
+    Obtiene toda la información de un vendedor específico por su email.
+    """
+    data = vendedor_service.obtener_vendedor_por_email(email)
+    return {
+        "data": data
+    }
+
+
+@vendedor_router.get(
     "/{vendedor_id}",
     response_model=dict,
     summary="Obtener vendedor por ID",

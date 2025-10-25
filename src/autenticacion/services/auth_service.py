@@ -55,13 +55,16 @@ class AuthService:
         """
         return self.password_hash.verify(plain_password, hashed_password)
 
-    def create_access_token(self, user_id: str, email: str) -> str:
+    def create_access_token(self, user_id: str, email: str, role: str = None, id_seller: str = None, id_client: str = None) -> str:
         """
         Crea un token JWT para el usuario
 
         Args:
             user_id: UUID del usuario
             email: Email del usuario
+            role: Rol del usuario ('seller' o 'client')
+            id_seller: ID del vendedor (si role='seller')
+            id_client: ID del cliente (si role='client')
 
         Returns:
             str: Token JWT
@@ -76,6 +79,15 @@ class AuthService:
             "exp": expire,  # Expiration time
             "iat": datetime.now(timezone.utc)  # Issued at
         }
+
+        if role:
+            payload["role"] = role
+
+        if role == "seller" and id_seller:
+            payload["id_seller"] = id_seller
+
+        if role == "client" and id_client:
+            payload["id_client"] = id_client
 
         # Generar token
         token = jwt.encode(payload, self.jwt_secret, algorithm=self.jwt_algorithm)
@@ -120,8 +132,20 @@ class AuthService:
             UserResponse: Información del usuario creado
 
         Raises:
-            HTTPException: Si el email ya está registrado
+            HTTPException: Si el email ya está registrado o falta un ID requerido
         """
+        if register_data.role == 'seller' and not register_data.id_seller:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="id_seller es requerido para usuarios con rol 'seller'"
+            )
+        
+        if register_data.role == 'client' and not register_data.id_client:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="id_client es requerido para usuarios con rol 'client'"
+            )
+
         # Hashear la contraseña
         hashed_password = self.hash_password(register_data.password)
 
@@ -130,8 +154,9 @@ class AuthService:
             email=register_data.email,
             username=register_data.username,
             hashed_password=hashed_password,
-            role=register_data.role if register_data.role else 'seller',
-            id_client=register_data.id_client if register_data.id_client else None,
+            role=register_data.role,
+            id_client=register_data.id_client,
+            id_seller=register_data.id_seller,
             is_active=True
         )
 
@@ -189,10 +214,12 @@ class AuthService:
                 detail="Credenciales inválidas"
             )
 
-        # Generar token JWT
         access_token = self.create_access_token(
             user_id=str(user.id),
-            email=user.email
+            email=user.email,
+            role=user.role,
+            id_seller=str(user.id_seller) if user.id_seller else None,
+            id_client=str(user.id_client) if user.id_client else None
         )
 
         return TokenResponse(access_token=access_token, token_type="bearer")
