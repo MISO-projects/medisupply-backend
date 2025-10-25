@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import Mock
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
+from uuid import uuid4
 
 from services.auth_service import AuthService
 from models.user_model import User
@@ -33,6 +34,8 @@ def sample_user():
         email="test@example.com",
         username="Test User",
         hashed_password="$argon2id$v=19$m=65536,t=3,p=4$test",
+        role="seller",
+        id_seller=uuid4(),
         is_active=True
     )
     user.id = "123e4567-e89b-12d3-a456-426614174000"
@@ -51,11 +54,14 @@ def test_hash_password(auth_service):
 
 # Tests esenciales para registro de usuario
 def test_register_user_success(auth_service, mock_db):
-    """Test que verifica el registro exitoso de un usuario"""
+    """Test que verifica el registro exitoso de un usuario con rol seller"""
+    test_seller_id = uuid4()
     register_data = RegisterRequest(
         email="newuser@example.com",
         username="New User",
-        password="securePass123"
+        password="securePass123",
+        role="seller",
+        id_seller=test_seller_id
     )
 
     def mock_add(user):
@@ -67,7 +73,62 @@ def test_register_user_success(auth_service, mock_db):
 
     assert result.email == register_data.email
     assert result.username == register_data.username
+    assert result.role == "seller"
+    assert result.id_seller == test_seller_id
     assert result.is_active is True
+
+
+def test_register_client_success(auth_service, mock_db):
+    """Test que verifica el registro exitoso de un usuario con rol client"""
+    test_client_id = uuid4()
+    register_data = RegisterRequest(
+        email="client@example.com",
+        username="Client User",
+        password="securePass456",
+        role="client",
+        id_client=test_client_id
+    )
+
+    def mock_add(user):
+        user.id = "new-client-id"
+
+    mock_db.add = mock_add
+
+    result = auth_service.register_user(mock_db, register_data)
+
+    assert result.email == register_data.email
+    assert result.username == register_data.username
+    assert result.role == "client"
+    assert result.id_client == test_client_id
+    assert result.is_active is True
+
+
+def test_register_seller_without_id_seller(auth_service, mock_db):
+    """Test que verifica que falla el registro de un seller sin id_seller"""
+    with pytest.raises(ValueError) as exc_info:
+        register_data = RegisterRequest(
+            email="seller@example.com",
+            username="Seller User",
+            password="securePass789",
+            role="seller",
+            id_seller=None
+        )
+    
+    assert "id_seller es requerido" in str(exc_info.value)
+
+
+def test_register_client_without_id_client(auth_service, mock_db):
+    """Test que verifica que falla el registro de un client sin id_client"""
+    with pytest.raises(ValueError) as exc_info:
+        register_data = RegisterRequest(
+            email="client2@example.com",
+            username="Client User 2",
+            password="securePass789",
+            role="client",
+            id_client=None
+        )
+    
+    assert "id_client es requerido" in str(exc_info.value)
 
 
 # Tests esenciales para login

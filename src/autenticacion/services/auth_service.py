@@ -120,8 +120,20 @@ class AuthService:
             UserResponse: Información del usuario creado
 
         Raises:
-            HTTPException: Si el email ya está registrado
+            HTTPException: Si el email ya está registrado o falta un ID requerido
         """
+        if register_data.role == 'seller' and not register_data.id_seller:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="id_seller es requerido para usuarios con rol 'seller'"
+            )
+        
+        if register_data.role == 'client' and not register_data.id_client:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="id_client es requerido para usuarios con rol 'client'"
+            )
+
         # Hashear la contraseña
         hashed_password = self.hash_password(register_data.password)
 
@@ -130,8 +142,9 @@ class AuthService:
             email=register_data.email,
             username=register_data.username,
             hashed_password=hashed_password,
-            role=register_data.role if register_data.role else 'seller',
-            id_client=register_data.id_client if register_data.id_client else None,
+            role=register_data.role,
+            id_client=register_data.id_client,
+            id_seller=register_data.id_seller,
             is_active=True
         )
 
