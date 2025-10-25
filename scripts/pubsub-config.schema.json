@@ -52,6 +52,22 @@
             "default": 60,
             "minimum": 10,
             "maximum": 600
+          },
+          "retryPolicy": {
+            "type": "object",
+            "description": "Retry policy with exponential backoff for failed push deliveries. Defaults: minimumBackoff='10s', maximumBackoff='600s'",
+            "properties": {
+              "minimumBackoff": {
+                "type": "string",
+                "description": "Minimum delay between retry attempts (e.g., '10s', '1m'). Default: '10s'",
+                "pattern": "^[0-9]+(s|m|h)$"
+              },
+              "maximumBackoff": {
+                "type": "string",
+                "description": "Maximum delay between retry attempts (e.g., '600s', '10m'). Default: '600s'",
+                "pattern": "^[0-9]+(s|m|h)$"
+              }
+            }
           }
         }
       },
