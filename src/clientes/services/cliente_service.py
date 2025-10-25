@@ -149,6 +149,51 @@ class ClienteService:
             logger.error(f"Error al obtener cliente {cliente_id} para vendedor {vendedor_id}: {str(e)}")
             raise
 
+    def get_clientes_by_ids(self, cliente_ids: List[str]) -> List[ClientResponse]:
+        """
+        Obtiene múltiples clientes por sus IDs.
+        
+        Args:
+            cliente_ids: Lista de IDs de clientes
+            
+        Returns:
+            Lista de ClientResponse con los datos de los clientes encontrados
+            
+        Raises:
+            HTTPException: Si hay un error al procesar la solicitud
+        """
+        try:
+            if not cliente_ids:
+                return []
+            
+            clientes_db = self.db.query(ClienteInstitucional).filter(
+                ClienteInstitucional.id.in_(cliente_ids)
+            ).all()
+
+            clientes_response = [
+                ClientResponse(
+                    id=str(cliente.id),
+                    nombre=cliente.nombre,
+                    nit=cliente.nit,
+                    logoUrl=cliente.logo_url,
+                    address=cliente.address,
+                    fecha_creacion=cliente.fecha_creacion,
+                    fecha_actualizacion=cliente.fecha_actualizacion,
+                    id_vendedor=str(cliente.id_vendedor) if cliente.id_vendedor else None
+                )
+                for cliente in clientes_db
+            ]
+
+            logger.info(f"Se encontraron {len(clientes_response)} clientes de {len(cliente_ids)} IDs solicitados")
+            return clientes_response
+
+        except Exception as e:
+            logger.error(f"Error al obtener clientes por IDs: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error interno al obtener los clientes."
+            )
+
     # 🚀 Aquí es donde cambiamos la lógica
     def register_client(self, db: Session, register_data: RegisterRequest) -> ClientResponse: 
         # 1️⃣ Llamar al servicio de autenticación para traer los vendedores activos

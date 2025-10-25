@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from ..db.database import get_db
 from fastapi import Depends
@@ -6,6 +6,7 @@ from ..db.order_projection_model import OrderProjection
 from fastapi import HTTPException
 from http import HTTPStatus
 from .cache_service import CacheService
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -58,3 +59,89 @@ class OrderService:
         """
         orders = self.db.query(OrderProjection.id).all()
         return [order.id for order in orders]
+
+    def list_orders(
+        self,
+        estado: Optional[str] = None,
+        fecha_creacion_desde: Optional[datetime] = None,
+        fecha_creacion_hasta: Optional[datetime] = None,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """List orders with optional filters and pagination.
+        
+        Args:
+            estado: Filter by order status (optional)
+            fecha_creacion_desde: Filter by creation date from (optional)
+            fecha_creacion_hasta: Filter by creation date to (optional)
+            skip: Number of records to skip (pagination)
+            limit: Maximum number of records to return
+            
+        Returns:
+            List of orders
+        """
+        try:
+            query = self.db.query(OrderProjection)
+            
+            if estado:
+                query = query.filter(OrderProjection.estado == estado)
+            
+            if fecha_creacion_desde:
+                query = query.filter(OrderProjection.fecha_creacion >= fecha_creacion_desde)
+            
+            if fecha_creacion_hasta:
+                query = query.filter(OrderProjection.fecha_creacion <= fecha_creacion_hasta)
+            
+            query = query.order_by(OrderProjection.fecha_creacion.desc())
+            
+            orders = query.offset(skip).limit(limit).all()
+            
+            orders_list = [order.to_dict() for order in orders]
+            
+            return orders_list
+            
+        except Exception as e:
+            logger.error(f"Error listing orders: {e}")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="Error interno al listar órdenes."
+            )
+
+    def count_orders(
+        self,
+        estado: Optional[str] = None,
+        fecha_creacion_desde: Optional[datetime] = None,
+        fecha_creacion_hasta: Optional[datetime] = None
+    ) -> int:
+        """Count total number of orders with optional filters.
+        
+        Args:
+            estado: Filter by order status (optional)
+            fecha_creacion_desde: Filter by creation date from (optional)
+            fecha_creacion_hasta: Filter by creation date to (optional)
+            
+        Returns:
+            Total number of orders
+        """
+        try:
+            query = self.db.query(OrderProjection)
+            
+            if estado:
+                query = query.filter(OrderProjection.estado == estado)
+            
+            if fecha_creacion_desde:
+                query = query.filter(OrderProjection.fecha_creacion >= fecha_creacion_desde)
+            
+            if fecha_creacion_hasta:
+                query = query.filter(OrderProjection.fecha_creacion <= fecha_creacion_hasta)
+            
+            count = query.count()
+            
+            return count
+            
+        except Exception as e:
+            logger.error(f"Error counting orders: {e}")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="Error interno al contar órdenes."
+            )
