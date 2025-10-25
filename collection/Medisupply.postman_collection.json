@@ -2187,7 +2187,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"documento_identidad\": \"{{$randomInt}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Perú\",\n\t\"plan_venta\": \"plan-{{$randomInt}}\",\n\t\"meta_venta\": 50000.00\n}",
+							"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"documento_identidad\": \"{{$randomInt}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Perú\",\n\t\"plan_venta_id\": \"{{id_plan_venta}}\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2288,7 +2288,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Colombia\",\n\t\"meta_venta\": 75000.00\n}",
+							"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Colombia\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
