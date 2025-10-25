@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 from fastapi import Depends, HTTPException
 from http import HTTPStatus
 from datetime import datetime, timezone
@@ -54,9 +55,9 @@ class VendedorService:
             HTTPException 500: Error interno del servidor
         """
         try:
-            # Verificar si el email ya existe
+            # Verificar si el email ya existe (case-insensitive)
             existing_by_email = self.db.query(Vendedor).filter(
-                Vendedor.email == vendedor_data.email
+                func.lower(Vendedor.email) == func.lower(vendedor_data.email)
             ).first()
 
             if existing_by_email:
@@ -136,6 +137,42 @@ class VendedorService:
                 detail="Error interno al obtener el vendedor."
             )
 
+    def obtener_vendedor_por_email(self, email: str) -> Dict[str, Any]:
+        """
+        Obtiene un vendedor por su email (case-insensitive).
+
+        Args:
+            email: Email del vendedor
+
+        Returns:
+            Dict con los datos del vendedor
+
+        Raises:
+            HTTPException 404: Vendedor no encontrado
+            HTTPException 500: Error interno
+        """
+        try:
+            vendedor = self.db.query(Vendedor).filter(
+                func.lower(Vendedor.email) == func.lower(email)
+            ).first()
+
+            if not vendedor:
+                raise HTTPException(
+                    status_code=HTTPStatus.NOT_FOUND,
+                    detail=f"Vendedor con email {email} no encontrado."
+                )
+
+            return vendedor.to_dict()
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error al obtener vendedor por email {email}: {e}")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="Error interno al obtener el vendedor."
+            )
+
     def listar_vendedores(
         self,
         skip: int = 0,
@@ -202,10 +239,10 @@ class VendedorService:
                     detail=f"Vendedor con ID {vendedor_id} no encontrado."
                 )
 
-            # Verificar si el nuevo email ya existe en otro vendedor
-            if vendedor_data.email and vendedor_data.email != vendedor.email:
+            # Verificar si el nuevo email ya existe en otro vendedor (case-insensitive)
+            if vendedor_data.email and vendedor_data.email.lower() != vendedor.email.lower():
                 existing_by_email = self.db.query(Vendedor).filter(
-                    Vendedor.email == vendedor_data.email,
+                    func.lower(Vendedor.email) == func.lower(vendedor_data.email),
                     Vendedor.id != vendedor_id
                 ).first()
 
