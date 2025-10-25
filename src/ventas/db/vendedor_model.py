@@ -1,5 +1,6 @@
-from sqlalchemy import Column, DateTime, String, Numeric
+from sqlalchemy import Column, DateTime, String, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 import uuid
 from .database import Base
@@ -15,10 +16,12 @@ class Vendedor(Base):
     documento_identidad = Column(String, nullable=True)
     email = Column(String, nullable=False, unique=True)
     zona_asignada = Column(String, nullable=False)
-    plan_venta = Column(String, nullable=False)
-    meta_venta = Column(Numeric(12, 2), nullable=True)
+    plan_venta_id = Column(UUID(as_uuid=True), ForeignKey('planes_venta.id'), nullable=False)
 
-    def __init__(self, nombre, documento_identidad, email, zona_asignada, plan_venta, meta_venta=None):
+    # Relación con PlanVenta
+    plan_venta = relationship("PlanVenta", foreign_keys=[plan_venta_id])
+
+    def __init__(self, nombre, documento_identidad, email, zona_asignada, plan_venta_id):
         now = datetime.now(timezone.utc)
         self.fecha_creacion = now
         self.fecha_actualizacion = now
@@ -26,8 +29,7 @@ class Vendedor(Base):
         self.documento_identidad = documento_identidad
         self.email = email
         self.zona_asignada = zona_asignada
-        self.plan_venta = plan_venta
-        self.meta_venta = meta_venta
+        self.plan_venta_id = plan_venta_id
 
     def to_dict(self):
         """Convert Vendedor instance to dictionary"""
@@ -39,6 +41,5 @@ class Vendedor(Base):
             "documento_identidad": self.documento_identidad,
             "email": self.email,
             "zona_asignada": self.zona_asignada,
-            "plan_venta": self.plan_venta,
-            "meta_venta": str(self.meta_venta) if self.meta_venta else None,
+            "plan_venta_id": str(self.plan_venta_id),
         }

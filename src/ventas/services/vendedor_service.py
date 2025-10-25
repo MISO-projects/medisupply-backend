@@ -9,6 +9,7 @@ import logging
 
 from db.database import get_db
 from db.vendedor_model import Vendedor
+from db.plan_venta_model import PlanVenta
 from schemas.vendedor_schema import (
     CrearVendedorSchema,
     ActualizarVendedorSchema,
@@ -42,7 +43,8 @@ class VendedorService:
 
         Pasos:
         1. Verifica que el email no exista
-        2. Crea el vendedor en la BD
+        2. Valida que el plan de venta exista
+        3. Crea el vendedor en la BD
 
         Args:
             vendedor_data: Datos del vendedor a crear
@@ -51,6 +53,7 @@ class VendedorService:
             Dict con los datos del vendedor creado
 
         Raises:
+            HTTPException 404: Si el plan de venta no existe
             HTTPException 409: Si el email ya existe
             HTTPException 500: Error interno del servidor
         """
@@ -66,14 +69,24 @@ class VendedorService:
                     detail=f"El email {vendedor_data.email} ya está registrado en el sistema."
                 )
 
+            # Validar que el plan de venta exista
+            plan_existe = self.db.query(PlanVenta).filter(
+                PlanVenta.id == vendedor_data.plan_venta_id
+            ).first()
+
+            if not plan_existe:
+                raise HTTPException(
+                    status_code=HTTPStatus.NOT_FOUND,
+                    detail=f"El plan de venta con ID {vendedor_data.plan_venta_id} no existe."
+                )
+
             # Crear nuevo vendedor
             nuevo_vendedor = Vendedor(
                 nombre=vendedor_data.nombre,
                 documento_identidad=vendedor_data.documento_identidad,
                 email=vendedor_data.email,
                 zona_asignada=vendedor_data.zona_asignada.value,
-                plan_venta=vendedor_data.plan_venta,
-                meta_venta=vendedor_data.meta_venta
+                plan_venta_id=vendedor_data.plan_venta_id
             )
 
             self.db.add(nuevo_vendedor)
@@ -215,7 +228,8 @@ class VendedorService:
         Pasos:
         1. Verifica que el vendedor exista
         2. Si se actualiza el email, verifica que no exista en otro vendedor
-        3. Actualiza solo los campos proporcionados
+        3. Si se actualiza el plan de venta, valida que exista
+        4. Actualiza solo los campos proporcionados
 
         Args:
             vendedor_id: ID del vendedor a actualizar
@@ -225,7 +239,7 @@ class VendedorService:
             Dict con los datos del vendedor actualizado
 
         Raises:
-            HTTPException 404: Vendedor no encontrado
+            HTTPException 404: Vendedor o plan de venta no encontrado
             HTTPException 409: Email ya existe en otro vendedor
         """
         try:
@@ -250,6 +264,18 @@ class VendedorService:
                     raise HTTPException(
                         status_code=HTTPStatus.CONFLICT,
                         detail=f"El email {vendedor_data.email} ya está registrado en otro vendedor."
+                    )
+
+            # Validar que el plan de venta exista si se actualiza
+            if vendedor_data.plan_venta_id is not None:
+                plan_existe = self.db.query(PlanVenta).filter(
+                    PlanVenta.id == vendedor_data.plan_venta_id
+                ).first()
+
+                if not plan_existe:
+                    raise HTTPException(
+                        status_code=HTTPStatus.NOT_FOUND,
+                        detail=f"El plan de venta con ID {vendedor_data.plan_venta_id} no existe."
                     )
 
             # Actualizar solo los campos proporcionados
