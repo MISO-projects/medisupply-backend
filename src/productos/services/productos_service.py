@@ -75,6 +75,7 @@ class ProductosService:
         self,
         solo_con_stock: bool = True,
         categoria: Optional[str] = None,
+        nombre: Optional[str] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> tuple[List[ProductoConStock], int]:
@@ -84,6 +85,7 @@ class ProductosService:
         Args:
             solo_con_stock: Si True, solo retorna productos con stock > 0
             categoria: Filtro opcional por categoría
+            nombre: Filtro opcional por nombre (búsqueda parcial, case-insensitive)
             skip: Número de registros a saltar (paginación)
             limit: Número máximo de registros a retornar
 
@@ -91,7 +93,7 @@ class ProductosService:
             Tupla con (lista de productos, total de productos)
         """
         try:
-            cache_key = f"productos:list:{solo_con_stock}:{categoria or 'all'}:{skip}:{limit}"
+            cache_key = f"productos:list:{solo_con_stock}:{categoria or 'all'}:{nombre or 'all'}:{skip}:{limit}"
             cached_data = self._get_cache(cache_key)
             
             if cached_data is not None:
@@ -113,6 +115,9 @@ class ProductosService:
 
             if categoria:
                 filters.append(Producto.categoria == categoria)
+
+            if nombre:
+                filters.append(Producto.nombre.ilike(f"%{nombre}%"))
 
             query = query.filter(and_(*filters))
 

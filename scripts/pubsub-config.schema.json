@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pub/Sub Emulator Configuration",
+  "description": "Configuration for Google Cloud Pub/Sub Emulator topics and subscriptions",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "description": "Google Cloud project ID",
+      "default": "medisupply-474421"
+    },
+    "emulator_host": {
+      "type": "string",
+      "description": "Pub/Sub emulator hostname and port",
+      "default": "pubsub-emulator:8085",
+      "pattern": "^[a-zA-Z0-9.-]+:[0-9]+$"
+    },
+    "topics": {
+      "type": "array",
+      "description": "List of topic names to create",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-zA-Z][a-zA-Z0-9-_]*$"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "subscriptions": {
+      "type": "array",
+      "description": "List of push subscriptions to create",
+      "items": {
+        "type": "object",
+        "required": ["name", "topic", "pushEndpoint"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique subscription name",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9-_]*$"
+          },
+          "topic": {
+            "type": "string",
+            "description": "Topic name (must exist in topics array)"
+          },
+          "pushEndpoint": {
+            "type": "string",
+            "description": "Service endpoint without http:// (format: service-name:port)",
+            "pattern": "^[a-zA-Z0-9.-]+:[0-9]+$"
+          },
+          "ackDeadlineSeconds": {
+            "type": "integer",
+            "description": "Message acknowledgment deadline in seconds",
+            "default": 60,
+            "minimum": 10,
+            "maximum": 600
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "healthChecks": {
+      "type": "array",
+      "description": "Optional list of services to wait for before setup",
+      "items": {
+        "type": "object",
+        "required": ["service", "endpoint"],
+        "properties": {
+          "service": {
+            "type": "string",
+            "description": "Display name for the service"
+          },
+          "endpoint": {
+            "type": "string",
+            "description": "Health check endpoint without http:// (format: service-name:port/path)",
+            "pattern": "^[a-zA-Z0-9.-]+:[0-9]+/.+$"
+          }
+        }
+      }
+    }
+  },
+  "required": ["topics", "subscriptions"]
+}
+

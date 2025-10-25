@@ -15,9 +15,16 @@ productos_router = APIRouter()
 def redirect_to_disponibles(request: Request):
     """
     Redirige la ruta raíz de productos a la ruta de productos disponibles
+    preservando los query parameters
     """
     base_url = str(request.base_url).rstrip('/')
     redirect_url = f"{base_url}/productos/disponibles"
+    
+    # Preserve query parameters
+    if request.query_params:
+        query_string = str(request.query_params)
+        redirect_url = f"{redirect_url}?{query_string}"
+    
     return RedirectResponse(url=redirect_url, status_code=302)
 
 
@@ -30,9 +37,16 @@ def health_check(productos_service: ProductosService = Depends(get_productos_ser
 def redirect_disponibles_with_slash(request: Request):
     """
     Redirige /disponibles/ a /disponibles para evitar problemas de redirect
+    preservando los query parameters
     """
     base_url = str(request.base_url).rstrip('/')
     redirect_url = f"{base_url}/productos/disponibles"
+    
+    # Preserve query parameters
+    if request.query_params:
+        query_string = str(request.query_params)
+        redirect_url = f"{redirect_url}?{query_string}"
+    
     return RedirectResponse(url=redirect_url, status_code=301)
 
 
@@ -49,6 +63,10 @@ def get_productos_disponibles(
         None,
         description="Filtrar por categoría específica (ej: MEDICAMENTOS, INSUMOS, EQUIPOS)"
     ),
+    nombre: Optional[str] = Query(
+        None,
+        description="Buscar productos por nombre (búsqueda parcial, case-insensitive)"
+    ),
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
     productos_service: ProductosService = Depends(get_productos_service)
@@ -57,12 +75,13 @@ def get_productos_disponibles(
     try:
         logger.info(
             f"BFF Móvil: Solicitud de productos disponibles - "
-            f"solo_con_stock: {solo_con_stock}, categoria: {categoria}"
+            f"solo_con_stock: {solo_con_stock}, categoria: {categoria}, nombre: {nombre}"
         )
         
         result = productos_service.get_productos_disponibles(
             solo_con_stock=solo_con_stock,
             categoria=categoria,
+            nombre=nombre,
             page=page,
             page_size=page_size
         )

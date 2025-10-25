@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -98,6 +98,30 @@ class ClientResponse(BaseModel):
             ]
         }
     }
+
+class GetClientesByIdsRequest(BaseModel):
+    """
+    Schema para solicitar múltiples clientes por sus IDs
+    
+    Attributes:
+        ids: Lista de IDs de clientes a consultar
+    """
+    ids: List[str] = Field(..., min_items=1, description="Lista de IDs de clientes")
+    
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "ids": [
+                        "c123e4567-e89b-12d3-a456-426614174000",
+                        "c123e4567-e89b-12d3-a456-426614174001",
+                        "c123e4567-e89b-12d3-a456-426614174002"
+                    ]
+                }
+            ]
+        }
+    }
+
 
 class RegisterRequest(BaseModel):
     """

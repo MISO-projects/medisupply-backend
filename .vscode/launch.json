@@ -30,6 +30,22 @@
           "remoteRoot": "/app"
         }
       ]
+    },
+    {
+      "name": "Attach to bff-movil",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5700
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/src/bff-movil",
+          "remoteRoot": "/app"
+        }
+      ]
+
     }
   ]
 }

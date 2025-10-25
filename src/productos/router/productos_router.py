@@ -42,6 +42,10 @@ def get_productos_disponibles(
         None,
         description="Filtrar por categoría específica"
     ),
+    nombre: Optional[str] = Query(
+        None,
+        description="Buscar productos por nombre (búsqueda parcial, case-insensitive)"
+    ),
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
     db: Session = Depends(get_db)
@@ -60,7 +64,7 @@ def get_productos_disponibles(
     - Unidad de medida
     """
     try:
-        logger.info(f"Consultando productos disponibles - solo_con_stock: {solo_con_stock}, categoria: {categoria}")
+        logger.info(f"Consultando productos disponibles - solo_con_stock: {solo_con_stock}, categoria: {categoria}, nombre: {nombre}")
 
         skip = (page - 1) * page_size
         
@@ -68,6 +72,7 @@ def get_productos_disponibles(
         productos, total = service.get_productos_disponibles(
             solo_con_stock=solo_con_stock,
             categoria=categoria,
+            nombre=nombre,
             skip=skip,
             limit=page_size
         )

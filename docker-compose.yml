@@ -23,6 +23,42 @@ services:
     networks:
       - medisupply-network
 
+  pubsub-emulator:
+    profiles: [ "ordenes", "dev" ]
+    image: google/cloud-sdk:latest
+    command: >
+      sh -c "gcloud beta emulators pubsub start --host-port=0.0.0.0:8085 --project=medisupply-474421"
+    ports:
+      - "8085:8085"
+    networks:
+      - medisupply-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pubsub-init:
+    profiles: [ "ordenes", "dev" ]
+    image: google/cloud-sdk:latest
+    environment:
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - PUBSUB_PROJECT_ID=medisupply-474421
+      - PUBSUB_CONFIG_FILE=/config/pubsub-config.json
+    volumes:
+      - ./scripts/init-pubsub.sh:/init-pubsub.sh
+      - ./scripts/pubsub-config.json:/config/pubsub-config.json
+    entrypoint: ["/bin/bash", "/init-pubsub.sh"]
+    networks:
+      - medisupply-network
+    depends_on:
+      pubsub-emulator:
+        condition: service_healthy
+      order-command-handler:
+        condition: service_started
+      order-query-projection:
+        condition: service_started
+
   order-command-api:
     profiles: [ "ordenes", "dev" ]
     build:
@@ -37,14 +73,16 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
       - PUBSUB_TOPIC_NAME=create-order-command
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
     volumes:
       - ./src/ordenes/commands/api:/app
     networks:
       - medisupply-network
     depends_on:
       - pg_db
+      - pubsub-emulator
 
   order-command-handler:
     profiles: [ "ordenes", "dev" ]
@@ -60,14 +98,17 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
       - PUBSUB_TOPIC_NAME=order-created
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
     volumes:
       - ./src/ordenes/commands/handlers:/app
     networks:
       - medisupply-network
     depends_on:
       - pg_db
+      - pubsub-emulator
 
   order-query-api:
     profiles: [ "ordenes", "dev" ]
@@ -83,7 +124,7 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=0
@@ -109,13 +150,16 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
     volumes:
       - ./src/ordenes/queries/projection:/app
     networks:
       - medisupply-network
     depends_on:
       - pg_db
+      - pubsub-emulator
 
   productos-service:
     profiles: [ "productos", "dev" ]
@@ -131,7 +175,7 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
     volumes:
       - ./src/productos:/app
     networks:
@@ -154,7 +198,7 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
     volumes:
       - ./src/proveedores:/app
     networks:
@@ -177,7 +221,7 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
     volumes:
       - ./src/reportes:/app
     networks:
@@ -200,7 +244,7 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
     volumes:
       - ./src/logistica:/app
     networks:
@@ -223,7 +267,7 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
     volumes:
       - ./src/inventario:/app
     networks:
@@ -246,7 +290,7 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
     volumes:
       - ./src/ventas:/app
     networks:
@@ -269,7 +313,7 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
     volumes:
       - ./src/clientes:/app
@@ -293,7 +337,7 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
     volumes:
       - ./src/auditoria:/app
     networks:
@@ -316,7 +360,7 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
       - JWT_SECRET_KEY=medisupply-secret-key
       - JWT_ALGORITHM=HS256
       - JWT_EXPIRATION_MINUTES=60
@@ -342,7 +386,7 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
       - AUDITORIA_SERVICE_URL=http://auditoria-service:3000
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
       - CLIENTES_SERVICE_URL=http://clientes-service:3000
@@ -373,7 +417,7 @@ services:
       - |
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
-      - GOOGLE_CLOUD_PROJECT_ID=tutoriales-miso
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
       - CLIENTES_SERVICE_URL=http://clientes-service:3000
       - PRODUCTOS_SERVICE_URL=http://productos-service:3000
