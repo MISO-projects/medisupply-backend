@@ -1,0 +1,34 @@
+{
+  "$schema": "./pubsub-config.schema.json",
+  "project_id": "medisupply-474421",
+  "emulator_host": "pubsub-emulator:8085",
+  "topics": [
+    "create-order-command",
+    "order-created"
+  ],
+  "subscriptions": [
+    {
+      "name": "create-order-command-sub",
+      "topic": "create-order-command",
+      "pushEndpoint": "order-command-handler:3000",
+      "ackDeadlineSeconds": 60
+    },
+    {
+      "name": "order-created-sub",
+      "topic": "order-created",
+      "pushEndpoint": "order-query-projection:3000",
+      "ackDeadlineSeconds": 60
+    }
+  ],
+  "healthChecks": [
+    {
+      "service": "order-command-handler",
+      "endpoint": "order-command-handler:3000/health"
+    },
+    {
+      "service": "order-query-projection",
+      "endpoint": "order-query-projection:3000/health"
+    }
+  ]
+}
+
