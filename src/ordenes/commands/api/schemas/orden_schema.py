@@ -1,26 +1,21 @@
 from pydantic import Field, BaseModel
-from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
 
 
 class DetalleOrdenSchema(BaseModel):
-    id_producto: str = Field(..., description="ID del producto")
-    cantidad: int = Field(..., description="Cantidad")
-    precio_unitario: float = Field(..., description="Precio unitario")
+    id_producto: UUID = Field(..., description="ID del producto (UUID válido)")
+    cantidad: int = Field(..., gt=0, description="Cantidad (debe ser mayor a 0)")
+    precio_unitario: float = Field(..., gt=0, description="Precio unitario (debe ser mayor a 0)")
     observaciones: Optional[str] = Field(None, description="Observaciones")
 
 
 class CrearOrdenSchema(BaseModel):
-    fecha_entrega_estimada: datetime = Field(
-        ..., description="Fecha de entrega estimada"
-    )
     observaciones: str = Field(..., description="Observaciones")
-    id_cliente: str = Field(..., description="ID del cliente")
-    id_vendedor: str = Field(..., description="ID del vendedor")
-    id_bodega_origen: str = Field(..., description="ID de la bodega de origen")
-    creado_por: str = Field(..., description="Usuario que creó la orden")
-    detalles: List[DetalleOrdenSchema] = Field(..., description="Detalles de la orden")
-    observaciones: str = Field(..., description="Observaciones")
-    fecha_entrega_estimada: datetime = Field(
-        ..., description="Fecha de entrega estimada"
+    id_cliente: UUID = Field(..., description="ID del cliente (UUID válido)")
+    id_vendedor: UUID = Field(..., description="ID del vendedor (UUID válido)")
+    detalles: List[DetalleOrdenSchema] = Field(
+        ..., 
+        min_length=1,
+        description="Detalles de la orden (debe tener al menos un detalle)"
     )

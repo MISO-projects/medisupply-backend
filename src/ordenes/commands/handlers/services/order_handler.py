@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from ..db.order_model import Orden, DetalleOrden
 from fastapi import Depends
 from ..db.database import get_db
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from ..services.pubsub_service import PubSubService
 from ..services.pubsub_service import get_pubsub_service
 import logging
@@ -31,17 +31,17 @@ class OrderHandler:
                 logger.info(f"Order with ID {order_data['id']} already exists. Skipping duplicate message.")
                 return existing_order
             
+            # Calculate fecha_entrega_estimada as 2 days from now
+            fecha_entrega_estimada = datetime.now(timezone.utc) + timedelta(days=2)
+            
             order = Orden(
                 id=order_data["id"],
                 numero_orden=order_data["numero_orden"],
                 estado="PENDIENTE",
-                fecha_entrega_estimada=datetime.fromisoformat(
-                    order_data["fecha_entrega_estimada"]
-                ),
+                fecha_entrega_estimada=fecha_entrega_estimada,
                 observaciones=order_data["observaciones"],
                 id_cliente=order_data["id_cliente"],
                 id_vendedor=order_data["id_vendedor"],
-                id_bodega_origen=order_data["id_bodega_origen"],
                 creado_por=order_data["creado_por"],
             )
             detalle_orden = []
