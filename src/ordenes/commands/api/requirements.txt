@@ -4,3 +4,4 @@ google-auth-oauthlib==1.2.2
 python-dotenv==1.1.1
 google-cloud-pubsub==2.23.1
 debugpy==1.8.16
+PyJWT==2.9.0

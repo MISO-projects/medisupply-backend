@@ -20,7 +20,6 @@ class OrderProjection(Base):
     valor_total = Column(Numeric, nullable=False)
     id_cliente = Column(UUID(as_uuid=True), nullable=False, index=True)
     id_vendedor = Column(UUID(as_uuid=True), nullable=False, index=True)
-    id_bodega_origen = Column(UUID(as_uuid=True), nullable=False, index=True)
     creado_por = Column(UUID(as_uuid=True), nullable=False)
     detalles = Column(Text, nullable=False)
     cantidad_items = Column(Integer, nullable=False)
@@ -39,7 +38,6 @@ class OrderProjection(Base):
         self.valor_total = Decimal(str(order_data.get('valor_total')))
         self.id_cliente = uuid.UUID(order_data.get('id_cliente'))
         self.id_vendedor = uuid.UUID(order_data.get('id_vendedor'))
-        self.id_bodega_origen = uuid.UUID(order_data.get('id_bodega_origen'))
         self.creado_por = uuid.UUID(order_data.get('creado_por'))
         self.observaciones = order_data.get('observaciones')
 
@@ -59,7 +57,6 @@ class OrderProjection(Base):
             "valor_total": float(self.valor_total),
             "id_cliente": str(self.id_cliente),
             "id_vendedor": str(self.id_vendedor),
-            "id_bodega_origen": str(self.id_bodega_origen),
             "creado_por": str(self.creado_por),
             "cantidad_items": self.cantidad_items,
             "observaciones": self.observaciones,
