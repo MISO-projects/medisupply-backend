@@ -35,6 +35,7 @@ class ProductosService:
         self,
         solo_con_stock: bool = True,
         categoria: Optional[str] = None,
+        nombre: Optional[str] = None,
         page: int = 1,
         page_size: int = 20,
     ) -> Dict[str, Any]:
@@ -44,6 +45,7 @@ class ProductosService:
         Args:
             solo_con_stock: Si True, solo retorna productos con stock > 0
             categoria: Filtro opcional por categoría
+            nombre: Filtro opcional por nombre (búsqueda parcial, case-insensitive)
             page: Número de página
             page_size: Tamaño de página
             
@@ -59,6 +61,9 @@ class ProductosService:
             
             if categoria:
                 params["categoria"] = categoria
+            
+            if nombre:
+                params["nombre"] = nombre
             
             response = httpx.get(
                 f"{self.base_url}/api/productos/disponibles",
