@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import logging
 
 from services.autenticacion_service import AutenticacionService, get_autenticacion_service
+from services.vendedores_service import VendedoresService, get_vendedores_service
 from schemas.auth_schema import RegisterRequest, LoginRequest, TokenResponse, UserResponse
 
 logging.basicConfig(level=logging.INFO)
@@ -23,27 +24,69 @@ def health_check(autenticacion_service: AutenticacionService = Depends(get_auten
     "/register",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Registrar nuevo usuario",
-    description="Registra un nuevo usuario en el sistema con email, nombre de usuario y contraseña"
+    summary="Registrar nuevo vendedor",
+    description="Registra un nuevo usuario vendedor en el sistema. El email debe corresponder a un vendedor existente en el sistema de ventas."
 )
-def register(
+async def register(
     register_data: RegisterRequest,
-    autenticacion_service: AutenticacionService = Depends(get_autenticacion_service)
+    autenticacion_service: AutenticacionService = Depends(get_autenticacion_service),
+    vendedores_service: VendedoresService = Depends(get_vendedores_service)
 ):
     """
-    Endpoint para registrar un nuevo usuario
+    Endpoint para registrar un nuevo usuario vendedor
+    
+    Flujo:
+    1. Verifica que el email exista en el sistema de ventas (vendedores)
+    2. Obtiene el ID del vendedor asociado al email
+    3. Registra el usuario en el servicio de autenticación con rol 'seller' y el id_vendedor
 
     Args:
         register_data: Datos de registro (email, username, password)
         autenticacion_service: Servicio de autenticación (inyectado)
+        vendedores_service: Servicio de vendedores (inyectado)
 
     Returns:
         UserResponse: Información del usuario creado
 
     Raises:
-        HTTPException 400: Si el email ya está registrado
+        HTTPException 404: Si el email no existe como vendedor en el sistema
+        HTTPException 400: Si el email ya está registrado como usuario
+        HTTPException 422: Si hay errores de validación
     """
-    return autenticacion_service.register_user(register_data.model_dump())
+    try:
+        vendedor_response = await vendedores_service.obtener_vendedor_por_email(register_data.email)
+        
+        if not vendedor_response or 'data' not in vendedor_response:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No se pudo obtener la información del vendedor con email {register_data.email}"
+            )
+        
+        id_seller = vendedor_response['data'].get('id')
+        if not id_seller:
+            raise HTTPException(
+                status_code=500,
+                detail="El vendedor no tiene un ID válido"
+            )
+        
+        auth_register_data = {
+            "email": register_data.email,
+            "username": register_data.username,
+            "password": register_data.password,
+            "role": "seller",
+            "id_seller": id_seller
+        }
+        
+        return autenticacion_service.register_user(auth_register_data)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error inesperado durante el registro: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error inesperado al registrar el usuario: {str(e)}"
+        )
 
 
 @autenticacion_router.post(

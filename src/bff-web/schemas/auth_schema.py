@@ -6,18 +6,16 @@ from uuid import UUID
 
 class RegisterRequest(BaseModel):
     """
-    Schema para el request de registro de usuario
+    Schema para el request de registro de usuario (solo sellers en BFF Web)
 
     Attributes:
-        email: Email del usuario (validado automáticamente)
+        email: Email del vendedor (debe existir en el sistema de ventas)
         username: Nombre para mostrar (ej: "Juan Pérez")
         password: Contraseña en texto plano (se hasheará en el servicio)
     """
-    email: EmailStr = Field(..., description="Email del usuario")
+    email: EmailStr = Field(..., description="Email del vendedor (debe existir previamente)")
     username: str = Field(..., min_length=2, max_length=100, description="Nombre para mostrar")
     password: str = Field(..., min_length=8, description="Contraseña (mínimo 8 caracteres)")
-    role: str = Field(default='seller', description="Rol del usuario (por defecto seller)")
-    id_client: Optional[UUID] = Field(default=None, description="ID del cliente asociado (opcional)")
 
     model_config = {
         "json_schema_extra": {
@@ -88,6 +86,8 @@ class UserResponse(BaseModel):
         id: UUID del usuario
         email: Email del usuario
         username: Nombre para mostrar
+        role: Rol del usuario (siempre 'seller' en BFF Web)
+        id_seller: ID del vendedor asociado
         is_active: Si el usuario está activo
         created_at: Fecha de creación
         updated_at: Fecha de última actualización
@@ -97,6 +97,7 @@ class UserResponse(BaseModel):
     username: str = Field(..., description="Nombre para mostrar")
     role: Optional[str] = Field(None, description="Rol del usuario (ej: 'seller', 'client')")
     id_client: Optional[UUID] = Field(None, description="ID del cliente asociado (opcional)")
+    id_seller: Optional[UUID] = Field(None, description="ID del vendedor asociado (opcional)")
     is_active: bool = Field(..., description="Si el usuario está activo")
     created_at: datetime = Field(..., description="Fecha de creación")
     updated_at: datetime = Field(..., description="Fecha de última actualización")
@@ -108,6 +109,8 @@ class UserResponse(BaseModel):
                     "id": "123e4567-e89b-12d3-a456-426614174000",
                     "email": "juan.perez@ejemplo.com",
                     "username": "Juan Pérez",
+                    "role": "seller",
+                    "id_seller": "550e8400-e29b-41d4-a716-446655440000",
                     "is_active": True,
                     "created_at": "2024-01-15T10:30:00Z",
                     "updated_at": "2024-01-15T10:30:00Z"

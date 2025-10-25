@@ -33,7 +33,7 @@ class AutenticacionService:
         Registra un nuevo usuario en el sistema
 
         Args:
-            register_data: Datos de registro (email, username, password)
+            register_data: Datos de registro (email, username, password, role, etc.)
 
         Returns:
             Dict con información del usuario creado
@@ -51,8 +51,9 @@ class AutenticacionService:
             return response.json()
         except httpx.HTTPStatusError as e:
             logger.error(f"Error registering user: {e}")
-            if e.response.status_code == 400:
-                raise HTTPException(status_code=400, detail=e.response.json().get("detail", "Error en el registro"))
+            if e.response.status_code in [400, 422]:
+                error_detail = e.response.json().get("detail", "Error en el registro")
+                raise HTTPException(status_code=e.response.status_code, detail=error_detail)
             raise HTTPException(status_code=e.response.status_code, detail=f"Error en el servicio de autenticación: {e}")
         except httpx.RequestError as e:
             logger.error(f"Failed to connect to Autenticacion microservice: {e}")

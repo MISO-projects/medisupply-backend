@@ -117,6 +117,34 @@ class VendedoresService:
                 detail="Ventas service is not available"
             )
 
+    async def obtener_vendedor_por_email(self, email: str) -> Dict[str, Any]:
+        """Get a specific vendedor by email"""
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(
+                    f"{self.base_url}/vendedores/by-email/{email}"
+                )
+
+                if response.status_code == 200:
+                    return response.json()
+                elif response.status_code == 404:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"No existe un vendedor registrado con el email {email}. Por favor, contacte al administrador para crear su perfil de vendedor primero.",
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"Error from ventas service: {response.text}",
+                    )
+        except HTTPException:
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Error connecting to ventas service: {str(e)}")
+            raise HTTPException(
+                status_code=503, detail="Ventas service is not available"
+            )
+
     async def actualizar_vendedor(
         self,
         vendedor_id: str,
