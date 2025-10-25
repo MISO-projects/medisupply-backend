@@ -32,6 +32,36 @@
       ]
     },
     {
+      "name": "Attach to autenticacion-service",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5698
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/src/autenticacion",
+          "remoteRoot": "/app"
+        }
+      ]
+    },
+    {
+      "name": "Attach to clientes-service",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5696
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/src/clientes",
+          "remoteRoot": "/app"
+        }
+      ]
+    },
+    {
       "name": "Attach to order-command-handler",
       "type": "debugpy",
       "request": "attach",
