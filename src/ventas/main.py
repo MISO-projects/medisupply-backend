@@ -16,11 +16,9 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Crear las tablas en la base de datos
 Base.metadata.create_all(bind=engine)
 logger.info("Database tables created successfully")
 
-# Registrar el router de vendedores
 app.include_router(
     vendedor_router,
     prefix="/vendedores",
