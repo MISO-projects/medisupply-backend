@@ -66,3 +66,25 @@ def get_inventario_disponible(
     except Exception as e:
         logger.error(f"Error en endpoint de inventario disponible: {str(e)}")
         raise
+
+@inventario_router.post(
+    "/",
+    # response_model=InventarioListResponse,
+    summary="Crear nuevo registro de inventario",
+    description="""
+    Crea un nuevo registro de inventario para un producto específico.
+    
+    Criterios: 
+    - El producto debe existir
+    """
+)
+def crear_registro_inventario():
+    """
+    """
+    try:
+
+        return {"message": "Endpoint de creación de inventario disponible - en construcción"}
+        
+    except Exception as e:
+        logger.error(f"Error en endpoint de inventario disponible: {str(e)}")
+        raise
