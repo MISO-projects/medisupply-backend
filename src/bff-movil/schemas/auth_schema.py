@@ -97,6 +97,7 @@ class UserResponse(BaseModel):
     username: str = Field(..., description="Nombre para mostrar")
     role: Optional[str] = Field(None, description="Rol del usuario (ej: 'seller', 'client')")
     id_client: Optional[UUID] = Field(None, description="ID del cliente asociado (opcional)")
+    id_seller: Optional[UUID] = Field(None, description="ID del vendedor asociado (opcional)")
     is_active: bool = Field(..., description="Si el usuario está activo")
     created_at: datetime = Field(..., description="Fecha de creación")
     updated_at: datetime = Field(..., description="Fecha de última actualización")
@@ -108,6 +109,7 @@ class UserResponse(BaseModel):
                     "id": "123e4567-e89b-12d3-a456-426614174000",
                     "email": "juan.perez@ejemplo.com",
                     "username": "Juan Pérez",
+                    "id_seller": "123e4567-e89b-12d3-a456-426614174000",
                     "is_active": True,
                     "created_at": "2024-01-15T10:30:00Z",
                     "updated_at": "2024-01-15T10:30:00Z"
