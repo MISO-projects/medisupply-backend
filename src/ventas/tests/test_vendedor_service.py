@@ -116,7 +116,7 @@ class TestVendedorServiceObtener:
             "zona_asignada": "Perú"
         }
 
-        mock_db.query().filter().first.return_value = vendedor_mock
+        mock_db.query().options().filter().first.return_value = vendedor_mock
 
         service = VendedorService(db=mock_db)
 
@@ -131,7 +131,7 @@ class TestVendedorServiceObtener:
         """Test: Fallar al obtener vendedor que no existe"""
         # Arrange
         mock_db = Mock()
-        mock_db.query().filter().first.return_value = None
+        mock_db.query().options().filter().first.return_value = None
 
         service = VendedorService(db=mock_db)
 
@@ -157,7 +157,7 @@ class TestVendedorServiceListar:
         vendedor2.to_dict.return_value = {"id": "2", "nombre": "María"}
 
         mock_query = Mock()
-        mock_query.order_by().offset().limit().all.return_value = [vendedor1, vendedor2]
+        mock_query.options().order_by().offset().limit().all.return_value = [vendedor1, vendedor2]
         mock_db.query.return_value = mock_query
 
         service = VendedorService(db=mock_db)
@@ -176,7 +176,7 @@ class TestVendedorServiceListar:
         mock_db = Mock()
 
         mock_query = Mock()
-        mock_query.order_by().offset().limit().all.return_value = []
+        mock_query.options().order_by().offset().limit().all.return_value = []
         mock_db.query.return_value = mock_query
 
         service = VendedorService(db=mock_db)

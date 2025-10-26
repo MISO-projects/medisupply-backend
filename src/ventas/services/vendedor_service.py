@@ -1,5 +1,5 @@
 from typing import Dict, Any, List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from fastapi import Depends, HTTPException
@@ -116,20 +116,22 @@ class VendedorService:
 
     def obtener_vendedor(self, vendedor_id: str) -> Dict[str, Any]:
         """
-        Obtiene un vendedor por su ID.
+        Obtiene un vendedor por su ID con información expandida del plan de venta.
 
         Args:
             vendedor_id: UUID del vendedor
 
         Returns:
-            Dict con los datos del vendedor
+            Dict con los datos del vendedor y su plan de venta
 
         Raises:
             HTTPException 404: Vendedor no encontrado
             HTTPException 500: Error interno
         """
         try:
-            vendedor = self.db.query(Vendedor).filter(
+            vendedor = self.db.query(Vendedor).options(
+                joinedload(Vendedor.plan_venta)
+            ).filter(
                 Vendedor.id == vendedor_id
             ).first()
 
@@ -139,7 +141,7 @@ class VendedorService:
                     detail=f"Vendedor con ID {vendedor_id} no encontrado."
                 )
 
-            return vendedor.to_dict()
+            return vendedor.to_dict(include_plan_venta=True)
 
         except HTTPException:
             raise
@@ -192,23 +194,25 @@ class VendedorService:
         limit: int = 100
     ) -> List[Dict[str, Any]]:
         """
-        Lista todos los vendedores con filtros opcionales.
+        Lista todos los vendedores con información expandida del plan de venta.
 
         Args:
             skip: Número de registros a saltar (paginación)
             limit: Número máximo de registros a retornar
 
         Returns:
-            Lista de vendedores
+            Lista de vendedores con información de sus planes de venta
         """
         try:
-            query = self.db.query(Vendedor)
+            query = self.db.query(Vendedor).options(
+                joinedload(Vendedor.plan_venta)
+            )
 
             query = query.order_by(Vendedor.fecha_creacion.desc())
 
             vendedores = query.offset(skip).limit(limit).all()
 
-            return [vendedor.to_dict() for vendedor in vendedores]
+            return [vendedor.to_dict(include_plan_venta=True) for vendedor in vendedores]
 
         except Exception as e:
             logger.error(f"Error al listar vendedores: {e}")
