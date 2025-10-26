@@ -59,13 +59,12 @@ class Orden(Base):
     valor_total = Column(Numeric, nullable=False)
     id_cliente = Column(UUID(as_uuid=True), nullable=False)
     id_vendedor = Column(UUID(as_uuid=True), nullable=False)
-    id_bodega_origen = Column(UUID(as_uuid=True), nullable=False)
     creado_por = Column(UUID(as_uuid=True), nullable=False)
     fecha_entrega_estimada = Column(DateTime, nullable=False)
     observaciones = Column(String, nullable=True)
     detalles = relationship("DetalleOrden", back_populates="orden")
 
-    def __init__(self, id, numero_orden, estado, id_cliente, id_vendedor, id_bodega_origen, creado_por, fecha_entrega_estimada, observaciones):
+    def __init__(self, id, numero_orden, estado, id_cliente, id_vendedor, creado_por, fecha_entrega_estimada, observaciones):
         now = datetime.now(timezone.utc)
         self.id = id if id else uuid.uuid4()
         self.fecha_creacion = now
@@ -75,7 +74,6 @@ class Orden(Base):
         self.valor_total = 0
         self.id_cliente = id_cliente
         self.id_vendedor = id_vendedor
-        self.id_bodega_origen = id_bodega_origen
         self.creado_por = creado_por
         self.fecha_entrega_estimada = fecha_entrega_estimada
         self.observaciones = observaciones
@@ -96,7 +94,6 @@ class Orden(Base):
             "valor_total": float(self.valor_total) if isinstance(self.valor_total, Decimal) else self.valor_total,
             "id_cliente": str(self.id_cliente),
             "id_vendedor": str(self.id_vendedor),
-            "id_bodega_origen": str(self.id_bodega_origen),
             "creado_por": str(self.creado_por),
             "fecha_entrega_estimada": self.fecha_entrega_estimada,
             "observaciones": self.observaciones,

@@ -21,3 +21,6 @@ class OrderService:
         if not result:
             raise Exception("Failed to publish create order command")
         return {"id": id, "numero_orden": order_data["numero_orden"]}
+
+def get_order_service() -> OrderService:
+    return OrderService()

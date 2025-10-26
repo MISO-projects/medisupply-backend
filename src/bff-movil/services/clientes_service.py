@@ -92,6 +92,40 @@ class ClientesService:
             logger.error(f"Unexpected error getting cliente {cliente_id}: {e}")
             raise HTTPException(status_code=500, detail="Error interno del servidor")
         
+    async def get_clientes_by_ids(self, cliente_ids: List[str]) -> List[Dict[str, Any]]:
+        """
+        Obtiene múltiples clientes por sus IDs en una sola llamada.
+        
+        Args:
+            cliente_ids: Lista de IDs de clientes
+            
+        Returns:
+            Lista de clientes encontrados
+        """
+        try:
+            if not cliente_ids:
+                return []
+            
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    f"{self.base_url}/api/clientes/by-ids",
+                    json={"ids": cliente_ids}
+                )
+                
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    logger.warning(f"Error fetching clients by IDs: {response.status_code}")
+                    return []
+                    
+        except httpx.RequestError as e:
+            logger.error(f"Failed to connect to Clientes microservice: {e}")
+            # Return empty list instead of raising exception to not break order listing
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected error getting clientes by IDs: {e}")
+            return []
+    
     async def register_client(self, register_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Llama al endpoint de registro del servicio de Clientes.
