@@ -17,7 +17,6 @@ class Producto(Base):
     categoria = Column(String(100), nullable=False)
     imagen_url = Column(String(500), nullable=True)
     precio_unitario = Column(Numeric(10, 2), nullable=False)
-    stock_disponible = Column(Integer, nullable=False, default=0)
     disponible = Column(Boolean, nullable=False, default=True)
     unidad_medida = Column(String(50), nullable=False, default="UNIDAD")
     sku = Column(String(100), nullable=True, unique=True)
