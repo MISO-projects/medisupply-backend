@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Integer, DateTime, Text, Date, ForeignKey
-from pydantic import BaseModel, Field, field_validator
+# from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
+# from sqlalchemy.orm import relationship
 from db.database import Base # Asumo que Base está en db.database
 import uuid
 from datetime import datetime
@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import UUID
 class Inventario(Base):
     __tablename__ = "inventario"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    producto_id = Column(UUID(as_uuid=True), ForeignKey("productos.id", ondelete="CASCADE"), nullable=False) 
+    producto_id = Column(UUID(as_uuid=True), nullable=False) 
     lote = Column(String(100), nullable=False, default="LT-UNDEFINED")
     fecha_vencimiento = Column(Date, nullable=True)
     cantidad = Column(Integer, nullable=False, default=0)
@@ -35,7 +35,7 @@ class Inventario(Base):
         self,
         producto_id: uuid.UUID,
         lote: str,
-        fecha_vencimiento: datetime.date,
+        fecha_vencimiento: datetime.date, 
         cantidad: int,
         ubicacion: str = "BODEGA-PRINCIPAL",
         temperatura_requerida: str = "AMBIENTE",
@@ -66,6 +66,8 @@ class Inventario(Base):
             "estado": self.estado,
             "condiciones_especiales": self.condiciones_especiales,
             "observaciones": self.observaciones,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
     
     # class InventarioListResponse(BaseModel):

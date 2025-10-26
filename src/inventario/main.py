@@ -1,6 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException
 from services.health_service import HealthService, get_health_service
 from router.inventario_router import inventario_router
+from db.database import engine, Base
+# from models.inventario_schema import Inventario
+# from fastapi.middleware.cors import CORSMiddleware
 import logging 
 import os
 
@@ -9,8 +12,8 @@ logger = logging.getLogger(__name__)
 
 # Crear las tablas en la base de datos solo si no estamos en modo testing
 if not os.getenv("TESTING"):
-    from db.database import Base, engine
     Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
 
 app = FastAPI(
     title="MediSupply - Inventario Service",
@@ -19,8 +22,6 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
-Base.metadata.create_all(bind=engine)
-logger.info("Database tables created successfully")
 
 # app.add_middleware( 
 #     CORSMiddleware,

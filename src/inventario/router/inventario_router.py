@@ -2,12 +2,16 @@ from fastapi import APIRouter, Depends, Query, Path
 from sqlalchemy.orm import Session
 from typing import Optional
 import logging
+from http import HTTPStatus
+from schemas.inventario_schema import CrearRegistroInventarioSchema, RegistroInventarioResponseSchema
 
-from db.database import get_db
-# from services.inventario_service import InventarioService
+from services.inventario_service import InventarioService, get_inventario_service
 # from schemas.inventario_schema import (
-    
+#     # InventarioListResponse, 
+#     # InventarioConDetalle
 # )
+
+# from db.database import get_db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -69,22 +73,13 @@ def get_inventario_disponible(
 
 @inventario_router.post(
     "/",
-    # response_model=InventarioListResponse,
-    summary="Crear nuevo registro de inventario",
-    description="""
-    Crea un nuevo registro de inventario para un producto específico.
-    
-    Criterios: 
-    - El producto debe existir
-    """
+    response_model=RegistroInventarioResponseSchema,
+    status_code=HTTPStatus.CREATED
 )
-def crear_registro_inventario():
-    """
-    """
-    try:
-
-        return {"message": "Endpoint de creación de inventario disponible - en construcción"}
-        
-    except Exception as e:
-        logger.error(f"Error en endpoint de inventario disponible: {str(e)}")
-        raise
+def crear_registro(
+    data: CrearRegistroInventarioSchema,
+    service: InventarioService = Depends(get_inventario_service)
+):
+    """Crea un nuevo registro de inventario."""
+    registro_dict = service.crear_registro_inventario(data)
+    return registro_dict
