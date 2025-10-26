@@ -1,7 +1,7 @@
 from pydantic import Field, BaseModel, EmailStr, field_validator
 from typing import Optional
 from enum import Enum
-from decimal import Decimal
+from uuid import UUID
 
 
 class ZonaAsignadaEnum(str, Enum):
@@ -31,14 +31,9 @@ class CrearVendedorSchema(BaseModel):
         ...,
         description="Zona/país asignado al vendedor"
     )
-    plan_venta: Optional[str] = Field(
-        None,
-        description="ID del plan de venta asignado"
-    )
-    meta_venta: Optional[Decimal] = Field(
-        None,
-        ge=0,
-        description="Meta de ventas en monto monetario"
+    plan_venta_id: UUID = Field(
+        ...,
+        description="ID (UUID) del plan de venta al que está asignado el vendedor"
     )
 
     @field_validator('nombre')
@@ -64,8 +59,7 @@ class CrearVendedorSchema(BaseModel):
                 "documento_identidad": "12345678",
                 "email": "juan.perez@medisupply.com",
                 "zona_asignada": "Perú",
-                "plan_venta": "plan-123",
-                "meta_venta": 50000.00
+                "plan_venta_id": "550e8400-e29b-41d4-a716-446655440000"
             }
         }
 
@@ -85,14 +79,9 @@ class ActualizarVendedorSchema(BaseModel):
         None,
         description="Zona/país asignado al vendedor"
     )
-    plan_venta: Optional[str] = Field(
+    plan_venta_id: Optional[UUID] = Field(
         None,
-        description="ID del plan de venta asignado"
-    )
-    meta_venta: Optional[Decimal] = Field(
-        None,
-        ge=0,
-        description="Meta de ventas en monto monetario"
+        description="ID (UUID) del plan de venta asignado"
     )
 
     @field_validator('nombre')
@@ -117,6 +106,6 @@ class ActualizarVendedorSchema(BaseModel):
                 "nombre": "Juan Pérez",
                 "email": "juan.nuevo@medisupply.com",
                 "zona_asignada": "Colombia",
-                "meta_venta": 75000.00
+                "plan_venta_id": "550e8400-e29b-41d4-a716-446655440000"
             }
         }
