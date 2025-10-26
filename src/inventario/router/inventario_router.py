@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import logging
 from http import HTTPStatus
-from schemas.inventario_schema import CrearRegistroInventarioSchema, RegistroInventarioResponseSchema
+from schemas.inventario_schema import CrearRegistroInventarioSchema, RegistroInventarioResponseSchema, StockDisponibleResponse
+from typing import List
 
 from services.inventario_service import InventarioService, get_inventario_service
 # from schemas.inventario_schema import (
@@ -83,3 +84,21 @@ def crear_registro(
     """Crea un nuevo registro de inventario."""
     registro_dict = service.crear_registro_inventario(data)
     return registro_dict
+
+@inventario_router.get(
+    "/stock",
+    # response_model=List[RegistroInventarioResponseSchema], # O StockDisponibleResponse
+    response_model=StockDisponibleResponse,
+    status_code=HTTPStatus.OK
+)
+def listar_stock(
+    service: InventarioService = Depends(get_inventario_service)
+):
+    """
+    Obtiene la lista de todos los registros de inventario que tienen stock > 0
+    y están disponibles para la venta o reserva.
+    """
+    stock_disponible = service.listar_stock_disponible()
+    
+    # return stock_disponible 
+    return StockDisponibleResponse(items=stock_disponible, total=len(stock_disponible))

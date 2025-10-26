@@ -1,6 +1,7 @@
 from datetime import datetime, date
 from typing import Optional
 from pydantic import BaseModel, UUID4, Field
+from typing import List
 
 class CrearRegistroInventarioSchema(BaseModel):
     """Esquema de datos requeridos para crear un nuevo registro de inventario."""
@@ -24,3 +25,7 @@ class RegistroInventarioResponseSchema(CrearRegistroInventarioSchema):
     fecha_recepcion: datetime
     created_at: datetime
     updated_at: Optional[datetime]
+
+class StockDisponibleResponse(BaseModel):
+    items: List[RegistroInventarioResponseSchema]
+    total: int

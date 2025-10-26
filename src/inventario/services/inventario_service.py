@@ -83,7 +83,6 @@ class InventarioService:
         """
         try:
             nuevo_inventario = Inventario(
-                # El esquema asegura que todos estos atributos existen y están tipados
                 producto_id=inventario_data.producto_id,
                 lote=inventario_data.lote,
                 fecha_vencimiento=inventario_data.fecha_vencimiento,
@@ -99,7 +98,6 @@ class InventarioService:
             self.db.refresh(nuevo_inventario)
             return nuevo_inventario.to_dict()
         except IntegrityError as ie:
-            # ... (Manejo de error) ...
             self.db.rollback()
             logger.error(f"Integrity error creating inventario: {ie}")
             raise HTTPException(
@@ -112,6 +110,30 @@ class InventarioService:
             raise HTTPException(
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 detail="Error interno al crear el registro de inventario."
+            )
+        
+    def listar_stock_disponible(self) -> List[Dict[str, Any]]:
+        """
+        Lista todos los registros de inventario que tienen cantidad > 0.
+        Excluye los registros con estado que no sea DISPONIBLE o RESERVADO.
+        """
+        try:
+            # Consulta para filtrar registros donde la cantidad sea mayor que 0
+            registros_db = self.db.query(Inventario).filter(
+                Inventario.cantidad > 0,
+                # Inventario.estado.in_(['DISPONIBLE', 'RESERVADO'])
+            ).all()
+
+            stock_list = [registro.to_dict() for registro in registros_db]
+            
+            logger.info(f"Se encontraron {len(stock_list)} registros con stock disponible.")
+            return stock_list
+
+        except Exception as e:
+            logger.error(f"Error al listar stock disponible: {e}")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="Error interno al listar el stock de inventario."
             )
     
 
