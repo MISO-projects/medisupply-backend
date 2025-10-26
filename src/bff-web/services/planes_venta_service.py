@@ -7,40 +7,30 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class VendedoresService:
-    """Service for communicating with the Ventas microservice (Vendedores endpoints)"""
+class PlanesVentaService:
+    """Service for communicating with the Ventas microservice (Planes de Venta endpoints)"""
 
     def __init__(self):
         self.base_url = os.getenv("VENTAS_SERVICE_URL", "http://ventas-service:3000")
         self.timeout = 30.0
 
-    def health_check(self) -> Dict[str, Any]:
-        """Check the health of the Ventas microservice"""
+    async def crear_plan_venta(self, plan_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new plan de venta via the ventas service"""
         try:
-            response = httpx.get(f"{self.base_url}/health", timeout=self.timeout)
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Health check failed for Ventas microservice: {e}")
-            raise HTTPException(status_code=503, detail=f"Ventas service returned error: {e}")
-        except httpx.RequestError as e:
-            logger.error(f"Failed to connect to Ventas microservice: {e}")
-            raise HTTPException(status_code=503, detail=f"Cannot reach Ventas service: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error checking Ventas health: {e}")
-            raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
+            # Convert Decimal to float for JSON serialization
+            if 'meta_venta' in plan_data and plan_data['meta_venta'] is not None:
+                plan_data['meta_venta'] = float(plan_data['meta_venta'])
 
-    async def crear_vendedor(self, vendedor_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a new vendedor via the ventas service"""
-        try:
-            # Convert UUID to string for JSON serialization
-            if 'plan_venta_id' in vendedor_data and vendedor_data['plan_venta_id'] is not None:
-                vendedor_data['plan_venta_id'] = str(vendedor_data['plan_venta_id'])
+            # Convert datetime to ISO string
+            if 'fecha_inicio' in plan_data and plan_data['fecha_inicio'] is not None:
+                plan_data['fecha_inicio'] = plan_data['fecha_inicio'].isoformat()
+            if 'fecha_fin' in plan_data and plan_data['fecha_fin'] is not None:
+                plan_data['fecha_fin'] = plan_data['fecha_fin'].isoformat()
 
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    f"{self.base_url}/vendedores/",
-                    json=vendedor_data
+                    f"{self.base_url}/planes-venta/",
+                    json=plan_data
                 )
 
                 if response.status_code == 201:
@@ -61,21 +51,28 @@ class VendedoresService:
                 detail="Ventas service is not available"
             )
 
-    async def listar_vendedores(
+    async def listar_planes_venta(
         self,
         page: int = 1,
-        page_size: int = 20
+        page_size: int = 20,
+        nombre: Optional[str] = None,
+        zona_asignada: Optional[str] = None
     ) -> Dict[str, Any]:
-        """List vendedores with pagination"""
+        """List planes de venta with pagination and optional filters"""
         try:
             params = {
                 "page": page,
                 "page_size": page_size
             }
 
+            if nombre:
+                params["nombre"] = nombre
+            if zona_asignada:
+                params["zona_asignada"] = zona_asignada
+
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(
-                    f"{self.base_url}/vendedores/",
+                    f"{self.base_url}/planes-venta/",
                     params=params
                 )
 
@@ -93,18 +90,18 @@ class VendedoresService:
                 detail="Ventas service is not available"
             )
 
-    async def obtener_vendedor(self, vendedor_id: str) -> Dict[str, Any]:
-        """Get a specific vendedor by ID"""
+    async def obtener_plan_venta(self, plan_id: str) -> Dict[str, Any]:
+        """Get a specific plan de venta by ID"""
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(
-                    f"{self.base_url}/vendedores/{vendedor_id}"
+                    f"{self.base_url}/planes-venta/{plan_id}"
                 )
 
                 if response.status_code == 200:
                     return response.json()
                 elif response.status_code == 404:
-                    raise HTTPException(status_code=404, detail="Vendedor no encontrado")
+                    raise HTTPException(status_code=404, detail="Plan de venta no encontrado")
                 else:
                     raise HTTPException(
                         status_code=response.status_code,
@@ -117,55 +114,33 @@ class VendedoresService:
                 detail="Ventas service is not available"
             )
 
-    async def obtener_vendedor_por_email(self, email: str) -> Dict[str, Any]:
-        """Get a specific vendedor by email"""
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.get(
-                    f"{self.base_url}/vendedores/by-email/{email}"
-                )
-
-                if response.status_code == 200:
-                    return response.json()
-                elif response.status_code == 404:
-                    raise HTTPException(
-                        status_code=404,
-                        detail=f"No existe un vendedor registrado con el email {email}. Por favor, contacte al administrador para crear su perfil de vendedor primero.",
-                    )
-                else:
-                    raise HTTPException(
-                        status_code=response.status_code,
-                        detail=f"Error from ventas service: {response.text}",
-                    )
-        except HTTPException:
-            raise
-        except httpx.RequestError as e:
-            logger.error(f"Error connecting to ventas service: {str(e)}")
-            raise HTTPException(
-                status_code=503, detail="Ventas service is not available"
-            )
-
-    async def actualizar_vendedor(
+    async def actualizar_plan_venta(
         self,
-        vendedor_id: str,
-        vendedor_data: Dict[str, Any]
+        plan_id: str,
+        plan_data: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Update an existing vendedor"""
+        """Update an existing plan de venta"""
         try:
-            # Convert UUID to string for JSON serialization
-            if 'plan_venta_id' in vendedor_data and vendedor_data['plan_venta_id'] is not None:
-                vendedor_data['plan_venta_id'] = str(vendedor_data['plan_venta_id'])
+            # Convert Decimal to float for JSON serialization
+            if 'meta_venta' in plan_data and plan_data['meta_venta'] is not None:
+                plan_data['meta_venta'] = float(plan_data['meta_venta'])
+
+            # Convert datetime to ISO string
+            if 'fecha_inicio' in plan_data and plan_data['fecha_inicio'] is not None:
+                plan_data['fecha_inicio'] = plan_data['fecha_inicio'].isoformat()
+            if 'fecha_fin' in plan_data and plan_data['fecha_fin'] is not None:
+                plan_data['fecha_fin'] = plan_data['fecha_fin'].isoformat()
 
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.put(
-                    f"{self.base_url}/vendedores/{vendedor_id}",
-                    json=vendedor_data
+                    f"{self.base_url}/planes-venta/{plan_id}",
+                    json=plan_data
                 )
 
                 if response.status_code == 200:
                     return response.json()
                 elif response.status_code == 404:
-                    raise HTTPException(status_code=404, detail="Vendedor no encontrado")
+                    raise HTTPException(status_code=404, detail="Plan de venta no encontrado")
                 elif response.status_code == 409:
                     raise HTTPException(status_code=409, detail=response.json())
                 elif response.status_code == 422:
@@ -182,7 +157,31 @@ class VendedoresService:
                 detail="Ventas service is not available"
             )
 
+    async def eliminar_plan_venta(self, plan_id: str) -> Dict[str, Any]:
+        """Delete a plan de venta"""
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.delete(
+                    f"{self.base_url}/planes-venta/{plan_id}"
+                )
 
-def get_vendedores_service() -> VendedoresService:
-    """Dependency function to get vendedores service instance"""
-    return VendedoresService()
+                if response.status_code == 200:
+                    return response.json()
+                elif response.status_code == 404:
+                    raise HTTPException(status_code=404, detail="Plan de venta no encontrado")
+                else:
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"Error from ventas service: {response.text}"
+                    )
+        except httpx.RequestError as e:
+            logger.error(f"Error connecting to ventas service: {str(e)}")
+            raise HTTPException(
+                status_code=503,
+                detail="Ventas service is not available"
+            )
+
+
+def get_planes_venta_service() -> PlanesVentaService:
+    """Dependency function to get planes de venta service instance"""
+    return PlanesVentaService()

@@ -16,7 +16,7 @@ vendedor_router = APIRouter()
 
 
 @vendedor_router.post(
-    "/",
+    "",
     response_model=dict,
     status_code=status.HTTP_201_CREATED,
     summary="Crear nuevo vendedor",
@@ -32,7 +32,8 @@ vendedor_router = APIRouter()
                             "id": "550e8400-e29b-41d4-a716-446655440000",
                             "nombre": "Juan Pérez",
                             "email": "juan.perez@medisupply.com",
-                            "zona_asignada": "Perú"
+                            "zona_asignada": "Perú",
+                            "plan_venta_id": "550e8400-e29b-41d4-a716-446655440000"
                         }
                     }
                 }
@@ -53,15 +54,14 @@ async def crear_vendedor(
     - **documento_identidad**: Documento de identidad (obligatorio)
     - **email**: Email válido y único (obligatorio)
     - **zona_asignada**: Zona/país asignado (obligatorio)
-    - **plan_venta**: ID del plan de venta (opcional)
-    - **meta_venta**: Meta de ventas en monto monetario (opcional)
+    - **plan_venta_id**: UUID del plan de venta al que está asignado (obligatorio)
     """
     data = await vendedores_service.crear_vendedor(vendedor.model_dump())
     return data
 
 
 @vendedor_router.get(
-    "/",
+    "",
     response_model=dict,
     summary="Listar vendedores",
     description="Obtiene listado de vendedores con paginación",
@@ -77,7 +77,7 @@ async def crear_vendedor(
                                 "nombre": "Juan Pérez",
                                 "email": "juan.perez@medisupply.com",
                                 "zona_asignada": "Perú",
-                                "meta_venta": "50000.00"
+                                "plan_venta_id": "550e8400-e29b-41d4-a716-446655440000"
                             }
                         ],
                         "total": 1,

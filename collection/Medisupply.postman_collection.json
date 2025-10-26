@@ -451,7 +451,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"documento_identidad\": \"{{$randomInt}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Perú\",\n\t\"plan_venta\": \"plan-{{$randomInt}}\",\n\t\"meta_venta\": 50000.00\n}",
+									"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"documento_identidad\": \"{{$randomInt}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Perú\",\n\t\"plan_venta_id\": \"{{id_plan_venta}}\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -555,7 +555,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Colombia\",\n\t\"meta_venta\": 75000.00\n}",
+									"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Colombia\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -576,6 +576,208 @@
 										{
 											"key": "id",
 											"value": "{{id_vendedor}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "crear plan de venta",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"const id = response.data?.id",
+											"pm.collectionVariables.set(\"id_plan_venta\", id);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"nombre\": \"Plan Q1 2025 - Perú\",\n\t\"fecha_inicio\": \"2025-01-01T00:00:00\",\n\t\"fecha_fin\": \"2025-03-31T23:59:59\",\n\t\"descripcion\": \"Plan de ventas del primer trimestre para la región de Perú\",\n\t\"meta_venta\": 100000.00,\n\t\"zona_asignada\": \"Perú\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/planes",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"planes"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "listar planes de venta",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/planes",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"planes"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "obtener plan de venta",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/planes/:id",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"planes",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{id_plan_venta}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "actualizar plan de venta",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"nombre\": \"Plan Q1 2025 - Perú (Actualizado)\",\n\t\"meta_venta\": 150000.00,\n\t\"descripcion\": \"Meta incrementada debido a buen desempeño\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/planes/:id",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"planes",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{id_plan_venta}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "eliminar plan de venta",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/planes/:id",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"planes",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{id_plan_venta}}"
 										}
 									]
 								}
