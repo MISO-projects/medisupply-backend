@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from decimal import Decimal
+from uuid import UUID
 
 from schemas.vendedor_schema import (
     CrearVendedorSchema,
@@ -14,13 +14,13 @@ class TestCrearVendedorSchema:
 
     def test_crear_vendedor_schema_valido(self):
         """Test: Crear vendedor con todos los datos válidos"""
+        plan_id = UUID("550e8400-e29b-41d4-a716-446655440000")
         data = {
             "nombre": "Juan Pérez García",
             "documento_identidad": "12345678",
             "email": "juan.perez@medisupply.com",
             "zona_asignada": "Perú",
-            "plan_venta": "plan-123",
-            "meta_venta": 50000.00
+            "plan_venta_id": "550e8400-e29b-41d4-a716-446655440000"
         }
 
         vendedor = CrearVendedorSchema(**data)
@@ -29,23 +29,22 @@ class TestCrearVendedorSchema:
         assert vendedor.documento_identidad == "12345678"
         assert vendedor.email == "juan.perez@medisupply.com"
         assert vendedor.zona_asignada == ZonaAsignadaEnum.PERU
-        assert vendedor.plan_venta == "plan-123"
-        assert vendedor.meta_venta == Decimal("50000.00")
+        assert vendedor.plan_venta_id == plan_id
 
-    def test_crear_vendedor_schema_sin_campos_opcionales(self):
-        """Test: Crear vendedor sin campos opcionales"""
+    def test_crear_vendedor_schema_campos_minimos(self):
+        """Test: Crear vendedor solo con campos obligatorios"""
         data = {
             "nombre": "María González",
             "documento_identidad": "87654321",
             "email": "maria@medisupply.com",
-            "zona_asignada": "Colombia"
+            "zona_asignada": "Colombia",
+            "plan_venta_id": "550e8400-e29b-41d4-a716-446655440000"
         }
 
         vendedor = CrearVendedorSchema(**data)
 
         assert vendedor.nombre == "María González"
-        assert vendedor.plan_venta is None
-        assert vendedor.meta_venta is None
+        assert vendedor.plan_venta_id == UUID("550e8400-e29b-41d4-a716-446655440000")
 
     def test_crear_vendedor_nombre_vacio_falla(self):
         """Test: Fallar si el nombre está vacío"""
@@ -89,26 +88,11 @@ class TestCrearVendedorSchema:
 
         assert "zona_asignada" in str(exc_info.value)
 
-    def test_crear_vendedor_meta_venta_negativa_falla(self):
-        """Test: Fallar si la meta de venta es negativa"""
-        data = {
-            "nombre": "Juan Pérez",
-            "documento_identidad": "12345678",
-            "email": "juan@medisupply.com",
-            "zona_asignada": "Perú",
-            "meta_venta": -1000
-        }
-
-        with pytest.raises(ValidationError) as exc_info:
-            CrearVendedorSchema(**data)
-
-        assert "meta_venta" in str(exc_info.value)
-
     def test_crear_vendedor_sin_campos_obligatorios_falla(self):
         """Test: Fallar si faltan campos obligatorios"""
         data = {
             "nombre": "Juan Pérez"
-            # Faltan: documento_identidad, email, zona_asignada
+            # Faltan: documento_identidad, email, zona_asignada, plan_venta_id
         }
 
         with pytest.raises(ValidationError) as exc_info:
@@ -118,6 +102,7 @@ class TestCrearVendedorSchema:
         assert "documento_identidad" in errors
         assert "email" in errors
         assert "zona_asignada" in errors
+        assert "plan_venta_id" in errors
 
 
 class TestActualizarVendedorSchema:
@@ -128,14 +113,14 @@ class TestActualizarVendedorSchema:
         data = {
             "nombre": "Juan Pérez Actualizado",
             "email": "nuevo@medisupply.com",
-            "meta_venta": 75000.00
+            "plan_venta_id": "550e8400-e29b-41d4-a716-446655440000"
         }
 
         vendedor = ActualizarVendedorSchema(**data)
 
         assert vendedor.nombre == "Juan Pérez Actualizado"
         assert vendedor.email == "nuevo@medisupply.com"
-        assert vendedor.meta_venta == Decimal("75000.00")
+        assert vendedor.plan_venta_id == UUID("550e8400-e29b-41d4-a716-446655440000")
 
     def test_actualizar_vendedor_todos_campos_opcionales(self):
         """Test: Todos los campos son opcionales en actualización"""
@@ -146,8 +131,7 @@ class TestActualizarVendedorSchema:
         assert vendedor.nombre is None
         assert vendedor.email is None
         assert vendedor.zona_asignada is None
-        assert vendedor.plan_venta is None
-        assert vendedor.meta_venta is None
+        assert vendedor.plan_venta_id is None
 
     def test_actualizar_vendedor_nombre_vacio_falla(self):
         """Test: Fallar si el nombre está vacío"""

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, MagicMock
 from fastapi import HTTPException
-from decimal import Decimal
+from uuid import UUID
 
 from services.vendedor_service import VendedorService
 from schemas.vendedor_schema import CrearVendedorSchema, ActualizarVendedorSchema, ZonaAsignadaEnum
@@ -15,7 +15,14 @@ class TestVendedorServiceCrear:
         """Test: Crear vendedor exitosamente"""
         # Arrange
         mock_db = Mock()
-        mock_db.query().filter().first.return_value = None  # No existe vendedor con ese email
+
+        # Mock del plan que existe
+        plan_mock = Mock()
+        plan_mock.id = UUID("550e8400-e29b-41d4-a716-446655440000")
+
+        # Primera llamada: verificar email (None = no existe)
+        # Segunda llamada: verificar plan (retorna el plan mock)
+        mock_db.query().filter().first.side_effect = [None, plan_mock]
         mock_db.add = Mock()
         mock_db.commit = Mock()
         mock_db.refresh = Mock()
@@ -25,8 +32,7 @@ class TestVendedorServiceCrear:
             documento_identidad="12345678",
             email="juan@medisupply.com",
             zona_asignada=ZonaAsignadaEnum.PERU,
-            plan_venta="plan-123",
-            meta_venta=Decimal("50000.00")
+            plan_venta_id=UUID("550e8400-e29b-41d4-a716-446655440000")
         )
 
         service = VendedorService(db=mock_db)
@@ -39,6 +45,32 @@ class TestVendedorServiceCrear:
         assert mock_db.commit.called
         assert "nombre" in result
         assert result["nombre"] == "Juan Pérez"
+
+    def test_crear_vendedor_plan_no_existe_falla(self):
+        """Test: Fallar al crear vendedor con plan que no existe"""
+        # Arrange
+        mock_db = Mock()
+
+        # Primera llamada: verificar email (None = no existe)
+        # Segunda llamada: verificar plan (None = plan no existe)
+        mock_db.query().filter().first.side_effect = [None, None]
+
+        vendedor_data = CrearVendedorSchema(
+            nombre="Juan Pérez",
+            documento_identidad="12345678",
+            email="juan@medisupply.com",
+            zona_asignada=ZonaAsignadaEnum.PERU,
+            plan_venta_id=UUID("550e8400-e29b-41d4-a716-446655440000")
+        )
+
+        service = VendedorService(db=mock_db)
+
+        # Act & Assert
+        with pytest.raises(HTTPException) as exc_info:
+            service.crear_vendedor(vendedor_data)
+
+        assert exc_info.value.status_code == 404
+        assert "plan" in str(exc_info.value.detail).lower()
 
     def test_crear_vendedor_email_duplicado_falla(self):
         """Test: Fallar al crear vendedor con email duplicado"""
@@ -54,7 +86,8 @@ class TestVendedorServiceCrear:
             nombre="Juan Pérez",
             documento_identidad="12345678",
             email="juan@medisupply.com",
-            zona_asignada=ZonaAsignadaEnum.PERU
+            zona_asignada=ZonaAsignadaEnum.PERU,
+            plan_venta_id=UUID("550e8400-e29b-41d4-a716-446655440000")
         )
 
         service = VendedorService(db=mock_db)
@@ -83,7 +116,7 @@ class TestVendedorServiceObtener:
             "zona_asignada": "Perú"
         }
 
-        mock_db.query().filter().first.return_value = vendedor_mock
+        mock_db.query().options().filter().first.return_value = vendedor_mock
 
         service = VendedorService(db=mock_db)
 
@@ -98,7 +131,7 @@ class TestVendedorServiceObtener:
         """Test: Fallar al obtener vendedor que no existe"""
         # Arrange
         mock_db = Mock()
-        mock_db.query().filter().first.return_value = None
+        mock_db.query().options().filter().first.return_value = None
 
         service = VendedorService(db=mock_db)
 
@@ -124,7 +157,7 @@ class TestVendedorServiceListar:
         vendedor2.to_dict.return_value = {"id": "2", "nombre": "María"}
 
         mock_query = Mock()
-        mock_query.order_by().offset().limit().all.return_value = [vendedor1, vendedor2]
+        mock_query.options().order_by().offset().limit().all.return_value = [vendedor1, vendedor2]
         mock_db.query.return_value = mock_query
 
         service = VendedorService(db=mock_db)
@@ -143,7 +176,7 @@ class TestVendedorServiceListar:
         mock_db = Mock()
 
         mock_query = Mock()
-        mock_query.order_by().offset().limit().all.return_value = []
+        mock_query.options().order_by().offset().limit().all.return_value = []
         mock_db.query.return_value = mock_query
 
         service = VendedorService(db=mock_db)
