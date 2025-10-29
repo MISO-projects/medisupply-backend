@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, Query, Header, HTTPException
+from fastapi import APIRouter, Depends, Query, Header, HTTPException, Request
 from typing import Optional
 from datetime import datetime
 import logging
+import json
+import base64
 from services.order_service import OrderService, get_order_service
 import jwt
 
@@ -151,3 +153,66 @@ async def get_order(order_id: str, order_service: OrderService = Depends(get_ord
 async def get_cache_health(order_service: OrderService = Depends(get_order_service)):
     """Get cache health status and statistics"""
     return order_service.get_cache_health()
+
+
+@order_router.post("/cache-invalidation")
+async def handle_cache_invalidation(
+    request: Request,
+    order_service: OrderService = Depends(get_order_service)
+):
+    """
+    Pub/Sub push endpoint for cache invalidation when order projections are created/updated.
+    
+    This endpoint is called by Google Cloud Pub/Sub (or the emulator) when a message
+    is published to the 'order-projection-created' topic.
+    """
+    try:
+        body = await request.json()
+        
+        message = body.get("message", {})
+        
+        if not message:
+            logger.warning("Received Pub/Sub message without 'message' field")
+            return {"status": "ignored", "reason": "no message field"}
+        
+        data = message.get("data", "")
+        if data:
+            decoded_data = base64.b64decode(data).decode("utf-8")
+            event_data = json.loads(decoded_data)
+        else:
+            logger.warning("Received Pub/Sub message without data")
+            return {"status": "ignored", "reason": "no data"}
+        
+        order_id = event_data.get("order_id")
+        client_id = event_data.get("client_id")
+        event_type = event_data.get("event_type")
+        
+        logger.info(f"Received cache invalidation event: {event_type} for order {order_id}, client {client_id}")
+        
+        invalidated = []
+        
+        if order_id:
+            if order_service.invalidate_order_cache(order_id):
+                invalidated.append(f"order:{order_id}")
+                logger.info(f"Invalidated cache for order {order_id}")
+        
+        if client_id:
+            if order_service.invalidate_client_orders_cache(client_id):
+                invalidated.append(f"client_orders:{client_id}")
+                logger.info(f"Invalidated all cached orders for client {client_id}")
+        
+        return {
+            "status": "success",
+            "invalidated": invalidated,
+            "event_type": event_type,
+            "order_id": order_id,
+            "client_id": client_id
+        }
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to decode Pub/Sub message: {str(e)}")
+        return {"status": "error", "reason": "invalid json"}
+    except Exception as e:
+        logger.error(f"Error handling cache invalidation: {str(e)}")
+        # Return 200 to acknowledge the message (cache invalidation is not critical)
+        return {"status": "error", "reason": str(e)}
