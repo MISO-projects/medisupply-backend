@@ -69,4 +69,32 @@ def failing_cache_deps():
     }
 
 
+@pytest.fixture
+def sample_orders():
+    """Sample order data for testing"""
+    return [
+        {
+            "id": "order-1",
+            "numero_orden": "ORD-001",
+            "id_cliente": "client-123",
+            "estado": "PENDING",
+            "fecha_creacion": "2024-01-01T10:00:00",
+        },
+        {
+            "id": "order-2",
+            "numero_orden": "ORD-002",
+            "id_cliente": "client-123",
+            "estado": "COMPLETED",
+            "fecha_creacion": "2024-01-02T10:00:00",
+        },
+        {
+            "id": "order-3",
+            "numero_orden": "ORD-003",
+            "id_cliente": "client-456",
+            "estado": "PENDING",
+            "fecha_creacion": "2024-01-03T10:00:00",
+        }
+    ]
+
+
 
