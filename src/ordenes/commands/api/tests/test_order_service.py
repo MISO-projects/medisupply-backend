@@ -51,7 +51,7 @@ class TestOrderService:
         assert parts[0] == "ORD"
         assert len(parts[1]) == 6  # YYMMDD
         assert len(parts[2]) == 8  # UUID part
-        assert parts[2].isupper()  # UUID part should be uppercase
+        assert parts[2] == parts[2].upper()  # UUID part should be uppercase (no lowercase chars)
 
     def test_generar_numero_orden_unique(self, order_service):
         """Test that generated order numbers are unique"""
