@@ -66,7 +66,7 @@ class ProductoConStock(BaseModel):
     nombre: str
     categoria: str
     imagen_url: Optional[str] = None
-    stock_disponible: int
+    # stock_disponible: int
     disponible: bool
     precio_unitario: Decimal
     unidad_medida: str

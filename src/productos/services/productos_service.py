@@ -111,7 +111,8 @@ class ProductosService:
             filters = [Producto.disponible == True]
 
             if solo_con_stock:
-                filters.append(Producto.stock_disponible > 0)
+                # filters.append(Producto.stock_disponible > 0)
+                logger.debug("Filtrando solo productos con stock disponible")
 
             if categoria:
                 filters.append(Producto.categoria == categoria)
@@ -123,6 +124,7 @@ class ProductosService:
 
             # Obtener total
             total = query.count()
+            logger.debug(f"Total productos encontrados: {total}")
 
             # Aplicar paginación y ordenamiento
             productos = query.order_by(Producto.nombre).offset(skip).limit(limit).all()
