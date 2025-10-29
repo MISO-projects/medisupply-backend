@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, Header, status
+from fastapi import APIRouter, Depends, Query, Header, status, HTTPException
 from typing import Optional
 from datetime import datetime
 import logging
@@ -112,6 +112,55 @@ async def listar_ordenes(
             order["nombre_cliente"] = clientes_map.get(cliente_id, "Cliente no encontrado")
     
     return data
+
+@ordenes_router.get(
+    "/mis-ordenes",
+    response_model=dict,
+    summary="Obtener órdenes del cliente autenticado",
+    description="Obtiene todas las órdenes del cliente autenticado con paginación"
+)
+async def obtener_mis_ordenes(
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
+    ordenes_queries_service: OrdenesQueriesService = Depends(get_ordenes_queries_service),
+    authorization: str = Header(..., alias="Authorization")
+):
+    """
+    Obtiene todas las órdenes del cliente autenticado con:
+    
+    - **Paginación**: Con page (número de página) y page_size (tamaño)
+    - **Ordenamiento**: Por fecha de creación (más recientes primero)
+    - **Autenticación**: Requiere token JWT con rol 'client'
+    
+    Returns:
+        dict: Respuesta paginada con órdenes del cliente
+        
+    Raises:
+        HTTPException 401: Si el token JWT es inválido o no está presente
+        HTTPException 403: Si el usuario no tiene rol 'client'
+        HTTPException 503: Si el servicio de órdenes no está disponible
+    """
+    try:
+        logger.info("BFF Móvil: Obteniendo órdenes del cliente autenticado")
+        
+        # Call the queries service with authorization header
+        data = await ordenes_queries_service.obtener_ordenes_cliente(
+            authorization=authorization,
+            page=page,
+            page_size=page_size
+        )
+        
+        logger.info(f"BFF Móvil: Órdenes obtenidas exitosamente - Total: {data.get('total', 0)}")
+        return data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"BFF Móvil: Error al obtener órdenes del cliente: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error inesperado al obtener órdenes: {str(e)}"
+        )
 
 @ordenes_router.get(
     "/{order_id}",
