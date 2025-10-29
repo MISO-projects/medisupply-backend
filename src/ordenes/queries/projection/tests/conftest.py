@@ -25,31 +25,10 @@ class FakeDB:
         return SimpleNamespace()
 
 
-class FakeRedisClient:
-    def __init__(self, should_fail: bool = False, connected: bool = True):
-        self.should_fail = should_fail
-        self.connected = connected
-
-    @property
-    def client(self):
-        if self.should_fail:
-            raise RuntimeError("Redis error")
-
-        class _Client:
-            def __init__(self, connected: bool):
-                self._connected = connected
-
-            def ping(self):
-                return self._connected
-
-        return _Client(self.connected)
-
-
 @pytest.fixture
 def healthy_deps():
     return {
         "db": FakeDB(should_fail=False),
-        "redis_client": FakeRedisClient(should_fail=False, connected=True),
     }
 
 
@@ -57,15 +36,6 @@ def healthy_deps():
 def failing_db_deps():
     return {
         "db": FakeDB(should_fail=True),
-        "redis_client": FakeRedisClient(should_fail=False, connected=True),
-    }
-
-
-@pytest.fixture
-def failing_cache_deps():
-    return {
-        "db": FakeDB(should_fail=False),
-        "redis_client": FakeRedisClient(should_fail=False, connected=False),
     }
 
 
