@@ -194,6 +194,51 @@ class ClienteService:
                 detail="Error interno al obtener los clientes."
             )
 
+    def get_cliente_info(self, cliente_id: str) -> ClientResponse:
+        """
+        Obtiene la información de un cliente por su ID.
+        
+        Args:
+            cliente_id: ID del cliente
+            
+        Returns:
+            ClientResponse con los datos del cliente
+            
+        Raises:
+            HTTPException 404: Si el cliente no existe
+            HTTPException 500: Si hay un error al procesar la solicitud
+        """
+        try:
+            cliente_db = self.db.query(ClienteInstitucional).filter(
+                ClienteInstitucional.id == cliente_id
+            ).first()
+
+            if not cliente_db:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Cliente no encontrado"
+                )
+
+            return ClientResponse(
+                id=str(cliente_db.id),
+                nombre=cliente_db.nombre,
+                nit=cliente_db.nit,
+                logoUrl=cliente_db.logo_url,
+                address=cliente_db.address,
+                fecha_creacion=cliente_db.fecha_creacion,
+                fecha_actualizacion=cliente_db.fecha_actualizacion,
+                id_vendedor=str(cliente_db.id_vendedor) if cliente_db.id_vendedor else None
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error al obtener información del cliente {cliente_id}: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error interno al obtener la información del cliente."
+            )
+
     # 🚀 Aquí es donde cambiamos la lógica
     def register_client(self, db: Session, register_data: RegisterRequest) -> ClientResponse: 
         # 1️⃣ Llamar al servicio de autenticación para traer los vendedores activos

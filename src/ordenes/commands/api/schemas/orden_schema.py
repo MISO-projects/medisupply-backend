@@ -11,8 +11,19 @@ class DetalleOrdenSchema(BaseModel):
 
 
 class CrearOrdenSchema(BaseModel):
-    observaciones: str = Field(..., description="Observaciones")
+    observaciones: Optional[str] = Field(None, description="Observaciones")
     id_cliente: UUID = Field(..., description="ID del cliente (UUID válido)")
+    id_vendedor: UUID = Field(..., description="ID del vendedor (UUID válido)")
+    detalles: List[DetalleOrdenSchema] = Field(
+        ..., 
+        min_length=1,
+        description="Detalles de la orden (debe tener al menos un detalle)"
+    )
+
+
+class CrearOrdenClienteSchema(BaseModel):
+    """Schema para que clientes creen sus propias órdenes"""
+    observaciones: Optional[str] = Field(None, description="Observaciones")
     id_vendedor: UUID = Field(..., description="ID del vendedor (UUID válido)")
     detalles: List[DetalleOrdenSchema] = Field(
         ..., 

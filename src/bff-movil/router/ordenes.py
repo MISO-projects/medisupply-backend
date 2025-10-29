@@ -6,7 +6,7 @@ import logging
 from services.ordenes_commands_service import OrdenesCommandsService, get_ordenes_commands_service
 from services.ordenes_queries_service import OrdenesQueriesService, get_ordenes_queries_service
 from services.clientes_service import ClientesService, get_clientes_service
-from schemas.orden_schema import CrearOrdenRequest, CrearOrdenResponse
+from schemas.orden_schema import CrearOrdenRequest, CrearOrdenResponse, CrearOrdenClienteRequest
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -67,6 +67,81 @@ async def crear_orden(
     except Exception as e:
         logger.error(f"BFF Móvil: Error al crear orden: {str(e)}")
         raise
+
+
+@ordenes_router.post(
+    "/cliente",
+    response_model=CrearOrdenResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear orden como cliente",
+    description="Permite a un cliente crear una orden para sí mismo. El id_cliente y el id_vendedor se obtienen automáticamente."
+)
+async def crear_orden_cliente(
+    orden: CrearOrdenClienteRequest,
+    ordenes_commands_service: OrdenesCommandsService = Depends(get_ordenes_commands_service),
+    clientes_service: ClientesService = Depends(get_clientes_service),
+    authorization: str = Header(..., alias="Authorization")
+):
+    """
+    Crea una nueva orden para un cliente autenticado.
+    
+    - Requiere autenticación con token JWT de cliente (rol='client')
+    - El `id_cliente` se extrae automáticamente del token JWT
+    - El `id_vendedor` se obtiene del perfil del cliente
+    - Solo requiere observaciones y detalles de la orden
+    
+    Args:
+        orden: Datos de la orden (observaciones y detalles)
+        authorization: Token JWT del cliente
+    
+    Returns:
+        CrearOrdenResponse: ID y número de orden generado
+    
+    Raises:
+        HTTPException 401: Si el token JWT es inválido o expiró
+        HTTPException 403: Si el usuario no tiene rol 'client'
+        HTTPException 400: Si los datos de la orden son inválidos
+        HTTPException 404: Si el cliente no tiene vendedor asignado
+        HTTPException 503: Si algún servicio no está disponible
+    """
+    try:
+        logger.info("BFF Móvil: Cliente autenticado creando orden")
+        
+        # 1. Obtener el perfil del cliente para conseguir el id_vendedor
+        perfil_cliente = await clientes_service.get_mi_perfil(authorization)
+        
+        if not perfil_cliente.get("id_vendedor"):
+            logger.error(f"Cliente {perfil_cliente.get('id')} no tiene vendedor asignado")
+            raise HTTPException(
+                status_code=400,
+                detail="El cliente no tiene un vendedor asignado. Contacte al administrador."
+            )
+        
+        id_vendedor = perfil_cliente["id_vendedor"]
+        logger.info(f"Cliente {perfil_cliente.get('id')} con vendedor {id_vendedor} creando orden")
+        
+        # 2. Preparar los datos de la orden con el id_vendedor
+        order_data = orden.model_dump(mode='json')
+        order_data["id_vendedor"] = id_vendedor
+        
+        # 3. Llamar al servicio de comandos para crear la orden
+        # El servicio extraerá el id_cliente del token y lo agregará automáticamente
+        result = await ordenes_commands_service.create_client_order(
+            order_data=order_data,
+            authorization=authorization
+        )
+        
+        logger.info(f"BFF Móvil: Orden de cliente creada exitosamente - {result.get('numero_orden')}")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"BFF Móvil: Error inesperado al crear orden de cliente: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error inesperado al crear la orden: {str(e)}"
+        )
 
 @ordenes_router.get(
     "/",
