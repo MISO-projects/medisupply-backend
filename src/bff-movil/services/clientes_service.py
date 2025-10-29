@@ -157,6 +157,62 @@ class ClientesService:
             logger.error(f"Unexpected error during client registration: {e}")
             raise HTTPException(status_code=500, detail="Error inesperado durante el registro del cliente")
 
+    async def get_mi_perfil(self, authorization: str) -> Dict[str, Any]:
+        """
+        Obtiene el perfil del cliente autenticado.
+        
+        Args:
+            authorization: Token de autorización JWT (formato: "Bearer <token>")
+            
+        Returns:
+            Dict con la información del cliente (incluye id_vendedor)
+            
+        Raises:
+            HTTPException: Si hay error al obtener el perfil
+        """
+        try:
+            logger.info("Obteniendo perfil del cliente autenticado")
+            
+            headers = {
+                "Authorization": authorization
+            }
+            
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(
+                    f"{self.base_url}/api/clientes/mi-perfil",
+                    headers=headers
+                )
+                response.raise_for_status()
+                
+                perfil = response.json()
+                logger.info(f"Perfil obtenido exitosamente para cliente {perfil.get('id')}")
+                return perfil
+                
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Error al obtener perfil del cliente - Status {e.response.status_code}: {e.response.text}")
+            
+            try:
+                error_detail = e.response.json().get("detail", "Error al obtener el perfil")
+            except:
+                error_detail = f"Error al obtener el perfil: {e.response.text}"
+            
+            raise HTTPException(
+                status_code=e.response.status_code,
+                detail=error_detail
+            )
+        except httpx.RequestError as e:
+            logger.error(f"Error de conexión con Clientes microservice: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail=f"No se puede conectar al servicio de clientes: {str(e)}"
+            )
+        except Exception as e:
+            logger.error(f"Error inesperado al obtener perfil: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error inesperado al obtener perfil: {str(e)}"
+            )
+
 # Función de dependencia para inyectar el servicio en los endpoints del BFF
 def get_clientes_service() -> ClientesService:
     return ClientesService()

@@ -26,7 +26,7 @@ class DetalleOrdenRequest(BaseModel):
 
 class CrearOrdenRequest(BaseModel):
     """Schema para crear una nueva orden"""
-    observaciones: str = Field(..., description="Observaciones generales de la orden")
+    observaciones: Optional[str] = Field(None, description="Observaciones generales de la orden")
     id_cliente: UUID = Field(..., description="ID del cliente (UUID válido)")
     id_vendedor: UUID = Field(..., description="ID del vendedor (UUID válido)")
     detalles: List[DetalleOrdenRequest] = Field(
@@ -67,6 +67,34 @@ class CrearOrdenResponse(BaseModel):
                 {
                     "id": "123e4567-e89b-12d3-a456-426614174000",
                     "numero_orden": "ORD-251025-A1B2C3D4"
+                }
+            ]
+        }
+    }
+
+
+class CrearOrdenClienteRequest(BaseModel):
+    """Schema para que clientes creen sus propias órdenes (BFF Mobile)"""
+    observaciones: Optional[str] = Field(None, description="Observaciones generales de la orden")
+    detalles: List[DetalleOrdenRequest] = Field(
+        ..., 
+        min_length=1,
+        description="Detalles de la orden (debe tener al menos un detalle)"
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "observaciones": "Pedido urgente - Entregar en recepción",
+                    "detalles": [
+                        {
+                            "id_producto": "456e7890-e89b-12d3-a456-426614174111",
+                            "cantidad": 10,
+                            "precio_unitario": 25.50,
+                            "observaciones": "Lote reciente"
+                        }
+                    ]
                 }
             ]
         }

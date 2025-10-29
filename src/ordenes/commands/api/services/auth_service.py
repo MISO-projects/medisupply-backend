@@ -98,3 +98,73 @@ def get_current_user_id(authorization: Optional[str] = Header(None)) -> str:
             detail="Error al procesar token de autorización"
         )
 
+
+# Dependency para obtener el client_id del token JWT
+def get_current_client_id(authorization: Optional[str] = Header(None)) -> str:
+    """
+    Extrae el client_id (id_client) del token JWT y valida que el rol sea 'client'
+    
+    Args:
+        authorization: Header Authorization con formato "Bearer <token>"
+        
+    Returns:
+        str: UUID del cliente autenticado
+        
+    Raises:
+        HTTPException: Si el token no existe, es inválido, expiró o no tiene rol de cliente
+    """
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token de autorización requerido",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    
+    try:
+        if not authorization.lower().startswith("bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Formato de token inválido. Use 'Bearer <token>'",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        token = authorization[7:].strip()
+        
+        # Validar y decodificar token (sin verificar firma en desarrollo)
+        try:
+            payload = jwt.decode(token, options={"verify_signature": False})
+        except jwt.DecodeError as e:
+            logger.error(f"Error al decodificar token: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token mal formado o inválido"
+            )
+        
+        # Verificar que el rol sea 'client'
+        role = payload.get("role")
+        if role != "client":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acceso denegado. Solo usuarios con rol 'client' pueden crear órdenes"
+            )
+        
+        # Extraer id_client del token
+        client_id = payload.get("id_client")
+        
+        if not client_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token no contiene id_client"
+            )
+        
+        return client_id
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al procesar token de autorización: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Error al procesar token de autorización"
+        )
+

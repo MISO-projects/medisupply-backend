@@ -86,6 +86,69 @@ def get_vendedor_id_from_auth(authorization: Optional[str] = Header(None)) -> st
         )
 
 
+def get_client_id_from_auth(authorization: Optional[str] = Header(None)) -> str:
+    """
+    Extrae el client_id (id_client) del token JWT y valida que el rol sea 'client'
+
+    Args:
+        authorization: Header Authorization con formato "Bearer <token>"
+
+    Returns:
+        str: UUID del cliente autenticado
+
+    Raises:
+        HTTPException: Si el token no existe, es inválido o no tiene rol de cliente
+    """
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail="Token de autorización requerido"
+        )
+
+    if not authorization.lower().startswith("bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Formato de token inválido. Debe ser 'Bearer <token>'"
+        )
+
+    try:
+        token = authorization[7:].strip()
+
+        payload = jwt.decode(token, options={"verify_signature": False})
+
+        role = payload.get("role")
+        if role != "client":
+            raise HTTPException(
+                status_code=403,
+                detail="Acceso denegado. Solo usuarios con rol 'client' pueden acceder a este recurso"
+            )
+
+        id_client = payload.get("id_client")
+
+        if not id_client:
+            raise HTTPException(
+                status_code=401,
+                detail="Token no contiene id_client"
+            )
+
+        return id_client
+
+    except jwt.DecodeError as e:
+        logger.error(f"Error al decodificar token: {str(e)}")
+        raise HTTPException(
+            status_code=401,
+            detail="Token mal formado o inválido"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error inesperado al procesar token de autorización: {str(e)}")
+        raise HTTPException(
+            status_code=401,
+            detail="Error al procesar token de autorización"
+        )
+
+
 @router.get(
     "/asignados",
     response_model=ClienteAsignadoListResponse,
@@ -209,8 +272,44 @@ def register(
     return client_service.register_client(db, register_data)
 
 
+@router.get(
+    "/mi-perfil",
+    response_model=ClientResponse,
+    summary="Obtener perfil del cliente autenticado",
+    description="Retorna la información del cliente autenticado basada en el token JWT"
+)
+async def get_mi_perfil(
+    client_id: str = Depends(get_client_id_from_auth),
+    client_service: ClienteService = Depends(get_cliente_service)
+):
+    """
+    Obtiene la información del cliente autenticado.
 
+    - Requiere autenticación con token JWT de cliente (rol='client')
+    - El `id_client` se extrae automáticamente del token
+    - Retorna toda la información del cliente
 
+    Returns:
+        ClientResponse: Información completa del cliente
 
+    Raises:
+        HTTPException 401: Si el token JWT es inválido o no está presente
+        HTTPException 403: Si el usuario no tiene rol 'client'
+        HTTPException 404: Si el cliente no existe
+    """
+    try:
+        logger.info(f"Cliente {client_id} solicitando su perfil")
 
+        cliente_info = client_service.get_cliente_info(client_id)
 
+        logger.info(f"Perfil del cliente {client_id} obtenido exitosamente")
+        return cliente_info
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error interno al obtener perfil del cliente {client_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error interno del servidor al obtener el perfil del cliente"
+        )
