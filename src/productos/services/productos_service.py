@@ -351,31 +351,30 @@ class ProductosService:
             logger.error(f"Error al eliminar producto {producto_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Error al eliminar producto")
 
-    def actualizar_stock(self, producto_id: str, cantidad: int) -> Producto:
-        """Actualiza el stock de un producto"""
+    def get_detalles_por_ids(self, producto_ids: List[str]) -> Dict[str, Dict[str, str]]:
+        """
+        Obtiene detalles clave (nombre y SKU) para una lista de IDs de productos.
+        """
         try:
-            producto = self._get_producto_model_by_id(producto_id)
+            unique_ids = list(set(producto_ids))
+            productos_db = self.db.query(
+                Producto.id, 
+                Producto.nombre, 
+                Producto.sku
+            ).filter(
+                Producto.id.in_(unique_ids)
+            ).all()
 
-            nuevo_stock = producto.stock_disponible + cantidad
-            if nuevo_stock < 0:
-                raise HTTPException(
-                    status_code=400, detail="No hay suficiente stock disponible"
-                )
+            # Convertimos la lista en un diccionario para búsqueda rápida
+            # Ej: {"uuid-1": {"nombre": "Guantes", "sku": "SKU-123"}, ...}
+            detalles_map = {
+                str(p.id): {"nombre": p.nombre, "sku": p.sku}
+                for p in productos_db
+            }
+            
+            logger.info(f"Se obtuvieron detalles para {len(detalles_map)} productos.")
+            return detalles_map
 
-            producto.stock_disponible = nuevo_stock
-            self.db.commit()
-            self.db.refresh(producto)
-
-            self._invalidate_producto_caches(producto_id)
-
-            logger.info(f"Stock actualizado para producto {producto_id}: {nuevo_stock}")
-            return producto
-
-        except HTTPException:
-            raise
         except Exception as e:
-            self.db.rollback()
-            logger.error(
-                f"Error al actualizar stock del producto {producto_id}: {str(e)}"
-            )
-            raise HTTPException(status_code=500, detail="Error al actualizar stock")
+            logger.error(f"Error al obtener detalles de productos por IDs: {str(e)}")
+            return {}

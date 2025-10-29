@@ -9,7 +9,6 @@ class CrearRegistroInventarioSchema(BaseModel):
     lote: str = Field(..., min_length=1, max_length=100, description="Código de lote del proveedor.")
     fecha_vencimiento: date = Field(..., description="Fecha de vencimiento de este lote (YYYY-MM-DD).")
     cantidad: int = Field(..., gt=0, description="Cantidad de unidades en este registro.")
-    
     ubicacion: str = Field("BODEGA-PRINCIPAL", max_length=100, description="Ubicación física del stock.")
     temperatura_requerida: str = Field("AMBIENTE", max_length=50, description="Condición de temperatura del stock.")
     estado: str = Field("DISPONIBLE", max_length=50, description="Estado inicial del stock (DISPONIBLE, BLOQUEADO, etc.).")
@@ -25,7 +24,21 @@ class RegistroInventarioResponseSchema(CrearRegistroInventarioSchema):
     fecha_recepcion: datetime
     created_at: datetime
     updated_at: Optional[datetime]
+    producto_nombre: Optional[str] = Field(None, description="Nombre del producto (enriquecido)")
+    producto_sku: Optional[str] = Field(None, description="SKU del producto (enriquecido)")
+
+    class Config:
+        from_attributes = True
+
 
 class StockDisponibleResponse(BaseModel):
     items: List[RegistroInventarioResponseSchema]
     total: int
+
+class InventarioListResponse(BaseModel):
+    items: List[RegistroInventarioResponseSchema]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    

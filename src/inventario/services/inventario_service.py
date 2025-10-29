@@ -5,6 +5,8 @@ from fastapi import Depends, HTTPException
 from http import HTTPStatus
 from datetime import datetime, timezone
 import logging
+import httpx
+import os
 import json
 
 from db.database import get_db
@@ -23,7 +25,11 @@ class InventarioService:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
         self.redis_client = get_redis_client()
+        self.productos_service_url = os.getenv(
+            "PRODUCTOS_SERVICE_URL", "http://productos-service:3000"
+        )
 
+    
     # def _get_cache(self, key: str) -> Optional[Any]:
     #     """Get data from cache"""
     #     try:
@@ -68,6 +74,33 @@ class InventarioService:
     #     except Exception as e:
     #         logger.warning(f"Error invalidating caches: {e}")
 
+    async def _get_detalles_productos(self, producto_ids: List[str]) -> Dict[str, Any]:
+        """Obtiene detalles (nombre, SKU) para una lista de IDs de productos."""
+        if not producto_ids:
+            return {}
+        
+        unique_ids = list(set(producto_ids))
+        
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    f"{self.productos_service_url}/api/productos/batch-details",
+                    json={"producto_ids": unique_ids}
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    # Retorna el mapa: {"uuid-1": {"nombre": "...", "sku": "..."}}
+                    return data.get("detalles", {}) 
+                else:
+                    logger.error(f"Error al obtener detalles de productos: {response.status_code} - {response.text}")
+                    return {}
+                    
+        except httpx.RequestError as e:
+            logger.error(f"Error de conexión al servicio de productos: {e}")
+            return {}
+
+
     def crear_registro_inventario(self, inventario_data: CrearRegistroInventarioSchema) -> Dict[str, Any]:
         """
         Crea un nuevo registro de inventario en el sistema.
@@ -111,7 +144,40 @@ class InventarioService:
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 detail="Error interno al crear el registro de inventario."
             )
-        
+
+    async def listar_registros_paginados(self, skip: int, limit: int) -> tuple[List[Dict[str, Any]], int]:
+        """
+        Obtiene una lista paginada de todos los registros de inventario,
+        enriquecida con nombre y SKU del servicio de productos.
+        """
+        try:
+            query = self.db.query(Inventario)
+            total = query.count()
+            
+            registros_db = query.order_by(Inventario.fecha_recepcion.desc()) \
+                                .offset(skip).limit(limit).all()
+
+            if not registros_db:
+                return [], 0
+            
+            producto_ids = [str(r.producto_id) for r in registros_db]
+            detalles_map = await self._get_detalles_productos(producto_ids)
+            items_enriquecidos = []
+            for registro in registros_db:
+                registro_dict = registro.to_dict()
+                detalles = detalles_map.get(str(registro.producto_id), {})
+                registro_dict["producto_nombre"] = detalles.get("nombre", "Producto no encontrado")
+                registro_dict["producto_sku"] = detalles.get("sku", "N/A")
+                items_enriquecidos.append(registro_dict)
+            return items_enriquecidos, total
+
+        except Exception as e:
+            logger.error(f"Error al listar registros de inventario paginados: {e}")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="Error interno al listar los registros de inventario."
+            )
+
     def listar_stock_disponible(self) -> List[Dict[str, Any]]:
         """
         Lista todos los registros de inventario que tienen cantidad > 0.

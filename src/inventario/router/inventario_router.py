@@ -1,18 +1,20 @@
+# src/inventario/router/inventario_router.py
+
 from fastapi import APIRouter, Depends, Query, Path
 from sqlalchemy.orm import Session
 from typing import Optional
 import logging
 from http import HTTPStatus
-from schemas.inventario_schema import CrearRegistroInventarioSchema, RegistroInventarioResponseSchema, StockDisponibleResponse
+
+from schemas.inventario_schema import (
+    CrearRegistroInventarioSchema, 
+    RegistroInventarioResponseSchema, 
+    StockDisponibleResponse,
+    InventarioListResponse 
+)
 from typing import List
 
 from services.inventario_service import InventarioService, get_inventario_service
-# from schemas.inventario_schema import (
-#     # InventarioListResponse, 
-#     # InventarioConDetalle
-# )
-
-# from db.database import get_db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,54 +24,41 @@ inventario_router = APIRouter()
 
 @inventario_router.get(
     "/",
-    # response_model=InventarioListResponse,
-    summary="Obtener inventario disponible",
+    response_model=InventarioListResponse, 
+    summary="Obtener registros de inventario (paginado)",
     description="""
-    Retorna la lista de productos disponibles con su información de stock.
-    
-    Criterios: 
-    - Solo productos marcados como disponibles
-    - Opcionalmente filtrar solo productos con stock > 0
-    - Incluye: imagen, nombre, cantidad disponible, categoría, disponibilidad
-     PARA WEB: producto(SKU), cantidad, bodega, lote, fecha de vencimiento, condicion de almacenamiento
+    Retorna una lista paginada de todos los registros de inventario,
+    enriquecida con el Nombre y SKU del producto.
     """
 )
-def get_inventario_disponible(
-    # solo_con_stock: bool = Query(
-    #     True,
-    #     description="Si es True, solo retorna productos con stock mayor a 0"
-    # ),
-    # categoria: Optional[str] = Query(
-    #     None,
-    #     description="Filtrar por categoría específica"
-    # ),
-    # nombre: Optional[str] = Query(
-    #     None,
-    #     description="Buscar productos por nombre (búsqueda parcial, case-insensitive)"
-    # ),
-    # page: int = Query(1, ge=1, description="Número de página"),
-    # page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
-    # db: Session = Depends(get_db)
+async def get_registros_inventario_paginado( # ¡async!
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
+    service: InventarioService = Depends(get_inventario_service)
 ):
     """
-    Endpoint principal para que representantes de ventas consulten productos disponibles.
-    
-    Retorna productos con:
-    - ID del producto
-    - Nombre del producto
-    - Categoría
-    - Imagen del producto
-    - Cantidad disponible en inventario
-    - Disponibilidad (activo/inactivo)
-    - Precio unitario
-    - Unidad de medida
+    Endpoint para la tabla de administración web.
+    Retorna todos los registros de inventario, con paginación.
     """
     try:
+        logger.info(f"Consultando registros de inventario paginados: page={page}, page_size={page_size}")
 
-        return {"message": "Endpoint de inventario disponible - en construcción"}
+        skip = (page - 1) * page_size
+        
+        registros, total = await service.listar_registros_paginados(skip=skip, limit=page_size)
+        total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+        logger.info(f"Retornando {len(registros)} registros de un total de {total}")
+        
+        return InventarioListResponse(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+            items=registros # Pydantic parseará la lista de dicts
+        )
         
     except Exception as e:
-        logger.error(f"Error en endpoint de inventario disponible: {str(e)}")
+        logger.error(f"Error en endpoint de registros de inventario: {str(e)}")
         raise
 
 @inventario_router.post(
@@ -87,7 +76,6 @@ def crear_registro(
 
 @inventario_router.get(
     "/stock",
-    # response_model=List[RegistroInventarioResponseSchema], # O StockDisponibleResponse
     response_model=StockDisponibleResponse,
     status_code=HTTPStatus.OK
 )
@@ -100,5 +88,4 @@ def listar_stock(
     """
     stock_disponible = service.listar_stock_disponible()
     
-    # return stock_disponible 
     return StockDisponibleResponse(items=stock_disponible, total=len(stock_disponible))

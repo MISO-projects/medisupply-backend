@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, Query, Path
+from fastapi import APIRouter, Depends, Query, Path, HTTPException
 from sqlalchemy.orm import Session
+from typing import List, Dict
+from pydantic import BaseModel, Field
 from typing import Optional
 import logging
 
@@ -281,4 +283,44 @@ def limpiar_productos(db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error al limpiar productos: {str(e)}")
         raise
+
+
+class BatchDetailsRequest(BaseModel):
+    producto_ids: List[str] = Field(..., description="Lista de IDs de productos (UUIDs como string)")
+
+class ProductoDetalleItem(BaseModel):
+    nombre: str
+    sku: Optional[str]
+
+class BatchDetailsResponse(BaseModel):
+    detalles: Dict[str, ProductoDetalleItem]
+
+    
+@productos_router.post(
+    "/batch-details",
+    response_model=BatchDetailsResponse,
+    summary="Obtener detalles (SKU, Nombre) para múltiples productos",
+    description="Recibe una lista de IDs de productos y retorna su SKU y Nombre."
+)
+def get_productos_batch_details(
+    request: BatchDetailsRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint interno para que otros servicios consulten detalles de productos
+    en lote.
+    """
+    try:
+        service = ProductosService(db)
+        detalles_map = service.get_detalles_por_ids(request.producto_ids)
+        
+        # El schema de respuesta espera un dict con la clave "detalles"
+        return {"detalles": detalles_map}
+        
+    except Exception as e:
+        logger.error(f"Error en endpoint de batch details: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Error al obtener detalles de productos"
+        )
 
