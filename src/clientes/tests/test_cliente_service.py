@@ -6,9 +6,10 @@ import uuid
 
 from services.cliente_service import ClienteService
 from models.cliente_institucional_model import ClienteInstitucional
-from schemas.cliente_schema import ClienteAsignadoResponse, ClienteAsignadoListResponse
+from schemas.cliente_schema import ClienteAsignadoResponse, ClienteAsignadoListResponse, ClientResponse
 from db.redis_client import RedisClient
 from schemas.cliente_schema import RegisterRequest
+from fastapi import HTTPException
 
 
 class TestClienteService:
@@ -235,3 +236,85 @@ class TestClienteService:
         mock_db.add.assert_called_once()
         mock_db.commit.assert_called_once()
         mock_httpx_get.assert_called_once()
+
+    def test_get_cliente_info_success(self, cliente_service, mock_db, sample_cliente_data):
+        """Test exitoso para obtener información completa de un cliente por ID"""
+        cliente, vendedor_id = sample_cliente_data
+        
+        # Configurar fechas
+        cliente.fecha_creacion = datetime.now(timezone.utc)
+        cliente.fecha_actualizacion = datetime.now(timezone.utc)
+        
+        # Mock de la consulta
+        mock_db.query.return_value.filter.return_value.first.return_value = cliente
+        
+        # Ejecutar método
+        result = cliente_service.get_cliente_info(str(cliente.id))
+        
+        # Verificaciones
+        assert isinstance(result, ClientResponse)
+        assert result.id == str(cliente.id)
+        assert result.nombre == cliente.nombre
+        assert result.logoUrl == cliente.logo_url
+        assert result.address == cliente.address
+        assert result.fecha_creacion == cliente.fecha_creacion
+        assert result.fecha_actualizacion == cliente.fecha_actualizacion
+        assert result.id_vendedor == str(cliente.id_vendedor)
+
+    def test_get_cliente_info_not_found(self, cliente_service, mock_db):
+        """Test cuando el cliente no existe - debe retornar 404"""
+        cliente_id = str(uuid.uuid4())
+        
+        # Mock de consulta sin resultados
+        mock_db.query.return_value.filter.return_value.first.return_value = None
+        
+        # Ejecutar método y verificar excepción
+        with pytest.raises(HTTPException) as exc_info:
+            cliente_service.get_cliente_info(cliente_id)
+        
+        # Verificaciones
+        assert exc_info.value.status_code == 404
+        assert "Cliente no encontrado" in exc_info.value.detail
+
+    def test_get_cliente_info_database_error(self, cliente_service, mock_db):
+        """Test cuando ocurre un error en la base de datos - debe retornar 500"""
+        cliente_id = str(uuid.uuid4())
+        
+        # Mock de error en la base de datos
+        mock_db.query.side_effect = Exception("Database connection error")
+        
+        # Ejecutar método y verificar excepción
+        with pytest.raises(HTTPException) as exc_info:
+            cliente_service.get_cliente_info(cliente_id)
+        
+        # Verificaciones
+        assert exc_info.value.status_code == 500
+        assert "Error interno al obtener la información del cliente" in exc_info.value.detail
+
+    def test_get_cliente_info_without_vendedor(self, cliente_service, mock_db):
+        """Test para obtener información de un cliente sin vendedor asignado"""
+        cliente_id = str(uuid.uuid4())
+        
+        # Crear cliente sin vendedor
+        cliente = ClienteInstitucional(
+            nombre="Clínica Sin Vendedor",
+            nit="900999888-7",
+            id_vendedor=None,
+            logo_url="https://storage.googleapis.com/logos/clinica.png",
+            address="Calle 100 #50-30"
+        )
+        cliente.id = uuid.UUID(cliente_id)
+        cliente.fecha_creacion = datetime.now(timezone.utc)
+        cliente.fecha_actualizacion = datetime.now(timezone.utc)
+        
+        # Mock de la consulta
+        mock_db.query.return_value.filter.return_value.first.return_value = cliente
+        
+        # Ejecutar método
+        result = cliente_service.get_cliente_info(cliente_id)
+        
+        # Verificaciones
+        assert isinstance(result, ClientResponse)
+        assert result.id == cliente_id
+        assert result.nombre == cliente.nombre
+        assert result.id_vendedor is None
