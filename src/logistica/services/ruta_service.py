@@ -170,12 +170,12 @@ class RutaService:
             total = self.db.query(Ruta).count()
             total_pages = math.ceil(total / page_size) if total > 0 else 0
             
-            # Obtener rutas con paginación y eager loading
+            # Obtener rutas con paginación, eager loading y ordenadas por fecha ascendente (más antiguas primero)
             rutas = self.db.query(Ruta).options(
                 joinedload(Ruta.conductor),
                 joinedload(Ruta.vehiculo),
                 joinedload(Ruta.paradas)
-            ).offset(skip).limit(page_size).all()
+            ).order_by(Ruta.fecha.asc()).offset(skip).limit(page_size).all()
             
             rutas_response = [
                 RutaResponse(

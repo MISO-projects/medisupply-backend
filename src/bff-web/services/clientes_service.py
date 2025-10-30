@@ -28,6 +28,33 @@ class ClientesService:
             logger.error(f"Unexpected error checking Clientes health: {e}")
             raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
 
+    def get_all_clientes(self) -> List[Dict[str, Any]]:
+        """
+        Obtiene todos los clientes registrados en el sistema
+        """
+        try:
+            response = httpx.get(
+                f"{self.base_url}/api/clientes/",
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            
+            logger.info(f"Successfully retrieved all clientes from service")
+            return response.json()
+            
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error getting all clientes: {e}")
+            if e.response.status_code == 404:
+                raise HTTPException(status_code=404, detail="No se encontraron clientes")
+            else:
+                raise HTTPException(status_code=e.response.status_code, detail=f"Error del servicio de clientes: {e}")
+        except httpx.RequestError as e:
+            logger.error(f"Failed to connect to Clientes microservice: {e}")
+            raise HTTPException(status_code=503, detail="No se puede conectar con el servicio de clientes")
+        except Exception as e:
+            logger.error(f"Unexpected error getting all clientes: {e}")
+            raise HTTPException(status_code=500, detail="Error interno del servidor")
+
     def get_clientes_asignados(self, authorization_header: str) -> Dict[str, Any]:
         try:
             headers = {

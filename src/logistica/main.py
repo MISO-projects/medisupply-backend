@@ -6,6 +6,7 @@ from router.conductor_router import router as conductor_router
 from router.vehiculo_router import router as vehiculo_router
 from db.database import engine, Base
 import logging
+import os
 
 logging.basicConfig(level=logging.DEBUG, force=True)
 logger = logging.getLogger(__name__)
@@ -16,8 +17,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
-Base.metadata.create_all(bind=engine)
-logger.info("Database tables created successfully")
+# Solo crear tablas si no estamos en modo testing
+# En tests, cada archivo de test maneja su propia configuración de BD
+if not os.getenv("TESTING"):
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
 
 app.include_router(ruta_router)
 app.include_router(recursos_router)

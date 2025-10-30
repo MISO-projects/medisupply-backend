@@ -1,15 +1,24 @@
 import pytest
 import os
+import sys
+from pathlib import Path
 
 # Establecer variable de entorno para usar SQLite en tests
 os.environ["TESTING"] = "1"
 
+# Asegurar que el path del proyecto esté en sys.path
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from db.database import Base, get_db
+from db.database import get_db, Base
 from main import app
 
+# Importar modelos DESPUÉS de establecer TESTING para que se registren con Base
+from models.ruta_model import Conductor, Vehiculo, Ruta, Parada
 
 # Configuración de base de datos de prueba
 TEST_DATABASE_URL = "sqlite:///./test_logistica_router.db"
@@ -30,10 +39,18 @@ app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
 
+@pytest.fixture(scope="module", autouse=True)
+def setup_module():
+    """Setup que se ejecuta una vez por módulo"""
+    app.dependency_overrides[get_db] = override_get_db
+    yield
+    # Limpiar dependency overrides al final del módulo
+    app.dependency_overrides.clear()
+
+
 @pytest.fixture(scope="function", autouse=True)
 def setup_database():
-    from models.ruta_model import Conductor, Vehiculo
-    
+    # Crear todas las tablas de base de datos en el engine de test
     Base.metadata.create_all(bind=engine)
     
     # Crear datos de prueba
@@ -74,6 +91,7 @@ def setup_database():
         db.close()
     
     yield
+    # Limpiar la base de datos después de cada test
     Base.metadata.drop_all(bind=engine)
 
 
@@ -88,14 +106,14 @@ def ruta_payload_valida():
         "condiciones_almacenamiento": "Refrigerado",
         "paradas": [
             {
-                "cliente_id": 32,
+                "cliente_id": "32",
                 "direccion": "Calle 80 #45-20",
                 "contacto": "Carlos Ríos",
                 "latitud": 4.7110,
                 "longitud": -74.0721
             },
             {
-                "cliente_id": 15,
+                "cliente_id": "15",
                 "direccion": "Av. 30 #22-10",
                 "contacto": "María López",
                 "latitud": 4.6097,
@@ -249,7 +267,7 @@ class TestRutaRouter:
             "conductor_id": 4,
             "paradas": [
                 {
-                    "cliente_id": 32,
+                    "cliente_id": "32",
                     "direccion": "Calle 80 #45-20",
                     "contacto": "Carlos Ríos"
                 }

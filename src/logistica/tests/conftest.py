@@ -7,6 +7,9 @@ import sys
 from pathlib import Path
 import pytest
 from types import SimpleNamespace
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from unittest.mock import MagicMock, patch
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(_PROJECT_ROOT) not in sys.path:
@@ -17,6 +20,30 @@ if str(_PROJECT_ROOT) not in sys.path:
 def _set_testing_env(monkeypatch):
     monkeypatch.setenv("TESTING", "1")
     yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def create_test_database():
+    """Crea las tablas de base de datos para los tests"""
+    # Este fixture ya no necesita crear tablas porque cada archivo de test
+    # maneja su propia base de datos
+    yield
+
+
+@pytest.fixture(autouse=True)
+def mock_redis():
+    """Mockea la conexión a Redis para todos los tests"""
+    mock_redis_client = MagicMock()
+    mock_redis_client.ping.return_value = True
+    mock_redis_client.get.return_value = None
+    mock_redis_client.setex.return_value = True
+    mock_redis_client.delete.return_value = True
+    
+    with patch('db.redis_client.RedisClient') as MockRedisClass:
+        mock_instance = MagicMock()
+        mock_instance.client = mock_redis_client
+        MockRedisClass.return_value = mock_instance
+        yield mock_redis_client
 
 
 class FakeDB:

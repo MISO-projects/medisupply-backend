@@ -73,14 +73,14 @@ def ruta_data_valida():
         condiciones_almacenamiento="Refrigerado",
         paradas=[
             ParadaRequest(
-                cliente_id=32,
+                cliente_id="32",
                 direccion="Calle 80 #45-20",
                 contacto="Carlos Ríos",
                 latitud=4.7110,
                 longitud=-74.0721
             ),
             ParadaRequest(
-                cliente_id=15,
+                cliente_id="15",
                 direccion="Av. 30 #22-10",
                 contacto="María López",
                 latitud=4.6097,
@@ -126,12 +126,12 @@ class TestRutaService:
         
         # Assert
         assert len(paradas_db) == 2
-        assert paradas_db[0].cliente_id == 32
+        assert paradas_db[0].cliente_id == "32"
         assert paradas_db[0].direccion == "Calle 80 #45-20"
         assert paradas_db[0].contacto == "Carlos Ríos"
         assert float(paradas_db[0].latitud) == 4.7110
         assert float(paradas_db[0].longitud) == -74.0721
-        assert paradas_db[1].cliente_id == 15
+        assert paradas_db[1].cliente_id == "15"
     
     def test_obtener_ruta_existente(self, ruta_service, ruta_data_valida):
         # Arrange
@@ -196,13 +196,13 @@ class TestRutaService:
             conductor_id=4,
             paradas=[
                 ParadaRequest(
-                    cliente_id=32,
+                    cliente_id="32",
                     direccion="Calle 80 #45-20",
                     contacto="Carlos Ríos",
                     orden=2
                 ),
                 ParadaRequest(
-                    cliente_id=15,
+                    cliente_id="15",
                     direccion="Av. 30 #22-10",
                     contacto="María López",
                     orden=1
@@ -219,9 +219,9 @@ class TestRutaService:
         ).order_by(Parada.orden).all()
         
         assert paradas_db[0].orden == 1
-        assert paradas_db[0].cliente_id == 15
+        assert paradas_db[0].cliente_id == "15"
         assert paradas_db[1].orden == 2
-        assert paradas_db[1].cliente_id == 32
+        assert paradas_db[1].cliente_id == "32"
     
     def test_crear_ruta_sin_orden_asigna_secuencial(self, ruta_service, db_session):
         # Arrange
@@ -233,12 +233,12 @@ class TestRutaService:
             conductor_id=4,
             paradas=[
                 ParadaRequest(
-                    cliente_id=32,
+                    cliente_id="32",
                     direccion="Calle 80 #45-20",
                     contacto="Carlos Ríos"
                 ),
                 ParadaRequest(
-                    cliente_id=15,
+                    cliente_id="15",
                     direccion="Av. 30 #22-10",
                     contacto="María López"
                 )

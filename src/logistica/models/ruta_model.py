@@ -145,7 +145,7 @@ class Parada(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     ruta_id = Column(Integer, ForeignKey("rutas.id"), nullable=False)
-    cliente_id = Column(Integer, nullable=False)
+    cliente_id = Column(String(255), nullable=False)  # UUID del cliente
     direccion = Column(String(500), nullable=False)
     contacto = Column(String(255), nullable=False)
     latitud = Column(Numeric(10, 8), nullable=True)  
@@ -157,7 +157,7 @@ class Parada(Base):
     
     ruta = relationship("Ruta", back_populates="paradas")
 
-    def __init__(self, ruta_id: int, cliente_id: int, direccion: str, contacto: str,
+    def __init__(self, ruta_id: int, cliente_id: str, direccion: str, contacto: str,
                  latitud: float = None, longitud: float = None, orden: int = None):
         now = datetime.now(timezone.utc)
         self.ruta_id = ruta_id

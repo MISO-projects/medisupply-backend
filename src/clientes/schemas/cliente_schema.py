@@ -77,8 +77,8 @@ class ClientResponse(BaseModel):
     """
     id: str = Field(..., description="Id del cliente institucional")
     nombre: str = Field(..., description="Nombre del cliente institucional")
-    logoUrl: str = Field(..., description="URL del logo del cliente institucional")
-    address: str = Field(..., description="Dirección del cliente institucional")
+    logoUrl: Optional[str] = Field(None, description="URL del logo del cliente institucional")
+    address: Optional[str] = Field(None, description="Dirección del cliente institucional")
     fecha_creacion: datetime = Field(..., description=  "Fecha de creación")
     fecha_actualizacion: datetime = Field(..., description="Fecha de última actualización")
     id_vendedor: Optional[str] = Field(None, description="Id del vendedor asignado")
