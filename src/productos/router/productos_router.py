@@ -13,7 +13,6 @@ from schemas.producto_schema import (
     ProductoCreate,
     ProductoUpdate,
     ProductosListResponse,
-    ProductoConStock,
     MobileProductoResponse
 )
 
@@ -72,6 +71,50 @@ async def get_productos_disponibles_mobile(
         raise HTTPException(
             status_code=500, detail=str(e)
         )
+    
+@productos_router.get(
+    "/creados",
+    response_model=ProductosListResponse,
+    summary="Obtener productos creados (para la Web)",
+    description="Retorna la lista de productos paginada (solo catálogo, sin stock) para la web admin."
+)
+async def get_productos_creados(
+    categoria: Optional[str] = Query(None, description="Filtrar por categoría"),
+    nombre: Optional[str] = Query(None, description="Buscar por nombre"), 
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(20, ge=1, le=100, description="Tamaño de página"),
+    db: Session = Depends(get_db)
+):
+    try:
+        logger.info(f"Consultando productos creados para WEB - nombre: {nombre}, categoria: {categoria}")
+        skip = (page - 1) * page_size
+        service = ProductosService(db)
+        
+        productos, total = await service.get_productos_creados_web(
+            categoria=categoria,      
+            nombre=nombre, 
+            skip=skip,
+            limit=page_size
+        )
+        total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+        
+        logger.info(f"Retornando {len(productos)} productos de un total de {total}")
+        
+        return ProductosListResponse(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages, 
+            productos=productos
+        )
+        
+    except Exception as e:
+        logger.error(f"Error en endpoint de productos creados: {e}")
+        raise HTTPException(
+            status_code=500, detail=str(e)
+        )
+
+
 @productos_router.get(
     "/{producto_id}",
     response_model=ProductoResponse,

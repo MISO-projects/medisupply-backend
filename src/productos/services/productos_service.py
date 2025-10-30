@@ -171,6 +171,47 @@ class ProductosService:
             raise HTTPException(
                 status_code=500, detail="Error al obtener productos disponibles"
             )
+        
+    async def get_productos_creados_web(
+        self,
+        categoria: Optional[str] = None,      
+        nombre: Optional[str] = None, 
+        skip: int = 0,
+        limit: int = 20,
+    ) -> tuple[List[ProductoResponse], int]: 
+        """
+        Obtiene la lista de productos creados para la WEB (SIN STOCK).
+        """
+        try:
+            query = self.db.query(Producto)
+            filters = [] 
+
+            if nombre:
+                filters.append(Producto.nombre.ilike(f"%{nombre}%"))
+            if categoria:
+                filters.append(Producto.categoria == categoria)
+            
+            if filters:
+                query = query.filter(and_(*filters))
+
+            total_en_catalogo = query.count()
+            logger.debug(f"Total productos en catálogo: {total_en_catalogo}")
+
+            productos_db = query.order_by(Producto.nombre).offset(skip).limit(limit).all()
+            
+            if not productos_db:
+                return [], 0
+
+            productos_finales = [ProductoResponse.model_validate(p) for p in productos_db]
+
+            logger.info(f"Retornando {len(productos_finales)} productos creados")
+            return productos_finales, total_en_catalogo
+
+        except Exception as e:
+            logger.error(f"Error al obtener productos creados: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail="Error al obtener productos creados"
+            )
 
     def _get_producto_model_by_id(self, producto_id: str) -> Producto:
         """
@@ -256,54 +297,27 @@ class ProductosService:
     async def crear_producto(self, producto_data: ProductoCreate) -> Dict[str, Any]:
         """Crea un nuevo producto"""
         try:
-
             proveedor_info = await self._verificar_proveedor_activo(
                 producto_data.proveedor_id
             )
-            # Verificar si ya existe un producto con el mismo SKU
             if producto_data.sku:
-                existing = (
-                    self.db.query(Producto)
-                    .filter(Producto.sku == producto_data.sku)
-                    .first()
-                )
+                existing = self.db.query(Producto).filter(Producto.sku == producto_data.sku).first()
                 if existing:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Ya existe un producto con el SKU {producto_data.sku}",
-                    )
+                    raise HTTPException(status_code=400, detail=f"Ya existe un producto con el SKU {producto_data.sku}")
 
             nuevo_producto = Producto(
-                nombre=producto_data.nombre,
-                descripcion=producto_data.descripcion,
-                categoria=producto_data.categoria,
-                imagen_url=producto_data.imagen_url,
-                precio_unitario=producto_data.precio_unitario,
-                stock_disponible=(
-                    producto_data.stock_disponible
-                    if producto_data.stock_disponible is not None
-                    else 100
-                ),
-                disponible=producto_data.disponible,
-                unidad_medida=producto_data.unidad_medida,
-                sku=producto_data.sku,
-                tipo_almacenamiento=producto_data.tipo_almacenamiento,
-                observaciones=producto_data.observaciones,
-                proveedor_id=producto_data.proveedor_id,
-                proveedor_nombre=proveedor_info.get(
-                    "nombre", "Proveedor (no verificado)"
-                ),
+                **producto_data.model_dump(),
+                proveedor_nombre=proveedor_info.get("nombre", "Proveedor (no verificado)")
             )
+            
             self.db.add(nuevo_producto)
             self.db.commit()
             self.db.refresh(nuevo_producto)
 
             self._invalidate_producto_caches()
-
-            logger.info(
-                f"Producto creado: {nuevo_producto.id} - {nuevo_producto.nombre}"
-            )
-            return nuevo_producto
+            logger.info(f"Producto creado: {nuevo_producto.id} - {nuevo_producto.nombre}")
+            
+            return nuevo_producto.to_dict()
 
         except HTTPException:
             raise
@@ -311,7 +325,6 @@ class ProductosService:
             self.db.rollback()
             logger.error(f"Error al crear producto: {str(e)}")
             raise HTTPException(status_code=500, detail="Error al crear producto")
-
     def actualizar_producto(
         self, producto_id: str, producto_data: ProductoUpdate
     ) -> Producto:

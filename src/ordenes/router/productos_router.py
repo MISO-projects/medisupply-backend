@@ -11,7 +11,6 @@ from schemas.producto_schema import (
     ProductoCreate,
     ProductoUpdate,
     ProductosListResponse,
-    ProductoConStock
 )
 
 logging.basicConfig(level=logging.INFO)
