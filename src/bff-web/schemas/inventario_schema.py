@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, UUID4
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, List
 from decimal import Decimal
 from uuid import UUID
 
@@ -32,3 +32,32 @@ class CrearRegistroInventarioSchema(BaseModel):
             }
         }
 
+
+class RegistroInventarioResponseSchema(BaseModel):
+    """Schema de un registro de inventario individual devuelto por la API."""
+    id: UUID4
+    producto_id: UUID4
+    lote: str
+    fecha_vencimiento: Optional[date]
+    cantidad: int
+    ubicacion: str
+    temperatura_requerida: str
+    estado: str
+    condiciones_especiales: Optional[str]
+    observaciones: Optional[str]
+    fecha_recepcion: datetime
+    created_at: datetime
+    updated_at: Optional[datetime]
+    producto_nombre: Optional[str]
+    producto_sku: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+class InventarioListResponse(BaseModel):
+    """Schema de la respuesta paginada de inventario."""
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    items: List[RegistroInventarioResponseSchema]
