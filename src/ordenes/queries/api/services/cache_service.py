@@ -1,7 +1,7 @@
 import json
 import logging
 from typing import Dict, Any, Optional
-from ..db.redis_client import get_redis_client
+from db.redis_client import get_redis_client
 import redis
 
 logger = logging.getLogger(__name__)
@@ -15,6 +15,10 @@ class CacheService:
     def _get_order_key(self, order_id: str) -> str:
         """Generate cache key for order"""
         return f"{self.key_prefix}{order_id}"
+
+    def _get_client_orders_key(self, client_id: str, skip: int, limit: int) -> str:
+        """Generate cache key for client orders with pagination"""
+        return f"client_orders:{client_id}:skip:{skip}:limit:{limit}"
 
     def get_order(self, order_id: str) -> Optional[Dict[str, Any]]:
         """Get order from cache"""
@@ -92,6 +96,98 @@ class CacheService:
     def invalidate_order(self, order_id: str) -> bool:
         """Invalidate order cache (public method for external use)"""
         return self._delete_order(order_id)
+
+    def get_client_orders(self, client_id: str, skip: int, limit: int) -> Optional[Dict[str, Any]]:
+        """Get client orders from cache"""
+        if not self.redis_client:
+            logger.warning("Redis client not available, cache miss")
+            return None
+
+        try:
+            cache_key = self._get_client_orders_key(client_id, skip, limit)
+            cached_data = self.redis_client.get(cache_key)
+            
+            if cached_data:
+                logger.info(f"Cache hit for client {client_id} orders (skip={skip}, limit={limit})")
+                return json.loads(cached_data)
+            
+            logger.info(f"Cache miss for client {client_id} orders (skip={skip}, limit={limit})")
+            return None
+            
+        except redis.ConnectionError:
+            logger.warning(f"Redis connection error when getting client {client_id} orders")
+            return None
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error for client {client_id} orders: {e}")
+            self._delete_client_orders(client_id, skip, limit)
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error getting client {client_id} orders from cache: {e}")
+            return None
+
+    def set_client_orders(self, client_id: str, skip: int, limit: int, orders_data: Dict[str, Any], ttl: Optional[int] = None) -> bool:
+        """Set client orders in cache"""
+        if not self.redis_client:
+            logger.warning("Redis client not available, cannot cache client orders")
+            return False
+
+        try:
+            cache_key = self._get_client_orders_key(client_id, skip, limit)
+            ttl = ttl or self.default_ttl
+            
+            serialized_data = json.dumps(orders_data, default=str)
+            
+            result = self.redis_client.setex(cache_key, ttl, serialized_data)
+            
+            if result:
+                logger.info(f"Successfully cached client {client_id} orders with TTL {ttl}s")
+                return True
+            else:
+                logger.warning(f"Failed to cache client {client_id} orders")
+                return False
+                
+        except redis.ConnectionError:
+            logger.warning(f"Redis connection error when caching client {client_id} orders")
+            return False
+        except (TypeError, ValueError) as e:
+            logger.error(f"Serialization error for client {client_id} orders: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error caching client {client_id} orders: {e}")
+            return False
+
+    def _delete_client_orders(self, client_id: str, skip: int, limit: int) -> bool:
+        """Delete client orders from cache"""
+        if not self.redis_client:
+            return False
+
+        try:
+            cache_key = self._get_client_orders_key(client_id, skip, limit)
+            result = self.redis_client.delete(cache_key)
+            logger.info(f"Deleted client {client_id} orders from cache: {bool(result)}")
+            return bool(result)
+        except Exception as e:
+            logger.error(f"Error deleting client {client_id} orders from cache: {e}")
+            return False
+
+    def invalidate_client_orders(self, client_id: str) -> bool:
+        """Invalidate all cached orders for a client (clears all pagination variants)"""
+        if not self.redis_client:
+            return False
+
+        try:
+            pattern = f"client_orders:{client_id}:*"
+            deleted_count = 0
+            
+            for key in self.redis_client.scan_iter(match=pattern):
+                self.redis_client.delete(key)
+                deleted_count += 1
+            
+            logger.info(f"Invalidated {deleted_count} cache entries for client {client_id}")
+            return deleted_count > 0
+        except Exception as e:
+            logger.error(f"Error invalidating client {client_id} orders cache: {e}")
+            return False
 
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics"""

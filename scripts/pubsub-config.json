@@ -4,7 +4,8 @@
   "emulator_host": "pubsub-emulator:8085",
   "topics": [
     "create-order-command",
-    "order-created"
+    "order-created",
+    "order-projection-created"
   ],
   "subscriptions": [
     {
@@ -18,6 +19,12 @@
       "topic": "order-created",
       "pushEndpoint": "order-query-projection:3000",
       "ackDeadlineSeconds": 60
+    },
+    {
+      "name": "order-projection-created-sub",
+      "topic": "order-projection-created",
+      "pushEndpoint": "order-query-api:3000/orders/cache-invalidation",
+      "ackDeadlineSeconds": 60
     }
   ],
   "healthChecks": [
@@ -28,6 +35,10 @@
     {
       "service": "order-query-projection",
       "endpoint": "order-query-projection:3000/health"
+    },
+    {
+      "service": "order-query-api",
+      "endpoint": "order-query-api:3000/health"
     }
   ]
 }

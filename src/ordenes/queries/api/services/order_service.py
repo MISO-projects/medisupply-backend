@@ -1,11 +1,11 @@
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
-from ..db.database import get_db
+from db.database import get_db
 from fastapi import Depends
-from ..db.order_projection_model import OrderProjection
+from db.order_projection_model import OrderProjection
 from fastapi import HTTPException
 from http import HTTPStatus
-from .cache_service import CacheService
+from services.cache_service import CacheService
 from datetime import datetime
 import logging
 
@@ -43,6 +43,10 @@ class OrderService:
     def invalidate_order_cache(self, order_id: str) -> bool:
         """Invalidate cache for a specific order"""
         return self.cache_service.invalidate_order(order_id)
+
+    def invalidate_client_orders_cache(self, client_id: str) -> bool:
+        """Invalidate all cached orders for a specific client"""
+        return self.cache_service.invalidate_client_orders(client_id)
 
     def get_cache_health(self) -> Dict[str, Any]:
         """Get cache health and statistics"""
@@ -145,3 +149,79 @@ class OrderService:
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 detail="Error interno al contar órdenes."
             )
+
+    def get_orders_by_client(
+        self,
+        id_cliente: str,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """Get all orders for a specific client with pagination.
+        
+        Args:
+            id_cliente: The ID of the client
+            skip: Number of records to skip (pagination)
+            limit: Maximum number of records to return
+            
+        Returns:
+            List of orders for the specified client
+        """
+        try:
+            # Try to get from cache first
+            cached_orders = self.cache_service.get_client_orders(id_cliente, skip, limit)
+            if cached_orders:
+                return cached_orders
+            
+            logger.info(f"Getting orders for client {id_cliente} from database")
+            orders = (
+                self.db.query(OrderProjection)
+                .filter(OrderProjection.id_cliente == id_cliente)
+                .order_by(OrderProjection.fecha_creacion.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
+            )
+            
+            orders_list = [order.to_summary_dict() for order in orders]
+            
+            # Cache the result
+            self.cache_service.set_client_orders(id_cliente, skip, limit, orders_list)
+            
+            return orders_list
+            
+        except Exception as e:
+            logger.error(f"Error getting orders for client {id_cliente}: {e}")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="Error interno al obtener órdenes del cliente."
+            )
+
+    def count_orders_by_client(self, id_cliente: str) -> int:
+        """Count total number of orders for a specific client.
+        
+        Args:
+            id_cliente: The ID of the client
+            
+        Returns:
+            Total number of orders for the client
+        """
+        try:
+            count = (
+                self.db.query(OrderProjection)
+                .filter(OrderProjection.id_cliente == id_cliente)
+                .count()
+            )
+            
+            return count
+            
+        except Exception as e:
+            logger.error(f"Error counting orders for client {id_cliente}: {e}")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="Error interno al contar órdenes del cliente."
+            )
+
+
+def get_order_service(db: Session = Depends(get_db)) -> OrderService:
+    """Dependency function to get OrderService instance"""
+    return OrderService(db=db)
