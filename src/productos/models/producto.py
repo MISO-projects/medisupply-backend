@@ -22,7 +22,7 @@ class Producto(Base):
     sku = Column(String(100), nullable=True, unique=True)
     tipo_almacenamiento = Column(String(50), nullable=False, default="AMBIENTE")
     observaciones = Column(Text, nullable=True)
-    proveedor_id = Column(UUID(as_uuid=True), nullable=False)  # FK to proveedores
+    proveedor_id = Column(UUID(as_uuid=True), nullable=False) 
     proveedor_nombre = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -34,7 +34,6 @@ class Producto(Base):
         categoria,
         imagen_url,
         precio_unitario,
-        stock_disponible,
         disponible,
         unidad_medida,
         tipo_almacenamiento="AMBIENTE",
@@ -48,7 +47,6 @@ class Producto(Base):
         self.categoria = categoria
         self.imagen_url = imagen_url
         self.precio_unitario = precio_unitario
-        self.stock_disponible = stock_disponible
         self.disponible = disponible
         self.unidad_medida = unidad_medida
         self.sku = sku or self._generate_sku()
@@ -67,17 +65,20 @@ class Producto(Base):
         return f"PRD-{date_part}-{random_part}"
 
     def __repr__(self):
-        return f"<Producto(id={self.id}, nombre={self.nombre}, categoria={self.categoria}, stock={self.stock_disponible})>"
+        return f"<Producto(id={self.id}, nombre={self.nombre}, categoria={self.categoria}, disponible={self.disponible})>"
     
     def to_dict(self):
+        """
+        Convierte el objeto SQLAlchemy en un dict.
+        Este dict es usado por el servicio para construir las respuestas.
+        """
         return {
             "id": self.id,
             "nombre": self.nombre,
             "descripcion": self.descripcion,
             "categoria": self.categoria,
             "imagen_url": self.imagen_url,
-            "precio_unitario": self.precio_unitario,
-            "stock": self.stock_disponible,
+            "precio_unitario": str(self.precio_unitario),
             "disponible": self.disponible,
             "unidad_medida": self.unidad_medida,
             "tipo_almacenamiento": self.tipo_almacenamiento,
@@ -85,6 +86,6 @@ class Producto(Base):
             "sku": self.sku,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
-            "proveedor_id": self.proveedor_id,
+            "proveedor_id": str(self.proveedor_id), 
             "proveedor_nombre": self.proveedor_nombre,
         }

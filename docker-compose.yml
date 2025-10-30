@@ -176,6 +176,7 @@ services:
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - INVENTARIO_SERVICE_URL=http://inventario-service:3000
     volumes:
       - ./src/productos:/app
     networks:

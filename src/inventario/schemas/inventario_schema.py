@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, Dict
 from pydantic import BaseModel, UUID4, Field
 from typing import List
 
@@ -42,3 +42,8 @@ class InventarioListResponse(BaseModel):
     page_size: int
     total_pages: int
     
+class StockBatchRequest(BaseModel):
+    producto_ids: List[str] = Field(..., description="Lista de IDs de productos (UUIDs como string)")
+
+class StockBatchResponse(BaseModel):
+    stock_data: Dict[str, int] = Field(..., description="Diccionario de producto_id: stock_total")

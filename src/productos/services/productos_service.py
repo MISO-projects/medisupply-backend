@@ -1,8 +1,16 @@
+# src/productos/services/productos_service.py
+
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from typing import List, Optional, Union
 from models.producto import Producto
-from schemas.producto_schema import ProductoCreate, ProductoUpdate, ProductoConStock, ProductoResponse
+# ¡Importa los schemas correctos!
+from schemas.producto_schema import (
+    ProductoCreate, 
+    ProductoUpdate, 
+    ProductoResponse,
+    MobileProducto 
+)
 from fastapi import HTTPException
 import logging
 import httpx
@@ -17,9 +25,8 @@ logger = logging.getLogger(__name__)
 
 
 class ProductosService:
-    CACHE_TTL_PRODUCTO = 3600  # 1 hour for individual product
-    CACHE_TTL_LIST = 300  # 5 minutes for lists
-    CACHE_TTL_COUNT = 300  # 5 minutes for counts
+    CACHE_TTL_PRODUCTO = 3600
+    CACHE_TTL_LIST = 300
 
     def __init__(self, db: Session):
         self.db = db
@@ -27,15 +34,16 @@ class ProductosService:
         self.proveedores_service_url = os.getenv(
             "PROVEEDORES_SERVICE_URL", "http://proveedores-service:3000"
         )
-
+        self.inventario_service_url = os.getenv(
+            "INVENTARIO_SERVICE_URL", "http://inventario-service:3000"
+        )
+    
     def _get_cache(self, key: str) -> Optional[Any]:
         """Get data from cache"""
         try:
-            if self.redis_client is None:
-                return None
+            if self.redis_client is None: return None
             cached_data = self.redis_client.get(key)
-            if cached_data:
-                return json.loads(cached_data)
+            if cached_data: return json.loads(cached_data)
             return None
         except Exception as e:
             logger.warning(f"Error getting cache for key {key}: {e}")
@@ -68,41 +76,49 @@ class ProductosService:
                 self._delete_cache(f"producto:{producto_id}")
             # Invalidate list caches
             self._delete_cache("productos:list:*")
+            self._delete_cache("productos:mobile:list:*")
         except Exception as e:
             logger.warning(f"Error invalidating caches: {e}")
+    
+    async def _get_stock_para_productos(self, producto_ids: List[str]) -> Dict[str, int]:
+        if not producto_ids: return {}
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    f"{self.inventario_service_url}/api/inventario/stock/batch",
+                    json={"producto_ids": producto_ids}
+                )
+                if response.status_code == 200:
+                    return response.json().get("stock_data", {}) 
+                else:
+                    logger.error(f"Error al obtener stock: {response.status_code} - {response.text}")
+                    return {}
+        except httpx.RequestError as e:
+            logger.error(f"Error de conexión al servicio de inventario: {e}")
+            return {}
 
-    def get_productos_disponibles(
+    async def get_productos_disponibles_mobile(
         self,
-        solo_con_stock: bool = True,
-        categoria: Optional[str] = None,
         nombre: Optional[str] = None,
+        categoria: Optional[str] = None,      
+        disponibilidad: Optional[bool] = None,
         skip: int = 0,
-        limit: int = 100,
-    ) -> tuple[List[ProductoConStock], int]:
+        limit: int = 20,
+    ) -> tuple[List[MobileProducto], int]:
         """
-        Obtiene la lista de productos disponibles con stock
-
-        Args:
-            solo_con_stock: Si True, solo retorna productos con stock > 0
-            categoria: Filtro opcional por categoría
-            nombre: Filtro opcional por nombre (búsqueda parcial, case-insensitive)
-            skip: Número de registros a saltar (paginación)
-            limit: Número máximo de registros a retornar
-
-        Returns:
-            Tupla con (lista de productos, total de productos)
+        Obtiene la lista de productos disponibles, enriquecida con stock
+        del servicio de inventario para el móvil, con filtros.
         """
         try:
-            cache_key = f"productos:list:{solo_con_stock}:{categoria or 'all'}:{nombre or 'all'}:{skip}:{limit}"
+            cache_key = f"productos:mobile:list:{nombre or 'all'}:{categoria or 'all'}:{disponibilidad}:{skip}:{limit}"
             cached_data = self._get_cache(cache_key)
             
             if cached_data is not None:
-                logger.debug(f"Cache hit for productos list")
-                # Return cached productos and total
-                productos_list = [ProductoConStock(**p) for p in cached_data.get('productos', [])]
+                logger.debug(f"Cache hit for productos mobile list")
+                productos_list = [MobileProducto(**p) for p in cached_data.get('productos', [])]
                 return productos_list, cached_data.get('total', 0)
             
-            logger.debug(f"Cache miss for productos list")
+            logger.debug(f"Cache miss for productos mobile list")
             
             # Construir query base
             query = self.db.query(Producto)
@@ -110,38 +126,45 @@ class ProductosService:
             # Aplicar filtros
             filters = [Producto.disponible == True]
 
-            if solo_con_stock:
-                # filters.append(Producto.stock_disponible > 0)
-                logger.debug("Filtrando solo productos con stock disponible")
-
+            if nombre:
+                filters.append(Producto.nombre.ilike(f"%{nombre}%"))
+            
             if categoria:
                 filters.append(Producto.categoria == categoria)
 
-            if nombre:
-                filters.append(Producto.nombre.ilike(f"%{nombre}%"))
-
             query = query.filter(and_(*filters))
 
-            # Obtener total
-            total = query.count()
-            logger.debug(f"Total productos encontrados: {total}")
+            total_en_catalogo = query.count()
+            logger.debug(f"Total productos en catálogo (sin filtro stock): {total_en_catalogo}")
 
-            # Aplicar paginación y ordenamiento
-            productos = query.order_by(Producto.nombre).offset(skip).limit(limit).all()
+            productos_db = query.order_by(Producto.nombre).offset(skip).limit(limit).all()
+            
+            if not productos_db:
+                return [], 0
+            producto_ids = [str(p.id) for p in productos_db]
+            stock_map = await self._get_stock_para_productos(producto_ids)
+            productos_finales = []
+            for producto in productos_db:
+                stock_actual = stock_map.get(str(producto.id), 0)
+                if disponibilidad is None:
+                    pass
+                elif disponibilidad is True and stock_actual == 0:
+                    continue
+                elif disponibilidad is False and stock_actual > 0:
+                    continue
 
-            # Convertir a schema
-            productos_response = [
-                ProductoConStock.model_validate(producto) for producto in productos
-            ]
-
+                producto_dict = producto.to_dict() 
+                producto_dict['stock_disponible'] = stock_actual
+                
+                productos_finales.append(MobileProducto.model_validate(producto_dict))
             cache_data = {
-                'productos': [p.model_dump(mode='json') for p in productos_response],
-                'total': total
+                'productos': [p.model_dump(mode='json', by_alias=True) for p in productos_finales],
+                'total': total_en_catalogo 
             }
             self._set_cache(cache_key, cache_data, self.CACHE_TTL_LIST)
 
-            logger.info(f"Se encontraron {total} productos disponibles")
-            return productos_response, total
+            logger.info(f"Retornando {len(productos_finales)} productos para el móvil")
+            return productos_finales, total_en_catalogo
 
         except Exception as e:
             logger.error(f"Error al obtener productos disponibles: {str(e)}")

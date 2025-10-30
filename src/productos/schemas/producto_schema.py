@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional
+from typing import Optional, List, Dict
 from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
@@ -88,3 +88,22 @@ class ProductosListResponse(BaseModel):
     total_pages: int
     productos: list[ProductoConStock]
 
+
+class MobileProducto(BaseModel):
+    id: str
+    nombre: str
+    categoria: str
+    imagen_url: Optional[str] 
+    stock_disponible: int
+    disponible: bool
+    precio_unitario: str 
+    unidad_medida: str 
+    descripcion: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
+class MobileProductoResponse(BaseModel):
+    total: int
+    productos: List[MobileProducto]

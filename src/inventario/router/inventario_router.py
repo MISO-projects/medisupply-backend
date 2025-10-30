@@ -1,8 +1,8 @@
 # src/inventario/router/inventario_router.py
 
-from fastapi import APIRouter, Depends, Query, Path
+from fastapi import APIRouter, Depends, Query, Path, HTTPException
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List, Dict
 import logging
 from http import HTTPStatus
 
@@ -10,7 +10,9 @@ from schemas.inventario_schema import (
     CrearRegistroInventarioSchema, 
     RegistroInventarioResponseSchema, 
     StockDisponibleResponse,
-    InventarioListResponse 
+    InventarioListResponse,
+    StockBatchRequest, 
+    StockBatchResponse 
 )
 from typing import List
 
@@ -74,18 +76,18 @@ def crear_registro(
     registro_dict = service.crear_registro_inventario(data)
     return registro_dict
 
-@inventario_router.get(
-    "/stock",
-    response_model=StockDisponibleResponse,
-    status_code=HTTPStatus.OK
+@inventario_router.post(
+    "/stock/batch", 
+    response_model=StockBatchResponse,
+    summary="Obtener stock agregado para múltiples productos"
 )
-def listar_stock(
+def get_stock_batch(
+    request: StockBatchRequest,
     service: InventarioService = Depends(get_inventario_service)
 ):
-    """
-    Obtiene la lista de todos los registros de inventario que tienen stock > 0
-    y están disponibles para la venta o reserva.
-    """
-    stock_disponible = service.listar_stock_disponible()
-    
-    return StockDisponibleResponse(items=stock_disponible, total=len(stock_disponible))
+    try:
+        stock_map = service.get_stock_agregado_por_ids(request.producto_ids)
+        return {"stock_data": stock_map}
+    except Exception as e:
+        logger.error(f"Error en endpoint de stock batch: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error al obtener el stock agregado.")

@@ -3,10 +3,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi import Depends, HTTPException
 from http import HTTPStatus
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 import logging
 import httpx
 import os
+from sqlalchemy import func, and_, or_
 import json
 
 from db.database import get_db
@@ -177,6 +178,46 @@ class InventarioService:
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 detail="Error interno al listar los registros de inventario."
             )
+        
+    def get_stock_agregado_por_ids(self, producto_ids: List[str]) -> Dict[str, int]:
+        """
+        Obtiene el stock agregado total para una lista de IDs de productos.
+        Suma la 'cantidad' de todos los registros que:
+        1. Tienen estado 'DISPONIBLE'.
+        2. No están vencidos (fecha_vencimiento > hoy).
+        """
+        try:
+            if not producto_ids:
+                return {}
+            
+            today = date.today()
+            
+            query = self.db.query(
+                Inventario.producto_id,
+                func.sum(Inventario.cantidad).label("stock_total")
+            ).filter(
+                Inventario.producto_id.in_(producto_ids),
+                Inventario.estado == 'DISPONIBLE',
+                or_(
+                    Inventario.fecha_vencimiento.is_(None),
+                    Inventario.fecha_vencimiento > today
+                )
+            ).group_by(
+                Inventario.producto_id
+            )
+            
+            resultados = query.all()
+            stock_map = {str(producto_id): total_stock for producto_id, total_stock in resultados}
+            
+            response_data = {pid: stock_map.get(pid, 0) for pid in producto_ids}
+            
+            logger.info(f"Stock agregado consultado para {len(producto_ids)} productos.")
+            return response_data
+        except Exception as e:
+            logger.error(f"Error al obtener stock agregado: {e}")
+            return {pid: 0 for pid in producto_ids}
+    
+    
 
     def listar_stock_disponible(self) -> List[Dict[str, Any]]:
         """

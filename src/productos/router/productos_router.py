@@ -13,7 +13,8 @@ from schemas.producto_schema import (
     ProductoCreate,
     ProductoUpdate,
     ProductosListResponse,
-    ProductoConStock
+    ProductoConStock,
+    MobileProductoResponse
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -24,76 +25,53 @@ productos_router = APIRouter()
 
 @productos_router.get(
     "/disponibles",
-    response_model=ProductosListResponse,
-    summary="Obtener productos con stock disponible",
-    description="""
-    Retorna la lista de productos disponibles con su información de stock.
-    
-    Criterios:
-    - Solo productos marcados como disponibles
-    - Opcionalmente filtrar solo productos con stock > 0
-    - Incluye: imagen, nombre, cantidad disponible, categoría, disponibilidad
-    """
+    response_model=MobileProductoResponse,
+    summary="Obtener productos disponibles para el móvil",
+    description="Retorna la lista de productos con stock para la app móvil."
 )
-def get_productos_disponibles(
-    solo_con_stock: bool = Query(
-        True,
-        description="Si es True, solo retorna productos con stock mayor a 0"
+async def get_productos_disponibles_mobile(
+    # Filtro de búsqueda
+    nombre: Optional[str] = Query(
+        None,
+        description="Buscar productos por nombre (búsqueda parcial, case-insensitive)"
     ),
     categoria: Optional[str] = Query(
         None,
         description="Filtrar por categoría específica"
     ),
-    nombre: Optional[str] = Query(
+    disponibilidad: Optional[bool] = Query(
         None,
-        description="Buscar productos por nombre (búsqueda parcial, case-insensitive)"
+        description="Filtrar por disponibilidad (True=con stock, False=sin stock, None=todos)"
     ),
     page: int = Query(1, ge=1, description="Número de página"),
-    page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
+    page_size: int = Query(20, ge=1, le=100, description="Tamaño de página"),
     db: Session = Depends(get_db)
 ):
-    """
-    Endpoint principal para que representantes de ventas consulten productos disponibles.
-    
-    Retorna productos con:
-    - ID del producto
-    - Nombre del producto
-    - Categoría
-    - Imagen del producto
-    - Cantidad disponible en inventario
-    - Disponibilidad (activo/inactivo)
-    - Precio unitario
-    - Unidad de medida
-    """
     try:
-        logger.info(f"Consultando productos disponibles - solo_con_stock: {solo_con_stock}, categoria: {categoria}, nombre: {nombre}")
+        logger.info(f"Consultando productos disponibles para móvil - nombre: {nombre}, categoria: {categoria}, disponibilidad: {disponibilidad}")
 
         skip = (page - 1) * page_size
-        
         service = ProductosService(db)
-        productos, total = service.get_productos_disponibles(
-            solo_con_stock=solo_con_stock,
-            categoria=categoria,
+        productos, total = await service.get_productos_disponibles_mobile(
             nombre=nombre,
+            categoria=categoria,      
+            disponibilidad=disponibilidad,
             skip=skip,
             limit=page_size
         )
         
         logger.info(f"Retornando {len(productos)} productos de un total de {total}")
         
-        return ProductosListResponse(
+        return MobileProductoResponse(
             total=total,
-            page=page,
-            page_size=page_size,
-            total_pages=(total + page_size - 1) // page_size if total > 0 else 0,
             productos=productos
         )
         
     except Exception as e:
-        logger.error(f"Error en endpoint de productos disponibles: {str(e)}")
-        raise
-
-
+        logger.error(f"Error en endpoint de productos disponibles: {e}")
+        raise HTTPException(
+            status_code=500, detail=str(e)
+        )
 @productos_router.get(
     "/{producto_id}",
     response_model=ProductoResponse,
