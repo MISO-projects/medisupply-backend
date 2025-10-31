@@ -70,12 +70,12 @@ async def get_registros_inventario_paginado( # ¡async!
     response_model=RegistroInventarioResponseSchema,
     status_code=HTTPStatus.CREATED
 )
-def crear_registro(
+async def crear_registro(
     data: CrearRegistroInventarioSchema,
     service: InventarioService = Depends(get_inventario_service)
 ):
     """Crea un nuevo registro de inventario."""
-    registro_dict = service.crear_registro_inventario(data)
+    registro_dict = await service.crear_registro_inventario(data)
     return registro_dict
 
 @inventario_router.post(
