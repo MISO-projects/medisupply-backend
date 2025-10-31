@@ -414,3 +414,20 @@ class ProductosService:
         except Exception as e:
             logger.error(f"Error al obtener detalles de productos por IDs: {str(e)}")
             return {}
+
+    def get_productos_by_ids(self, ids: List[str]) -> List[ProductoResponse]:
+        """Obtiene productos por una lista de IDs."""
+        try:
+            if not ids:
+                return []
+
+            productos = (
+                self.db.query(Producto)
+                .filter(Producto.id.in_(ids))
+                .all()
+            )
+
+            return [ProductoResponse.model_validate(p) for p in productos]
+        except Exception as e:
+            logger.error(f"Error al obtener productos por IDs: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error al obtener productos por IDs")

@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch
+from datetime import datetime
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from main import app
@@ -49,13 +50,21 @@ class TestGetOrdersByClientEndpoint:
                 "id": "order-1",
                 "numero_orden": "ORD-001",
                 "id_cliente": client_id,
-                "estado": "PENDING"
+                "estado": "PENDING",
+                "fecha_creacion": datetime(2024, 1, 1, 10, 0, 0),
+                "valor_total": 100.50,
+                "cantidad_items": 2,
+                "fecha_entrega_estimada": datetime(2024, 1, 5, 10, 0, 0)
             },
             {
                 "id": "order-2",
                 "numero_orden": "ORD-002",
                 "id_cliente": client_id,
-                "estado": "COMPLETED"
+                "estado": "COMPLETED",
+                "fecha_creacion": datetime(2024, 1, 2, 10, 0, 0),
+                "valor_total": 250.75,
+                "cantidad_items": 5,
+                "fecha_entrega_estimada": datetime(2024, 1, 6, 10, 0, 0)
             }
         ]
         
@@ -86,7 +95,19 @@ class TestGetOrdersByClientEndpoint:
         page = 2
         page_size = 10
         
-        mock_orders = [{"id": f"order-{i}"} for i in range(10)]
+        mock_orders = [
+            {
+                "id": f"order-{i}",
+                "numero_orden": f"ORD-{i:03d}",
+                "id_cliente": client_id,
+                "estado": "PENDING",
+                "fecha_creacion": datetime(2024, 1, 1, 10, 0, 0),
+                "valor_total": 100.0 + i,
+                "cantidad_items": i + 1,
+                "fecha_entrega_estimada": datetime(2024, 1, 5, 10, 0, 0)
+            }
+            for i in range(10)
+        ]
         mock_order_service.get_orders_by_client.return_value = mock_orders
         mock_order_service.count_orders_by_client.return_value = 25
         

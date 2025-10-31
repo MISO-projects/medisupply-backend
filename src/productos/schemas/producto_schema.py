@@ -71,3 +71,5 @@ class MobileProducto(BaseModel):
 class MobileProductoResponse(BaseModel):
     total: int
     productos: List[MobileProducto]
+class GetProductosByIdsRequest(BaseModel):
+    ids: list[str] = Field(..., description="Lista de IDs de productos a consultar")

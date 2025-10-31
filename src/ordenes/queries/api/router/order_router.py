@@ -5,6 +5,14 @@ import logging
 import json
 import base64
 from services.order_service import OrderService, get_order_service
+from schemas.order_schema import (
+    PaginatedOrders,
+    PaginatedClientOrders,
+    SingleOrderResponse,
+    IdsResponse,
+    CacheHealthResponse,
+    CacheInvalidationResponse,
+)
 import jwt
 
 logging.basicConfig(level=logging.INFO)
@@ -55,7 +63,7 @@ def get_client_id_from_auth(authorization: Optional[str] = Header(None)) -> str:
         )
 
 
-@order_router.get("/")
+@order_router.get("/", response_model=PaginatedOrders)
 async def list_orders(
     estado: Optional[str] = Query(None, description="Filtrar por estado de la orden"),
     fecha_creacion_desde: Optional[datetime] = Query(
@@ -102,13 +110,13 @@ async def list_orders(
     }
 
 
-@order_router.get("/ids")
+@order_router.get("/ids", response_model=IdsResponse)
 async def get_all_order_ids(order_service: OrderService = Depends(get_order_service)):
     data = order_service.get_all_order_ids()
     return {"data": data}
 
 
-@order_router.get("/client-orders")
+@order_router.get("/client-orders", response_model=PaginatedClientOrders)
 async def get_orders_by_client(
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(
@@ -143,19 +151,19 @@ async def get_orders_by_client(
     }
 
 
-@order_router.get("/{order_id}")
+@order_router.get("/{order_id}", response_model=SingleOrderResponse)
 async def get_order(order_id: str, order_service: OrderService = Depends(get_order_service)):
     data = order_service.get_order(order_id)
     return {"data": data}
 
 
-@order_router.get("/health/cache")
+@order_router.get("/health/cache", response_model=CacheHealthResponse)
 async def get_cache_health(order_service: OrderService = Depends(get_order_service)):
     """Get cache health status and statistics"""
     return order_service.get_cache_health()
 
 
-@order_router.post("/cache-invalidation")
+@order_router.post("/cache-invalidation", response_model=CacheInvalidationResponse)
 async def handle_cache_invalidation(
     request: Request,
     order_service: OrderService = Depends(get_order_service)

@@ -1,5 +1,5 @@
 from pydantic import Field, BaseModel
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 from uuid import UUID
 
 
@@ -100,3 +100,68 @@ class CrearOrdenClienteRequest(BaseModel):
         }
     }
 
+
+class OrdenResumen(BaseModel):
+    """Schema de resumen de orden (BFF)"""
+    id: str
+    numero_orden: str
+    fecha_creacion: str
+    estado: str
+    valor_total: float
+    id_cliente: str
+    cantidad_items: int
+    fecha_entrega_estimada: str
+    nombre_cliente: Optional[str] = None
+
+
+class OrdenDetalle(BaseModel):
+    """Schema de detalle de orden (BFF)"""
+    id: str
+    numero_orden: str
+    fecha_creacion: str
+    fecha_actualizacion: str
+    fecha_entrega_estimada: str
+    estado: str
+    valor_total: float
+    id_cliente: str
+    id_vendedor: str
+    creado_por: str
+    cantidad_items: int
+    observaciones: Optional[str] = None
+    detalles: List["DetalleOrdenRespuesta"]
+    nombre_cliente: Optional[str] = None
+    direccion_cliente: Optional[str] = None
+
+
+class PaginadoOrdenes(BaseModel):
+    data: List[OrdenDetalle]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class PaginadoOrdenesCliente(BaseModel):
+    data: List[OrdenResumen]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class RespuestaOrden(BaseModel):
+    data: OrdenDetalle
+
+
+class DetalleOrdenRespuesta(BaseModel):
+    """Schema para un detalle de orden en la respuesta (BFF)"""
+    id: str
+    fecha_creacion: str
+    fecha_actualizacion: str
+    id_orden: str
+    id_producto: str
+    cantidad: int
+    precio_unitario: float
+    subtotal: float
+    observaciones: Optional[str] = None
+    nombre_producto: Optional[str] = None

@@ -56,7 +56,7 @@ class TestCrearProductoEndpoint:
         assert response.status_code == 201
         data = response.json()
         assert data["nombre"] == producto_ejemplo_dict["nombre"]
-        assert "stock_disponible" not in data # Ya no debe devolver esto
+        assert "stock_disponible" not in data 
         assert "id" in data
         assert data["disponible"] is True
     
@@ -75,30 +75,16 @@ class TestCrearProductoEndpoint:
     def test_crear_producto_datos_invalidos(self, client):
         """Test: Error al crear producto con datos inválidos"""
         producto_invalido = {
-            "nombre": "",  # Nombre vacío
-            "precio_unitario": -10, # Precio negativo
+            "nombre": "", 
+            "precio_unitario": -10, 
         }
         response = client.post("/api/productos/", json=producto_invalido)
         assert response.status_code == 422
 
-# ... (Las clases TestObtenerProductoEndpoint, TestActualizarProductoEndpoint,
-# y TestEliminarProductoEndpoint de tu archivo original pueden ir aquí,
-# solo asegúrate de añadir 'async' a 'actualizar_producto' si es necesario) ...
-
-# --- ¡ELIMINADO! ---
-# class TestActualizarStockEndpoint:
-#    ... (Toda esta clase de prueba se elimina) ...
-# --- FIN DE LA ELIMINACIÓN ---
-
-
-# --- ¡CORREGIDO! ---
-# Las pruebas de 'init' fallan porque llaman a Producto() con 'stock_disponible'
-# Esto debe arreglarse en 'services/init_service.py' (ver Paso 4)
 class TestInicializarProductosEndpoint:
     
     async def test_seed_productos_primera_vez(self, client):
         """Test: Inicializar productos por primera vez"""
-        # Limpiamos por si acaso
         client.delete("/api/productos/init/clean")
         
         response = client.post("/api/productos/init/seed")
@@ -106,32 +92,110 @@ class TestInicializarProductosEndpoint:
         assert response.status_code == 201
         data = response.json()
         assert data["status"] == "success"
-        assert data["productos_creados"] == 13 # O el número que sea
-
-# ... (El resto de las pruebas de init fallarán hasta arreglar init_service.py) ...
+        assert data["productos_creados"] == 13 
 
 
-# --- ¡CORREGIDO! ---
-# Eliminamos la prueba de 'actualizar_stock'
+class TestObtenerProductosPorIdsEndpoint:
+    """Tests para el endpoint POST /api/productos/by-ids"""
+    
+    def test_obtener_productos_por_ids_exitoso(self, client, producto_ejemplo):
+        """Test: Obtener múltiples productos por IDs"""
+        # Crear productos
+        producto1 = producto_ejemplo.copy()
+        producto1["nombre"] = "Producto 1"
+        producto1["sku"] = "TEST-PROD-1"
+        response1 = client.post("/api/productos/", json=producto1)
+        producto_id_1 = response1.json()["id"]
+        
+        producto2 = producto_ejemplo.copy()
+        producto2["nombre"] = "Producto 2"
+        producto2["sku"] = "TEST-PROD-2"
+        response2 = client.post("/api/productos/", json=producto2)
+        producto_id_2 = response2.json()["id"]
+        
+        # Obtener productos por IDs
+        response = client.post("/api/productos/by-ids", json={"ids": [producto_id_1, producto_id_2]})
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert {p["id"] for p in data} == {producto_id_1, producto_id_2}
+        nombres = {p["nombre"] for p in data}
+        assert "Producto 1" in nombres
+        assert "Producto 2" in nombres
+    
+    def test_obtener_productos_por_ids_lista_vacia(self, client):
+        """Test: Obtener productos con lista vacía de IDs"""
+        response = client.post("/api/productos/by-ids", json={"ids": []})
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data == []
+    
+    def test_obtener_productos_por_ids_parcial(self, client, producto_ejemplo):
+        """Test: Obtener productos cuando algunos IDs no existen"""
+        # Crear un producto
+        response_create = client.post("/api/productos/", json=producto_ejemplo)
+        producto_id_existente = response_create.json()["id"]
+        
+        # Intentar obtener con ID existente y uno que no existe
+        producto_id_inexistente = "id-que-no-existe"
+        response = client.post("/api/productos/by-ids", json={"ids": [producto_id_existente, producto_id_inexistente]})
+        
+        assert response.status_code == 200
+        data = response.json()
+        # Solo debe retornar el producto que existe
+        assert len(data) == 1
+        assert data[0]["id"] == producto_id_existente
+    
+    def test_obtener_productos_por_ids_todos_inexistentes(self, client):
+        """Test: Obtener productos cuando ningún ID existe"""
+        response = client.post("/api/productos/by-ids", json={"ids": ["id-1", "id-2"]})
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data == []
+    
+    def test_obtener_productos_por_ids_duplicados(self, client, producto_ejemplo):
+        """Test: Obtener productos con IDs duplicados en la lista"""
+        response_create = client.post("/api/productos/", json=producto_ejemplo)
+        producto_id = response_create.json()["id"]
+        
+        # Solicitar el mismo ID dos veces
+        response = client.post("/api/productos/by-ids", json={"ids": [producto_id, producto_id]})
+        
+        assert response.status_code == 200
+        data = response.json()
+        # Debe retornar solo una instancia del producto
+        assert len(data) == 1
+        assert data[0]["id"] == producto_id
+    
+    def test_obtener_productos_por_ids_formato_invalido(self, client):
+        """Test: Error con formato de request inválido"""
+        # Sin el campo 'ids'
+        response = client.post("/api/productos/by-ids", json={})
+        
+        assert response.status_code == 422  # Validation error
+    
+    def test_obtener_productos_por_ids_campo_invalido(self, client):
+        """Test: Error cuando 'ids' no es una lista"""
+        response = client.post("/api/productos/by-ids", json={"ids": "no-es-una-lista"})
+        
+        assert response.status_code == 422  # Validation error
+
+
 class TestIntegracionCompleta:
     
     async def test_flujo_completo_producto(self, client, producto_ejemplo_dict):
         """Test: Flujo completo de creación, consulta, actualización y eliminación"""
-        # 1. Crear producto
         response_create = client.post("/api/productos/", json=producto_ejemplo_dict)
         assert response_create.status_code == 201
         producto_id = response_create.json()["id"]
         
-        # 2. Consultar producto
         response_get = client.get(f"/api/productos/{producto_id}")
         assert response_get.status_code == 200
         assert response_get.json()["nombre"] == producto_ejemplo_dict["nombre"]
         
-        # 3. Actualizar stock <-- ¡ELIMINADO!
-        # response_stock = client.patch(f"/api/productos/{producto_id}/stock?cantidad=50")
-        # assert response_stock.status_code == 200
-        
-        # 4. Actualizar información
         response_update = client.put(
             f"/api/productos/{producto_id}",
             json={"precio_unitario": 18.00}
@@ -139,17 +203,14 @@ class TestIntegracionCompleta:
         assert response_update.status_code == 200
         assert float(response_update.json()["precio_unitario"]) == 18.00
         
-        # 5. Verificar en listado
-        response_list = client.get("/api/productos/creados") # <-- Llama al nuevo endpoint
+        response_list = client.get("/api/productos/creados") 
         assert response_list.status_code == 200
         assert response_list.json()["total"] == 1
         
-        # 6. Eliminar producto
         response_delete = client.delete(f"/api/productos/{producto_id}")
         assert response_delete.status_code == 204
         
-        # 7. Verificar que no aparece en productos (ahora sí, porque está eliminado)
         response_final = client.get(f"/api/productos/{producto_id}")
         response_final = client.get(f"/api/productos/{producto_id}")
-        assert response_final.status_code == 200 # <-- ¡CORREGIDO!
-        assert response_final.json()["disponible"] is False # <-- ¡VERIFICACIÓN CORRECTA!
+        assert response_final.status_code == 200 
+        assert response_final.json()["disponible"] is False 
