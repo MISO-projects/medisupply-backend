@@ -6,7 +6,15 @@ import logging
 from services.ordenes_commands_service import OrdenesCommandsService, get_ordenes_commands_service
 from services.ordenes_queries_service import OrdenesQueriesService, get_ordenes_queries_service
 from services.clientes_service import ClientesService, get_clientes_service
-from schemas.orden_schema import CrearOrdenRequest, CrearOrdenResponse, CrearOrdenClienteRequest
+from services.productos_service import ProductosService, get_productos_service
+from schemas.orden_schema import (
+    CrearOrdenRequest,
+    CrearOrdenResponse,
+    CrearOrdenClienteRequest,
+    PaginadoOrdenes,
+    PaginadoOrdenesCliente,
+    RespuestaOrden,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -145,7 +153,7 @@ async def crear_orden_cliente(
 
 @ordenes_router.get(
     "/",
-    response_model=dict,
+    response_model=PaginadoOrdenes,
     summary="Listar órdenes",
     description="Obtiene listado de órdenes con filtros opcionales y paginación"
 )
@@ -190,7 +198,7 @@ async def listar_ordenes(
 
 @ordenes_router.get(
     "/mis-ordenes",
-    response_model=dict,
+    response_model=PaginadoOrdenesCliente,
     summary="Obtener órdenes del cliente autenticado",
     description="Obtiene todas las órdenes del cliente autenticado con paginación"
 )
@@ -239,14 +247,15 @@ async def obtener_mis_ordenes(
 
 @ordenes_router.get(
     "/{order_id}",
-    response_model=dict,
+    response_model=RespuestaOrden,
     summary="Obtener orden por ID",
     description="Obtiene los detalles completos de una orden específica"
 )
 async def obtener_orden(
     order_id: str,
     ordenes_queries_service: OrdenesQueriesService = Depends(get_ordenes_queries_service),
-    clientes_service: ClientesService = Depends(get_clientes_service)
+    clientes_service: ClientesService = Depends(get_clientes_service),
+    productos_service: ProductosService = Depends(get_productos_service)
 ):
     """
     Obtiene toda la información de una orden específica por su ID.
@@ -261,7 +270,21 @@ async def obtener_orden(
         clientes = await clientes_service.get_clientes_by_ids([order["id_cliente"]])
         if clientes:
             order["nombre_cliente"] = clientes[0]["nombre"]
+            order["direccion_cliente"] = clientes[0]["address"]
         else:
             order["nombre_cliente"] = "Cliente no encontrado"
+            order["direccion_cliente"] = "Dirección no encontrada"
+
+    # Enrich each detalle with product name
+    detalles = order.get("detalles") if order else None
+    if detalles:
+        producto_ids = list({d.get("id_producto") for d in detalles if d.get("id_producto")})
+        if producto_ids:
+            productos = await productos_service.get_productos_by_ids(producto_ids)
+            productos_map = {p.get("id"): p.get("nombre") for p in productos}
+            for d in detalles:
+                pid = d.get("id_producto")
+                if pid:
+                    d["nombre_producto"] = productos_map.get(pid, "Producto no encontrado")
     
     return data

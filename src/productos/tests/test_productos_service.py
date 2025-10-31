@@ -317,4 +317,120 @@ class TestProductosService:
         
         assert exc_info.value.status_code == 400
         assert "stock" in str(exc_info.value.detail).lower()
+    
+    def test_get_productos_by_ids_exitoso(self, test_db):
+        """Test: Obtener múltiples productos por IDs"""
+        proveedor_id = uuid4()
+        
+        producto1 = Producto(
+            nombre="Producto 1",
+            descripcion="Test",
+            categoria="MEDICAMENTOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=10.00,
+            stock_disponible=50,
+            disponible=True,
+            unidad_medida="UNIDAD",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test"
+        )
+        producto2 = Producto(
+            nombre="Producto 2",
+            descripcion="Test",
+            categoria="INSUMOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=15.00,
+            stock_disponible=30,
+            disponible=True,
+            unidad_medida="CAJA",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test"
+        )
+        
+        test_db.add(producto1)
+        test_db.add(producto2)
+        test_db.commit()
+        test_db.refresh(producto1)
+        test_db.refresh(producto2)
+        
+        service = ProductosService(test_db)
+        resultados = service.get_productos_by_ids([producto1.id, producto2.id])
+        
+        assert len(resultados) == 2
+        ids_resultados = {p.id for p in resultados}
+        assert ids_resultados == {producto1.id, producto2.id}
+        nombres = {p.nombre for p in resultados}
+        assert "Producto 1" in nombres
+        assert "Producto 2" in nombres
+    
+    def test_get_productos_by_ids_lista_vacia(self, test_db):
+        """Test: Obtener productos con lista vacía de IDs"""
+        service = ProductosService(test_db)
+        resultados = service.get_productos_by_ids([])
+        
+        assert resultados == []
+    
+    def test_get_productos_by_ids_parcial(self, test_db):
+        """Test: Obtener productos cuando algunos IDs no existen"""
+        proveedor_id = uuid4()
+        producto = Producto(
+            nombre="Producto Existente",
+            descripcion="Test",
+            categoria="MEDICAMENTOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=10.00,
+            stock_disponible=50,
+            disponible=True,
+            unidad_medida="UNIDAD",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test"
+        )
+        test_db.add(producto)
+        test_db.commit()
+        test_db.refresh(producto)
+        
+        service = ProductosService(test_db)
+        resultados = service.get_productos_by_ids([producto.id, "id-inexistente"])
+        
+        assert len(resultados) == 1
+        assert resultados[0].id == producto.id
+        assert resultados[0].nombre == "Producto Existente"
+    
+    def test_get_productos_by_ids_todos_inexistentes(self, test_db):
+        """Test: Obtener productos cuando ningún ID existe"""
+        service = ProductosService(test_db)
+        resultados = service.get_productos_by_ids(["id-1", "id-2"])
+        
+        assert resultados == []
+    
+    def test_get_productos_by_ids_duplicados(self, test_db):
+        """Test: Obtener productos con IDs duplicados en la lista"""
+        proveedor_id = uuid4()
+        producto = Producto(
+            nombre="Producto Único",
+            descripcion="Test",
+            categoria="MEDICAMENTOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=10.00,
+            stock_disponible=50,
+            disponible=True,
+            unidad_medida="UNIDAD",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test"
+        )
+        test_db.add(producto)
+        test_db.commit()
+        test_db.refresh(producto)
+        
+        service = ProductosService(test_db)
+        resultados = service.get_productos_by_ids([producto.id, producto.id])
+        
+        # SQLAlchemy puede retornar duplicados o puede deduplicar dependiendo de la query
+        # Pero al menos debe haber uno
+        assert len(resultados) >= 1
+        assert any(p.id == producto.id for p in resultados)
 
