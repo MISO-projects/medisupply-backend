@@ -50,24 +50,24 @@ def get_vendedor_id_from_auth(authorization: Optional[str] = Header(None)) -> st
 
     try:
         token = authorization[7:].strip()
-        
+
         payload = jwt.decode(token, options={"verify_signature": False})
-        
+
         role = payload.get("role")
         if role != "seller":
             raise HTTPException(
                 status_code=403,
                 detail="Acceso denegado. Solo usuarios con rol 'seller' pueden acceder a este recurso"
             )
-        
+
         id_seller = payload.get("id_seller")
-        
+
         if not id_seller:
             raise HTTPException(
                 status_code=401,
                 detail="Token no contiene id_seller"
             )
-            
+
         return id_seller
         
     except jwt.DecodeError as e:
@@ -89,22 +89,22 @@ def get_vendedor_id_from_auth(authorization: Optional[str] = Header(None)) -> st
 def get_client_id_from_auth(authorization: Optional[str] = Header(None)) -> str:
     """
     Extrae el client_id (id_client) del token JWT y valida que el rol sea 'client'
-    
+
     Args:
         authorization: Header Authorization con formato "Bearer <token>"
-        
+
     Returns:
         str: UUID del cliente autenticado
-        
+
     Raises:
         HTTPException: Si el token no existe, es inválido o no tiene rol de cliente
     """
     if not authorization:
         raise HTTPException(
-            status_code=401, 
+            status_code=401,
             detail="Token de autorización requerido"
         )
-    
+
     if not authorization.lower().startswith("bearer "):
         raise HTTPException(
             status_code=401,
@@ -113,26 +113,26 @@ def get_client_id_from_auth(authorization: Optional[str] = Header(None)) -> str:
 
     try:
         token = authorization[7:].strip()
-        
+
         payload = jwt.decode(token, options={"verify_signature": False})
-        
+
         role = payload.get("role")
         if role != "client":
             raise HTTPException(
                 status_code=403,
                 detail="Acceso denegado. Solo usuarios con rol 'client' pueden acceder a este recurso"
             )
-        
+
         id_client = payload.get("id_client")
-        
+
         if not id_client:
             raise HTTPException(
                 status_code=401,
                 detail="Token no contiene id_client"
             )
-            
+
         return id_client
-        
+
     except jwt.DecodeError as e:
         logger.error(f"Error al decodificar token: {str(e)}")
         raise HTTPException(
@@ -224,17 +224,17 @@ def get_clientes_by_ids(
 ):
     """
     Obtiene la información de múltiples clientes por sus IDs.
-    
+
     Args:
         request: Objeto con la lista de IDs de clientes a consultar
         client_service: Servicio de clientes (inyectado)
-    
+
     Returns:
         List[ClientResponse]: Lista con la información completa de los clientes encontrados
-    
+
     Raises:
         HTTPException 500: Error interno del servidor
-    
+
     Note:
         - Si algún ID no existe, simplemente no se incluye en el resultado
         - La lista de respuesta puede ser más corta que la lista de IDs solicitados
@@ -284,14 +284,14 @@ async def get_mi_perfil(
 ):
     """
     Obtiene la información del cliente autenticado.
-    
+
     - Requiere autenticación con token JWT de cliente (rol='client')
     - El `id_client` se extrae automáticamente del token
     - Retorna toda la información del cliente
-    
+
     Returns:
         ClientResponse: Información completa del cliente
-        
+
     Raises:
         HTTPException 401: Si el token JWT es inválido o no está presente
         HTTPException 403: Si el usuario no tiene rol 'client'
@@ -299,12 +299,12 @@ async def get_mi_perfil(
     """
     try:
         logger.info(f"Cliente {client_id} solicitando su perfil")
-        
+
         cliente_info = client_service.get_cliente_info(client_id)
-        
+
         logger.info(f"Perfil del cliente {client_id} obtenido exitosamente")
         return cliente_info
-        
+
     except HTTPException:
         raise
     except Exception as e:
