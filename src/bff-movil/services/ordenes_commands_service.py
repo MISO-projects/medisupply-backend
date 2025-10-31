@@ -85,6 +85,63 @@ class OrdenesCommandsService:
                 detail=f"Error inesperado al crear la orden: {str(e)}"
             )
 
+    async def create_client_order(self, order_data: Dict[str, Any], authorization: str) -> Dict[str, Any]:
+        """
+        Crea una nueva orden para un cliente en el servicio de comandos de órdenes
+        
+        Args:
+            order_data: Datos de la orden a crear (sin id_cliente, se extrae del token)
+            authorization: Token de autorización JWT del cliente (formato: "Bearer <token>")
+            
+        Returns:
+            Dict con id y numero_orden de la orden creada
+            
+        Raises:
+            HTTPException: Si hay error al crear la orden
+        """
+        try:
+            logger.info(f"Creando orden de cliente en OrdenesCommands service")
+            
+            # Llamar al endpoint /cliente del servicio de comandos
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}/ordenes/cliente",
+                    json=order_data,
+                    headers={"Authorization": authorization},
+                    timeout=self.timeout
+                )
+                response.raise_for_status()
+                
+                result = response.json()
+                logger.info(f"Orden de cliente creada exitosamente: {result.get('numero_orden')}")
+                return result
+                
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Error al crear orden de cliente - Status {e.response.status_code}: {e.response.text}")
+            
+            # Intentar extraer el detalle del error de la respuesta
+            try:
+                error_detail = e.response.json().get("detail", "Error al crear la orden")
+            except:
+                error_detail = f"Error al crear la orden: {e.response.text}"
+            
+            raise HTTPException(
+                status_code=e.response.status_code,
+                detail=error_detail
+            )
+        except httpx.RequestError as e:
+            logger.error(f"Error de conexión con OrdenesCommands microservice: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail=f"No se puede conectar al servicio de órdenes: {str(e)}"
+            )
+        except Exception as e:
+            logger.error(f"Error inesperado al crear orden de cliente: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error inesperado al crear la orden: {str(e)}"
+            )
+
 def get_ordenes_commands_service() -> OrdenesCommandsService:
     return OrdenesCommandsService()
 

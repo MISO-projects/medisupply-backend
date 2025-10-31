@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
-from .router.order_router import order_router
+from router.order_router import order_router
 from services.health_service import HealthService, get_health_service
 
 app = FastAPI()

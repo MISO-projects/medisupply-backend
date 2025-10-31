@@ -93,6 +93,48 @@ class OrdenesQueriesService:
                 status_code=503,
                 detail="Ordenes queries service is not available"
             )
+
+    async def obtener_ordenes_cliente(
+        self,
+        authorization: str,
+        page: int = 1,
+        page_size: int = 20
+    ) -> Dict[str, Any]:
+        """Get orders for the authenticated client with pagination"""
+        try:
+            params = {
+                "page": page,
+                "page_size": page_size
+            }
+            
+            headers = {
+                "Authorization": authorization
+            }
+            
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(
+                    f"{self.base_url}/orders/client-orders",
+                    params=params,
+                    headers=headers
+                )
+                
+                if response.status_code == 200:
+                    return response.json()
+                elif response.status_code == 401:
+                    raise HTTPException(status_code=401, detail="No autorizado")
+                elif response.status_code == 403:
+                    raise HTTPException(status_code=403, detail="Acceso denegado")
+                else:
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"Error from ordenes queries service: {response.text}"
+                    )
+        except httpx.RequestError as e:
+            logger.error(f"Error connecting to ordenes queries service: {str(e)}")
+            raise HTTPException(
+                status_code=503,
+                detail="Ordenes queries service is not available"
+            )
         
 
 

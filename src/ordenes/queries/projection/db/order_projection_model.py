@@ -29,16 +29,24 @@ class OrderProjection(Base):
     processed_at = Column(DateTime, default=datetime.utcnow)
 
     def __init__(self, order_data: dict):
-        self.id = uuid.UUID(order_data.get('id'))
+        # Helper function to safely convert to UUID
+        def to_uuid(value):
+            if value is None:
+                return None
+            if isinstance(value, uuid.UUID):
+                return value
+            return uuid.UUID(value)
+        
+        self.id = to_uuid(order_data.get('id'))
         self.numero_orden = order_data.get('numero_orden')
         self.fecha_creacion = order_data.get('fecha_creacion')
         self.fecha_actualizacion = order_data.get('fecha_actualizacion')
         self.fecha_entrega_estimada = order_data.get('fecha_entrega_estimada')
         self.estado = order_data.get('estado')
         self.valor_total = Decimal(str(order_data.get('valor_total')))
-        self.id_cliente = uuid.UUID(order_data.get('id_cliente'))
-        self.id_vendedor = uuid.UUID(order_data.get('id_vendedor'))
-        self.creado_por = uuid.UUID(order_data.get('creado_por'))
+        self.id_cliente = to_uuid(order_data.get('id_cliente'))
+        self.id_vendedor = to_uuid(order_data.get('id_vendedor'))
+        self.creado_por = to_uuid(order_data.get('creado_por'))
         self.observaciones = order_data.get('observaciones')
 
         detalles = order_data.get('detalles', [])
