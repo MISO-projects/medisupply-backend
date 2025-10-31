@@ -313,6 +313,3 @@ async def get_mi_perfil(
             status_code=500,
             detail="Error interno del servidor al obtener el perfil del cliente"
         )
-
-
-
