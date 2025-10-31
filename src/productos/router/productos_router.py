@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, Path
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 import logging
 
 from db.database import get_db
@@ -11,7 +11,8 @@ from schemas.producto_schema import (
     ProductoCreate,
     ProductoUpdate,
     ProductosListResponse,
-    ProductoConStock
+    ProductoConStock,
+    GetProductosByIdsRequest
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -280,5 +281,23 @@ def limpiar_productos(db: Session = Depends(get_db)):
         
     except Exception as e:
         logger.error(f"Error al limpiar productos: {str(e)}")
+        raise
+
+@productos_router.post(
+    "/by-ids",
+    response_model=List[ProductoResponse],
+    summary="Obtener productos por lista de IDs",
+    description="Obtiene los detalles completos de múltiples productos dados sus IDs"
+)
+def get_productos_por_ids(
+    request: GetProductosByIdsRequest,
+    db: Session = Depends(get_db)
+):
+    """Obtiene productos por una lista de IDs en el cuerpo de la solicitud."""
+    try:
+        service = ProductosService(db)
+        return service.get_productos_by_ids(request.ids)
+    except Exception as e:
+        logger.error(f"Error al obtener productos por IDs: {str(e)}")
         raise
 

@@ -383,6 +383,95 @@ class TestLimpiarProductosEndpoint:
         assert data["productos_eliminados"] == 0
 
 
+class TestObtenerProductosPorIdsEndpoint:
+    """Tests para el endpoint POST /api/productos/by-ids"""
+    
+    def test_obtener_productos_por_ids_exitoso(self, client, producto_ejemplo):
+        """Test: Obtener múltiples productos por IDs"""
+        # Crear productos
+        producto1 = producto_ejemplo.copy()
+        producto1["nombre"] = "Producto 1"
+        producto1["sku"] = "TEST-PROD-1"
+        response1 = client.post("/api/productos/", json=producto1)
+        producto_id_1 = response1.json()["id"]
+        
+        producto2 = producto_ejemplo.copy()
+        producto2["nombre"] = "Producto 2"
+        producto2["sku"] = "TEST-PROD-2"
+        response2 = client.post("/api/productos/", json=producto2)
+        producto_id_2 = response2.json()["id"]
+        
+        # Obtener productos por IDs
+        response = client.post("/api/productos/by-ids", json={"ids": [producto_id_1, producto_id_2]})
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert {p["id"] for p in data} == {producto_id_1, producto_id_2}
+        nombres = {p["nombre"] for p in data}
+        assert "Producto 1" in nombres
+        assert "Producto 2" in nombres
+    
+    def test_obtener_productos_por_ids_lista_vacia(self, client):
+        """Test: Obtener productos con lista vacía de IDs"""
+        response = client.post("/api/productos/by-ids", json={"ids": []})
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data == []
+    
+    def test_obtener_productos_por_ids_parcial(self, client, producto_ejemplo):
+        """Test: Obtener productos cuando algunos IDs no existen"""
+        # Crear un producto
+        response_create = client.post("/api/productos/", json=producto_ejemplo)
+        producto_id_existente = response_create.json()["id"]
+        
+        # Intentar obtener con ID existente y uno que no existe
+        producto_id_inexistente = "id-que-no-existe"
+        response = client.post("/api/productos/by-ids", json={"ids": [producto_id_existente, producto_id_inexistente]})
+        
+        assert response.status_code == 200
+        data = response.json()
+        # Solo debe retornar el producto que existe
+        assert len(data) == 1
+        assert data[0]["id"] == producto_id_existente
+    
+    def test_obtener_productos_por_ids_todos_inexistentes(self, client):
+        """Test: Obtener productos cuando ningún ID existe"""
+        response = client.post("/api/productos/by-ids", json={"ids": ["id-1", "id-2"]})
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data == []
+    
+    def test_obtener_productos_por_ids_duplicados(self, client, producto_ejemplo):
+        """Test: Obtener productos con IDs duplicados en la lista"""
+        response_create = client.post("/api/productos/", json=producto_ejemplo)
+        producto_id = response_create.json()["id"]
+        
+        # Solicitar el mismo ID dos veces
+        response = client.post("/api/productos/by-ids", json={"ids": [producto_id, producto_id]})
+        
+        assert response.status_code == 200
+        data = response.json()
+        # Debe retornar solo una instancia del producto
+        assert len(data) == 1
+        assert data[0]["id"] == producto_id
+    
+    def test_obtener_productos_por_ids_formato_invalido(self, client):
+        """Test: Error con formato de request inválido"""
+        # Sin el campo 'ids'
+        response = client.post("/api/productos/by-ids", json={})
+        
+        assert response.status_code == 422  # Validation error
+    
+    def test_obtener_productos_por_ids_campo_invalido(self, client):
+        """Test: Error cuando 'ids' no es una lista"""
+        response = client.post("/api/productos/by-ids", json={"ids": "no-es-una-lista"})
+        
+        assert response.status_code == 422  # Validation error
+
+
 class TestIntegracionCompleta:
     """Tests de integración completa del flujo de productos"""
     
