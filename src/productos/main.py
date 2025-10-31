@@ -8,7 +8,6 @@ import os
 logging.basicConfig(level=logging.DEBUG, force=True)
 logger = logging.getLogger(__name__)
 
-# Crear las tablas en la base de datos solo si no estamos en modo testing
 if not os.getenv("TESTING"):
     from db.database import Base, engine
     Base.metadata.create_all(bind=engine)

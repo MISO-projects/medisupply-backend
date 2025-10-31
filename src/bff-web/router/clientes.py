@@ -14,6 +14,37 @@ def health_check(clientes_service: ClientesService = Depends(get_clientes_servic
     return clientes_service.health_check()
 
 @clientes_router.get(
+    "/",
+    summary="Obtener todos los clientes",
+    description="Retorna la lista de todos los clientes registrados en el sistema"
+)
+def get_all_clientes(
+    clientes_service: ClientesService = Depends(get_clientes_service)
+):
+    """
+    Endpoint para obtener todos los clientes sin filtros
+    
+    Returns:
+        Lista de todos los clientes registrados
+    """
+    try:
+        logger.info("BFF: Solicitud de todos los clientes recibida")
+        
+        result = clientes_service.get_all_clientes()
+        
+        logger.info(f"BFF: Retornando {len(result)} clientes")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"BFF: Error interno al procesar solicitud de todos los clientes: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error interno del servidor BFF"
+        )
+
+@clientes_router.get(
     "/asignados",
     summary="Obtener clientes asignados al vendedor autenticado",
     description="Retorna la lista de clientes institucionales asignados al vendedor autenticado"
