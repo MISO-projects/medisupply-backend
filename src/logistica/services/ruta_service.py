@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException, status
-from typing import List
+from typing import List, Tuple, Optional
 import logging
 import math
 from db.redis_client import RedisClient
@@ -13,6 +13,7 @@ from schemas.ruta_schema import (
     RutasListResponse,
     ParadaResponse
 )
+from services.traffic_manager import optimize_route_order, TrafficAPIManager
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +53,13 @@ class RutaService:
             )
             
             self.db.add(nueva_ruta)
-            self.db.flush()  # Para obtener el ID de la ruta sin hacer commit
+            self.db.flush() 
             
             logger.info(f"Ruta creada con ID: {nueva_ruta.id}")
             
-            # Crear las paradas asociadas
-            for idx, parada_data in enumerate(ruta_data.paradas, start=1):
+            paradas_ordenadas = self._optimizar_orden_paradas(ruta_data.paradas, ruta_data.bodega_origen)
+            
+            for idx, parada_data in enumerate(paradas_ordenadas, start=1):
                 nueva_parada = Parada(
                     ruta_id=nueva_ruta.id,
                     cliente_id=parada_data.cliente_id,
@@ -160,17 +162,68 @@ class RutaService:
                 detail=f"Error al obtener la ruta: {str(e)}"
             )
 
+    def _get_bodega_coords(self, bodega_origen: str) -> Tuple[float, float]:
+    
+        
+        DEFAULT_COORDS = (4.6097, -74.0817)
+        
+        
+        logger.info(f"Usando coordenadas para bodega: {bodega_origen}")
+        return DEFAULT_COORDS
+    
+    def _optimizar_orden_paradas(
+        self, 
+        paradas: List, 
+        bodega_origen: str
+    ) -> List:
+       
+        paradas_con_coordenadas = [
+            p for p in paradas 
+            if p.latitud is not None and p.longitud is not None
+        ]
+        
+        tiene_orden_explicito = any(p.orden is not None for p in paradas)
+        
+        if len(paradas_con_coordenadas) != len(paradas) or tiene_orden_explicito:
+            if len(paradas_con_coordenadas) != len(paradas):
+                logger.info("No todas las paradas tienen coordenadas, usando orden original")
+            else:
+                logger.info("Orden explícito especificado, respetando orden del usuario")
+            return paradas
+        
+        if len(paradas_con_coordenadas) < 2:
+            logger.info("Menos de 2 paradas, no se requiere optimización")
+            return paradas
+        
+        try:
+            origin_coords = self._get_bodega_coords(bodega_origen)
+            
+            stops_coords = [
+                (p.latitud, p.longitud) 
+                for p in paradas_con_coordenadas
+            ]
+            
+            logger.info(f"Optimizando orden de {len(stops_coords)} paradas usando OSRM")
+            optimized_indices = optimize_route_order(origin_coords, stops_coords)
+            
+            # Reordenar las paradas según el orden optimizado
+            paradas_optimizadas = [paradas_con_coordenadas[i] for i in optimized_indices]
+            
+            logger.info(f"Orden optimizado aplicado exitosamente")
+            return paradas_optimizadas
+            
+        except Exception as e:
+            logger.warning(f"Error al optimizar orden de paradas: {str(e)}. Usando orden original.")
+            return paradas
+
     def listar_rutas(self, page: int = 1, page_size: int = 20) -> RutasListResponse:
 
         try:
-            # Calcular skip para la paginación
             skip = (page - 1) * page_size
             
-            # Obtener total de rutas
             total = self.db.query(Ruta).count()
             total_pages = math.ceil(total / page_size) if total > 0 else 0
             
-            # Obtener rutas con paginación, eager loading y ordenadas por fecha ascendente (más antiguas primero)
             rutas = self.db.query(Ruta).options(
                 joinedload(Ruta.conductor),
                 joinedload(Ruta.vehiculo),
