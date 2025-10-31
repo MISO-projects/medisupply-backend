@@ -77,5 +77,6 @@ class CacheInvalidationResponse(BaseModel):
     event_type: Optional[str] = None
     order_id: Optional[str] = None
     client_id: Optional[str] = None
+    reason: Optional[str] = None
 
 
