@@ -119,7 +119,8 @@ class RutaService:
                     detail=f"Ruta con ID {ruta_id} no encontrada"
                 )
             
-            # Construir la respuesta con las paradas
+            # Construir la respuesta con las paradas ordenadas por el campo orden
+            paradas_ordenadas = sorted(ruta.paradas, key=lambda p: p.orden if p.orden is not None else 999)
             paradas_response = [
                 ParadaResponse(
                     id=parada.id,
@@ -134,7 +135,7 @@ class RutaService:
                     fecha_creacion=parada.fecha_creacion,
                     fecha_actualizacion=parada.fecha_actualizacion
                 )
-                for parada in ruta.paradas
+                for parada in paradas_ordenadas
             ]
             
             return RutaResponse(
@@ -258,7 +259,7 @@ class RutaService:
                             fecha_creacion=parada.fecha_creacion,
                             fecha_actualizacion=parada.fecha_actualizacion
                         )
-                        for parada in ruta.paradas
+                        for parada in sorted(ruta.paradas, key=lambda p: p.orden if p.orden is not None else 999)
                     ]
                 )
                 for ruta in rutas
