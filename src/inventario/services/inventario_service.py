@@ -324,6 +324,7 @@ class InventarioService:
                     cantidad_disminuida_de_este_lote = lote.cantidad
                     cantidad_restante_por_disminuir -= lote.cantidad
                     lote.cantidad = 0
+                    lote.estado = 'AGOTADO'
                 
                 lotes_afectados_info.append({
                     "id": lote.id, 
