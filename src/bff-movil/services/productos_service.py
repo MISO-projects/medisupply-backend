@@ -1,6 +1,6 @@
 import httpx
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from fastapi import HTTPException
 import logging
 
@@ -119,6 +119,30 @@ class ProductosService:
             raise HTTPException(status_code=503, detail="No se puede conectar con el servicio de productos")
         except Exception as e:
             logger.error(f"Unexpected error getting producto {producto_id}: {e}")
+            raise HTTPException(status_code=500, detail="Error interno del servidor")
+
+    async def get_productos_by_ids(self, ids: List[str]) -> List[Dict[str, Any]]:
+        """Obtiene múltiples productos por sus IDs usando POST /api/productos/by-ids"""
+        try:
+            if not ids:
+                return []
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    f"{self.base_url}/api/productos/by-ids",
+                    json={"ids": ids}
+                )
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"Error del servicio de productos: {response.text}"
+                    )
+        except httpx.RequestError as e:
+            logger.error(f"Error de conexión al obtener productos por IDs: {str(e)}")
+            raise HTTPException(status_code=503, detail="Servicio de productos no disponible")
+        except Exception as e:
+            logger.error(f"Error inesperado al obtener productos por IDs: {str(e)}")
             raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 

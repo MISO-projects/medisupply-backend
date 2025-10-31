@@ -88,3 +88,6 @@ class ProductosListResponse(BaseModel):
     total_pages: int
     productos: list[ProductoConStock]
 
+
+class GetProductosByIdsRequest(BaseModel):
+    ids: list[str] = Field(..., description="Lista de IDs de productos a consultar")
