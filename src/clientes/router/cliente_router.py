@@ -50,9 +50,9 @@ def get_vendedor_id_from_auth(authorization: Optional[str] = Header(None)) -> st
 
     try:
         token = authorization[7:].strip()
-        
+
         payload = jwt.decode(token, options={"verify_signature": False})
-        
+
         role = payload.get("role")
         if role != "seller":
             raise HTTPException(
@@ -67,7 +67,7 @@ def get_vendedor_id_from_auth(authorization: Optional[str] = Header(None)) -> st
                 status_code=401,
                 detail="Token no contiene id_seller"
             )
-            
+
         return id_seller
         
     except jwt.DecodeError as e:
@@ -313,3 +313,6 @@ async def get_mi_perfil(
             status_code=500,
             detail="Error interno del servidor al obtener el perfil del cliente"
         )
+
+
+
