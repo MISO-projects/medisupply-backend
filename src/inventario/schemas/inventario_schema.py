@@ -8,7 +8,7 @@ class CrearRegistroInventarioSchema(BaseModel):
     producto_id: UUID4 = Field(..., description="UUID del producto al que pertenece este registro.")
     lote: str = Field(..., min_length=1, max_length=100, description="Código de lote del proveedor.")
     fecha_vencimiento: date = Field(..., description="Fecha de vencimiento de este lote (YYYY-MM-DD).")
-    cantidad: int = Field(..., gt=0, description="Cantidad de unidades en este registro.")
+    cantidad: int = Field(..., ge=0, description="Cantidad de unidades en este registro.")
     ubicacion: str = Field("BODEGA-PRINCIPAL", max_length=100, description="Ubicación física del stock.")
     temperatura_requerida: str = Field("AMBIENTE", max_length=50, description="Condición de temperatura del stock.")
     estado: str = Field("DISPONIBLE", max_length=50, description="Estado inicial del stock (DISPONIBLE, BLOQUEADO, etc.).")
@@ -30,6 +30,12 @@ class RegistroInventarioResponseSchema(CrearRegistroInventarioSchema):
     class Config:
         from_attributes = True
 
+class CrearRegistroPedidoSchema(BaseModel):
+    """Esquema de datos con la información para hacer la modificación en el inventario."""
+    producto_id: Optional[str] = Field(None, description="SKU del producto (enriquecido)")
+    cantidad_producto_solicitada: int = Field(..., ge=0, description="Cantidad de unidades solicitadas en el registro.")
+    class Config:
+        from_attributes = True
 
 class StockDisponibleResponse(BaseModel):
     items: List[RegistroInventarioResponseSchema]
@@ -47,3 +53,20 @@ class StockBatchRequest(BaseModel):
 
 class StockBatchResponse(BaseModel):
     stock_data: Dict[str, int] = Field(..., description="Diccionario de producto_id: stock_total")
+
+class LoteAfectadoResponse(BaseModel):
+    """Describe un registro de inventario (lote) que fue modificado."""
+    id: UUID4 
+    lote: str  
+    cantidad_disminuida: int
+    cantidad_restante_lote: int
+
+    class Config:
+        from_attributes = True
+
+class DisminuirStockResponseSchema(BaseModel):
+    """Respuesta exitosa al disminuir el stock."""
+    producto_id: str
+    cantidad_disminuida: int
+    stock_restante_total: int
+    lotes_afectados: List[LoteAfectadoResponse]

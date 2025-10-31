@@ -80,6 +80,20 @@ class ProductosService:
         except Exception as e:
             logger.warning(f"Error invalidating caches: {e}")
     
+    def invalidar_cache_de_listas(self) -> None:
+        """
+        Invalida todos los cachés de listas (móvil y web).
+        Este método está diseñado para ser llamado por un webhook
+        (ej. desde el servicio de inventario) cuando el stock cambia.
+        """
+        try:
+            logger.info("Iniciando invalidación de caché de listas (webhook)...")
+            self._delete_cache("productos:list:*")
+            self._delete_cache("productos:mobile:list:*")
+            logger.info("Cachés de listas de productos invalidados (webhook).")
+        except Exception as e:
+            logger.warning(f"Error durante la invalidación de caché por webhook: {e}")
+    
     async def _get_stock_para_productos(self, producto_ids: List[str]) -> Dict[str, int]:
         if not producto_ids: return {}
         try:

@@ -4,6 +4,7 @@ from typing import List, Dict
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import logging
+from http import HTTPStatus
 
 from db.database import get_db
 from services.productos_service import ProductosService
@@ -306,7 +307,34 @@ def limpiar_productos(db: Session = Depends(get_db)):
         logger.error(f"Error al limpiar productos: {str(e)}")
         raise
 
-
+@productos_router.post(
+    "/internal/cache/invalidate-lists",
+    status_code=HTTPStatus.OK, 
+    summary="[Interno] Invalidar caché de listas",
+    description="""
+    Endpoint interno (webhook) para que otros servicios 
+    (como Inventario) notifiquen que el stock ha cambiado
+    y los cachés de listas de productos deben ser eliminados.
+    """,
+    response_model=Dict[str, str]
+)
+def invalidar_cache_de_listas_endpoint(
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint interno para invalidar cachés de listas de productos.
+    """
+    try:
+        service = ProductosService(db)
+        service.invalidar_cache_de_listas()
+        
+        return {"status": "ok", "message": "Solicitud de invalidación de caché procesada."}
+    except Exception as e:
+        logger.error(f"Error crítico en endpoint de invalidación de caché: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Error interno al procesar la invalidación de caché."
+        )
 class BatchDetailsRequest(BaseModel):
     producto_ids: List[str] = Field(..., description="Lista de IDs de productos (UUIDs como string)")
 

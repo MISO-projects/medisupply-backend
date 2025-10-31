@@ -26,5 +26,5 @@ async def handle_command(request: Request, order_handler: OrderHandler = Depends
     payload = base64.b64decode(envelope["message"]["data"]).decode("utf-8")
     data = json.loads(payload)
 
-    result = order_handler.handle_order(data)
+    result = await order_handler.handle_order(data)
     return {"data": result, "message": "Order handled successfully"}

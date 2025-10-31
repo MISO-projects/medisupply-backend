@@ -7,12 +7,12 @@ from datetime import datetime, timezone, date
 import logging
 import httpx
 import os
-from sqlalchemy import func, and_, or_
+from sqlalchemy import func, and_, or_, nullslast
 import json
 
 from db.database import get_db
 from db.inventario_model import Inventario
-from schemas.inventario_schema import CrearRegistroInventarioSchema
+from schemas.inventario_schema import CrearRegistroInventarioSchema, CrearRegistroPedidoSchema
 from db.redis_client import get_redis_client
 
 logger = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ class InventarioService:
             return {}
 
 
-    def crear_registro_inventario(self, inventario_data: CrearRegistroInventarioSchema) -> Dict[str, Any]:
+    async def crear_registro_inventario(self, inventario_data: CrearRegistroInventarioSchema) -> Dict[str, Any]:
         """
         Crea un nuevo registro de inventario en el sistema.
         
@@ -130,6 +130,7 @@ class InventarioService:
             self.db.add(nuevo_inventario)
             self.db.commit()
             self.db.refresh(nuevo_inventario)
+            await self._notificar_actualizacion_a_productos()
             return nuevo_inventario.to_dict()
         except IntegrityError as ie:
             self.db.rollback()
@@ -243,6 +244,123 @@ class InventarioService:
                 detail="Error interno al listar el stock de inventario."
             )
     
+    async def _notificar_actualizacion_a_productos(self):
+        """
+        Avisa a productos-service (usando el webhook)
+        que debe limpiar su caché de listas.
+        """
+        PRODUCTOS_SERVICE_URL = self.productos_service_url 
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{PRODUCTOS_SERVICE_URL}/api/productos/internal/cache/invalidate-lists"
+                )
+            logger.info("Notificación de invalidación de caché enviada a productos.")
+        except Exception as e:
+            logger.warning(f"No se pudo notificar a productos-service: {e}")
+
+    async def disminuir_stock_por_pedido(self, data: CrearRegistroPedidoSchema) -> Dict[str, Any]:
+        """
+        Disminuye el stock de un producto basado en una solicitud de pedido (FIFO/FEFO).
+
+        La lógica sigue un orden estricto de prioridad:
+        1. Lotes con fecha_vencimiento más próxima (no vencidos).
+        2. Lotes sin fecha_vencimiento, por fecha_recepcion más antigua.
+        
+        Solo se consideran lotes DISPONIBLES, con cantidad > 0 y no vencidos.
+        Esta operación es transaccional y usa FOR UPDATE para evitar race conditions.
+        """
+        
+        if not data.producto_id:
+            raise HTTPException(
+                status_code=HTTPStatus.BAD_REQUEST,
+                detail="El 'producto_id' es requerido."
+            )
+
+        cantidad_a_disminuir = data.cantidad_producto_solicitada
+        producto_id = data.producto_id
+        
+        try:
+            today = date.today()
+            
+            lotes_disponibles = self.db.query(Inventario).filter(
+                Inventario.producto_id == producto_id,
+                Inventario.estado == 'DISPONIBLE',
+                Inventario.cantidad > 0,
+                or_(
+                    Inventario.fecha_vencimiento.is_(None),
+                    Inventario.fecha_vencimiento > today # No vencidos
+                )
+            ).order_by(
+                nullslast(Inventario.fecha_vencimiento.asc()) 
+            ).order_by(
+                Inventario.fecha_recepcion.asc() 
+            ).with_for_update().all()
+
+            total_stock_disponible = sum(lote.cantidad for lote in lotes_disponibles)
+
+            if total_stock_disponible < cantidad_a_disminuir:
+                self.db.rollback() 
+                raise HTTPException(
+                    status_code=HTTPStatus.BAD_REQUEST, 
+                    detail=f"Stock insuficiente para {producto_id}. Solicitado: {cantidad_a_disminuir}, Disponible: {total_stock_disponible}"
+                )
+
+           
+            cantidad_restante_por_disminuir = cantidad_a_disminuir
+            lotes_afectados_info = [] 
+
+            for lote in lotes_disponibles:
+                if cantidad_restante_por_disminuir <= 0:
+                    break 
+
+                cantidad_disminuida_de_este_lote = 0
+                
+                if lote.cantidad >= cantidad_restante_por_disminuir:
+                    cantidad_disminuida_de_este_lote = cantidad_restante_por_disminuir
+                    lote.cantidad -= cantidad_restante_por_disminuir
+                    cantidad_restante_por_disminuir = 0
+                else:
+                    cantidad_disminuida_de_este_lote = lote.cantidad
+                    cantidad_restante_por_disminuir -= lote.cantidad
+                    lote.cantidad = 0
+                
+                lotes_afectados_info.append({
+                    "id": lote.id, 
+                    "lote": lote.lote,
+                    "cantidad_disminuida": cantidad_disminuida_de_este_lote,
+                    "cantidad_restante_lote": lote.cantidad
+                })
+            
+            self.db.commit()
+            await self._notificar_actualizacion_a_productos()
+
+            logger.info(f"Stock disminuido exitosamente para {producto_id}. Cantidad: {cantidad_a_disminuir}")
+            
+            return {
+                "producto_id": str(producto_id),
+                "cantidad_disminuida": cantidad_a_disminuir,
+                "stock_restante_total": total_stock_disponible - cantidad_a_disminuir,
+                "lotes_afectados": lotes_afectados_info
+            }
+            
+        except HTTPException:
+            self.db.rollback()
+            raise
+        except IntegrityError as ie:
+            self.db.rollback()
+            logger.error(f"Integrity error updating register inventario: {ie}")
+            raise HTTPException(
+                status_code=HTTPStatus.CONFLICT,
+                detail="Error de integridad al actualizar el inventario."
+            )
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error al disminuir stock: {e}")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="Error interno al editar el registro de inventario."
+            )
 
 def get_inventario_service(db: Session = Depends(get_db)) -> InventarioService:
     """

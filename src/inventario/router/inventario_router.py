@@ -12,7 +12,9 @@ from schemas.inventario_schema import (
     StockDisponibleResponse,
     InventarioListResponse,
     StockBatchRequest, 
-    StockBatchResponse 
+    StockBatchResponse,
+    CrearRegistroPedidoSchema,
+    DisminuirStockResponseSchema
 )
 from typing import List
 
@@ -91,3 +93,24 @@ def get_stock_batch(
     except Exception as e:
         logger.error(f"Error en endpoint de stock batch: {str(e)}")
         raise HTTPException(status_code=500, detail="Error al obtener el stock agregado.")
+    
+@inventario_router.put(
+    "/registro/pedido",
+    response_model=DisminuirStockResponseSchema,
+    status_code=HTTPStatus.OK,  
+    summary="Disminuir stock por pedido (FIFO/FEFO)", 
+    description="""
+    Disminuye la cantidad de un producto en el inventario,
+    siguiendo la lógica de FIFO/FEFO (First-Expired, First-Out).
+    Primero consume lotes próximos a vencer, luego lotes más antiguos.
+    """
+)
+async def disminuir_stock_por_pedido( 
+    data: CrearRegistroPedidoSchema,
+    service: InventarioService = Depends(get_inventario_service)
+):
+    """
+    Disminuye el stock de un producto basado en una solicitud de pedido.
+    """
+    result = await service.disminuir_stock_por_pedido(data)
+    return result

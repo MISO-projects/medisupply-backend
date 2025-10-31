@@ -273,6 +273,11 @@ class ClienteService:
             db.add(new_client)
             db.commit()
             db.refresh(new_client)
+            try:
+                self.invalidate_cache(str(id_vendedor))
+                logger.info(f"Cache invalidado para vendedor {id_vendedor} tras registro de cliente.")
+            except Exception as e:
+                logger.error(f"Error al invalidar caché para {id_vendedor}: {e}")
             user_dict = new_client.to_dict()
             return ClientResponse(**user_dict)
 
