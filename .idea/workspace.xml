@@ -5,10 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8998943f-9567-4dcf-8009-681626a1807f" name="Changes" comment="Feature | MEDSUP-182 | Nuevas rutas">
-      <change beforePath="$PROJECT_DIR$/src/clientes/router/cliente_router.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/clientes/router/cliente_router.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/logistica/schemas/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/logistica/schemas/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/logistica/schemas/conductor_schema.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/logistica/schemas/conductor_schema.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/logistica/schemas/vehiculo_schema.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/logistica/schemas/vehiculo_schema.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -62,6 +59,7 @@
       <workItem from="1761261736460" duration="3237000" />
       <workItem from="1761271806694" duration="2190000" />
       <workItem from="1761308030034" duration="3005000" />
+      <workItem from="1761917083926" duration="1140000" />
     </task>
     <task id="LOCAL-00001" summary="Feature | MEDSUP-135 | Productos disponibles">
       <option name="closed" value="true" />
@@ -141,6 +139,8 @@
   </component>
   <component name="WfRunsListSearchHistory"><![CDATA[{
   "history": [
+    {
+    },
     {
     },
     {
