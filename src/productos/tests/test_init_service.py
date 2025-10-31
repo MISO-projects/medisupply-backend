@@ -19,7 +19,7 @@ class TestInitService:
         assert resultado["productos_creados"] == 13
         assert resultado["estadisticas"]["total"] == 13
         assert resultado["estadisticas"]["disponibles"] == 12
-        assert resultado["estadisticas"]["con_stock"] == 11
+        assert "con_stock" not in resultado["estadisticas"]
         
         # Verificar categorías (el total debe ser 13 productos)
         medicamentos = resultado["estadisticas"]["por_categoria"]["MEDICAMENTOS"]
@@ -55,7 +55,6 @@ class TestInitService:
             categoria="MEDICAMENTOS",
             imagen_url="http://test.com/manual.jpg",
             precio_unitario=10.00,
-            stock_disponible=50,
             disponible=True,
             unidad_medida="UNIDAD",
             sku="MANUAL-001",
@@ -148,9 +147,6 @@ class TestInitService:
             # Validar precio
             assert producto.precio_unitario > 0
             
-            # Validar stock (puede ser 0 o positivo)
-            assert producto.stock_disponible >= 0
-            
             # Validar categoría
             assert producto.categoria in ["MEDICAMENTOS", "INSUMOS", "EQUIPOS"]
             
@@ -166,10 +162,6 @@ class TestInitService:
         service = InitService(test_db)
         productos = service.get_productos_ejemplo()
         
-        # Debe haber al menos un producto sin stock
-        productos_sin_stock = [p for p in productos if p.stock_disponible == 0]
-        assert len(productos_sin_stock) > 0
-        
         # Debe haber al menos un producto no disponible
         productos_no_disponibles = [p for p in productos if not p.disponible]
         assert len(productos_no_disponibles) > 0
@@ -182,11 +174,7 @@ class TestInitService:
         # Contar manualmente en la base de datos
         total_db = test_db.query(Producto).count()
         disponibles_db = test_db.query(Producto).filter(Producto.disponible == True).count()
-        con_stock_db = test_db.query(Producto).filter(
-            Producto.disponible == True,
-            Producto.stock_disponible > 0
-        ).count()
-        
+
         medicamentos_db = test_db.query(Producto).filter(
             Producto.categoria == "MEDICAMENTOS"
         ).count()
@@ -200,7 +188,6 @@ class TestInitService:
         # Comparar con estadísticas reportadas
         assert resultado["estadisticas"]["total"] == total_db
         assert resultado["estadisticas"]["disponibles"] == disponibles_db
-        assert resultado["estadisticas"]["con_stock"] == con_stock_db
         assert resultado["estadisticas"]["por_categoria"]["MEDICAMENTOS"] == medicamentos_db
         assert resultado["estadisticas"]["por_categoria"]["INSUMOS"] == insumos_db
         assert resultado["estadisticas"]["por_categoria"]["EQUIPOS"] == equipos_db

@@ -25,7 +25,6 @@ class InitService:
                 categoria="MEDICAMENTOS",
                 imagen_url="https://example.com/images/paracetamol.jpg",
                 precio_unitario=15.50,
-                stock_disponible=250,
                 disponible=True,
                 unidad_medida="CAJA",
                 sku="MED-PAR-500-100",
@@ -39,7 +38,6 @@ class InitService:
                 categoria="MEDICAMENTOS",
                 imagen_url="https://example.com/images/ibuprofeno.jpg",
                 precio_unitario=22.00,
-                stock_disponible=180,
                 disponible=True,
                 unidad_medida="CAJA",
                 sku="MED-IBU-400-50",
@@ -53,7 +51,6 @@ class InitService:
                 categoria="MEDICAMENTOS",
                 imagen_url="https://example.com/images/amoxicilina.jpg",
                 precio_unitario=35.75,
-                stock_disponible=95,
                 disponible=True,
                 unidad_medida="CAJA",
                 sku="MED-AMO-500-21",
@@ -67,7 +64,6 @@ class InitService:
                 categoria="MEDICAMENTOS",
                 imagen_url="https://example.com/images/omeprazol.jpg",
                 precio_unitario=28.50,
-                stock_disponible=140,
                 disponible=True,
                 unidad_medida="CAJA",
                 sku="MED-OME-20-28",
@@ -82,7 +78,6 @@ class InitService:
                 categoria="INSUMOS",
                 imagen_url="https://example.com/images/guantes-latex.jpg",
                 precio_unitario=45.00,
-                stock_disponible=320,
                 disponible=True,
                 unidad_medida="CAJA",
                 sku="INS-GLV-LAT-M-100",
@@ -96,7 +91,6 @@ class InitService:
                 categoria="INSUMOS",
                 imagen_url="https://example.com/images/jeringas.jpg",
                 precio_unitario=55.00,
-                stock_disponible=200,
                 disponible=True,
                 unidad_medida="CAJA",
                 sku="INS-JER-10ML-100",
@@ -110,7 +104,6 @@ class InitService:
                 categoria="INSUMOS",
                 imagen_url="https://example.com/images/gasas.jpg",
                 precio_unitario=38.00,
-                stock_disponible=175,
                 disponible=True,
                 unidad_medida="CAJA",
                 sku="INS-GAS-10X10-100",
@@ -124,7 +117,6 @@ class InitService:
                 categoria="INSUMOS",
                 imagen_url="https://example.com/images/alcohol-gel.jpg",
                 precio_unitario=12.50,
-                stock_disponible=450,
                 disponible=True,
                 unidad_medida="UNIDAD",
                 sku="INS-ALC-GEL-500",
@@ -138,7 +130,6 @@ class InitService:
                 categoria="EQUIPOS",
                 imagen_url="https://example.com/images/tensiometro.jpg",
                 precio_unitario=185.00,
-                stock_disponible=45,
                 disponible=True,
                 unidad_medida="UNIDAD",
                 sku="EQU-TEN-DIG-BR",
@@ -152,7 +143,6 @@ class InitService:
                 categoria="EQUIPOS",
                 imagen_url="https://example.com/images/termometro-infrarrojo.jpg",
                 precio_unitario=95.00,
-                stock_disponible=68,
                 disponible=True,
                 unidad_medida="UNIDAD",
                 sku="EQU-TER-INF",
@@ -166,7 +156,6 @@ class InitService:
                 categoria="EQUIPOS",
                 imagen_url="https://example.com/images/nebulizador.jpg",
                 precio_unitario=245.00,
-                stock_disponible=28,
                 disponible=True,
                 unidad_medida="UNIDAD",
                 sku="EQU-NEB-ULT",
@@ -174,14 +163,12 @@ class InitService:
                 proveedor_id=proveedor_id,
                 proveedor_nombre=proveedor_nombre
             ),
-            # Productos sin stock (para testing)
             Producto(
                 nombre="Insulina Glargina 100UI",
                 descripcion="Insulina de acción prolongada. Caja con 5 plumas precargadas",
                 categoria="MEDICAMENTOS",
                 imagen_url="https://example.com/images/insulina.jpg",
                 precio_unitario=285.00,
-                stock_disponible=0,
                 disponible=True,
                 unidad_medida="CAJA",
                 sku="MED-INS-GLA-100",
@@ -195,7 +182,6 @@ class InitService:
                 categoria="MEDICAMENTOS",
                 imagen_url="https://example.com/images/vacuna-influenza.jpg",
                 precio_unitario=125.00,
-                stock_disponible=0,
                 disponible=False,
                 unidad_medida="DOSIS",
                 sku="MED-VAC-INF-TRI",
@@ -235,12 +221,6 @@ class InitService:
             
             total = self.db.query(Producto).count()
             disponibles = self.db.query(Producto).filter(Producto.disponible == True).count()
-            con_stock = self.db.query(Producto).filter(
-                and_(
-                    Producto.disponible == True,
-                    Producto.stock_disponible > 0
-                )
-            ).count()
             
             medicamentos = self.db.query(Producto).filter(Producto.categoria == "MEDICAMENTOS").count()
             insumos = self.db.query(Producto).filter(Producto.categoria == "INSUMOS").count()
@@ -255,7 +235,6 @@ class InitService:
                 "estadisticas": {
                     "total": total,
                     "disponibles": disponibles,
-                    "con_stock": con_stock,
                     "por_categoria": {
                         "MEDICAMENTOS": medicamentos,
                         "INSUMOS": insumos,

@@ -11,7 +11,6 @@ class CrearProductoSchema(BaseModel):
     categoria: str = Field(..., min_length=1, max_length=100, description="Categoría del producto")
     imagen_url: Optional[str] = Field(None, max_length=500, description="URL de la imagen del producto")
     precio_unitario: Decimal = Field(..., gt=0, description="Precio unitario del producto")
-    stock_disponible: Optional[int] = Field(None, ge=0, description="Cantidad disponible en stock")
     disponible: bool = Field(True, description="Indica si el producto está disponible para venta")
     unidad_medida: str = Field(..., min_length=1, max_length=50, description="Unidad de medida (UNIDAD, CAJA, LITRO, etc)")
     sku: Optional[str] = Field(None, max_length=100, description="SKU del producto")
@@ -27,7 +26,6 @@ class CrearProductoSchema(BaseModel):
                 "categoria": "MEDICAMENTOS",
                 "imagen_url": "https://example.com/paracetamol.jpg",
                 "precio_unitario": 15.50,
-                "stock_disponible": 100,
                 "disponible": True,
                 "unidad_medida": "CAJA",
                 "sku": "PRD-20241018-ABC12",

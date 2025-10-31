@@ -205,9 +205,11 @@ class TestClienteService:
         """Test exitoso para registrar un cliente institucional (mockeando llamada externa)"""
         # Mockear llamada al servicio externo
         mock_httpx_get.return_value = Mock(status_code=200)
-        mock_httpx_get.return_value.json.return_value = [
-            {"id": str(uuid.uuid4()), "nombre": "Vendedor 1"}
-        ]
+        mock_httpx_get.return_value.json.return_value = {
+            "data": [
+                {"id": str(uuid.uuid4()), "nombre": "Vendedor 1"}
+            ]
+        }
 
         # Datos simulados
         data = RegisterRequest(
