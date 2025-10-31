@@ -1,5 +1,3 @@
-# src/productos/tests/test_productos_service.py
-
 import pytest
 from models.producto import Producto
 from services.productos_service import ProductosService
@@ -181,59 +179,9 @@ class TestProductosService:
         producto_eliminado = service.get_producto_by_id(producto_dict["id"])
         assert producto_eliminado.disponible is False
     
-    @pytest.mark.asyncio
-    async def test_actualizar_stock_incrementar(self, test_db, producto_ejemplo):
-        from schemas.producto_schema import ProductoCreate
-        
-        service = ProductosService(test_db)
-        producto_data = ProductoCreate(**producto_ejemplo)
-        
-        # Mock the provider verification
-        with patch.object(service, '_verificar_proveedor_activo', new_callable=AsyncMock) as mock_verify:
-            mock_verify.return_value = {"id": producto_ejemplo["proveedor_id"], "nombre": "Proveedor Test"}
-            producto = await service.crear_producto(producto_data)
-        
-        stock_inicial = producto.stock_disponible
-        
-        producto_actualizado = service.actualizar_stock(producto.id, 50)
-        
-        assert producto_actualizado.stock_disponible == stock_inicial + 50
     
-    @pytest.mark.asyncio
-    async def test_actualizar_stock_decrementar(self, test_db, producto_ejemplo):
-        from schemas.producto_schema import ProductoCreate
-        
-        service = ProductosService(test_db)
-        producto_data = ProductoCreate(**producto_ejemplo)
-        
-        # Mock the provider verification
-        with patch.object(service, '_verificar_proveedor_activo', new_callable=AsyncMock) as mock_verify:
-            mock_verify.return_value = {"id": producto_ejemplo["proveedor_id"], "nombre": "Proveedor Test"}
-            producto = await service.crear_producto(producto_data)
-        
-        stock_inicial = producto.stock_disponible
-        
-        producto_actualizado = service.actualizar_stock(producto.id, -30)
-        
-        assert producto_actualizado.stock_disponible == stock_inicial - 30
     
-    @pytest.mark.asyncio
-    async def test_actualizar_stock_insuficiente(self, test_db, producto_ejemplo):
-        from schemas.producto_schema import ProductoCreate
-        
-        service = ProductosService(test_db)
-        producto_data = ProductoCreate(**producto_ejemplo)
-        
-        # Mock the provider verification
-        with patch.object(service, '_verificar_proveedor_activo', new_callable=AsyncMock) as mock_verify:
-            mock_verify.return_value = {"id": producto_ejemplo["proveedor_id"], "nombre": "Proveedor Test"}
-            producto = await service.crear_producto(producto_data)
-        
-        with pytest.raises(HTTPException) as exc_info:
-            service.actualizar_stock(producto.id, -200)
-        
-        assert exc_info.value.status_code == 400
-        assert "stock" in str(exc_info.value.detail).lower()
+
     
     def test_get_productos_by_ids_exitoso(self, test_db):
         """Test: Obtener múltiples productos por IDs"""
@@ -245,7 +193,6 @@ class TestProductosService:
             categoria="MEDICAMENTOS",
             imagen_url="http://test.com/img.jpg",
             precio_unitario=10.00,
-            stock_disponible=50,
             disponible=True,
             unidad_medida="UNIDAD",
             tipo_almacenamiento="AMBIENTE",
@@ -258,7 +205,6 @@ class TestProductosService:
             categoria="INSUMOS",
             imagen_url="http://test.com/img.jpg",
             precio_unitario=15.00,
-            stock_disponible=30,
             disponible=True,
             unidad_medida="CAJA",
             tipo_almacenamiento="AMBIENTE",
@@ -298,7 +244,6 @@ class TestProductosService:
             categoria="MEDICAMENTOS",
             imagen_url="http://test.com/img.jpg",
             precio_unitario=10.00,
-            stock_disponible=50,
             disponible=True,
             unidad_medida="UNIDAD",
             tipo_almacenamiento="AMBIENTE",
@@ -332,7 +277,6 @@ class TestProductosService:
             categoria="MEDICAMENTOS",
             imagen_url="http://test.com/img.jpg",
             precio_unitario=10.00,
-            stock_disponible=50,
             disponible=True,
             unidad_medida="UNIDAD",
             tipo_almacenamiento="AMBIENTE",
