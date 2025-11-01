@@ -1,9 +1,12 @@
+# src/bff-movil/schemas/visita_schema.py
+
 from datetime import datetime, date
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from pydantic import BaseModel, UUID4, Field
-from typing import List
 import uuid
 from enum import Enum
+
+# --- Copia exacta de los schemas del microservicio ---
 
 class EstadoVisitaEnum(str, Enum):
     """Define los estados permitidos para una visita."""
@@ -56,7 +59,6 @@ class VisitaDetalleResponseSchema(VisitaResponseSchema):
     """
     Schema de respuesta con toda la información de una visita,
     enriquecida con detalles del cliente.
-    Hereda todos los campos de VisitaBaseResponseSchema.
     """
     nombre_institucion: str = Field(..., description="Nombre del cliente institucional")
     direccion: Optional[str] = Field(None, description="Dirección del cliente")
@@ -65,7 +67,7 @@ class VisitaDetalleResponseSchema(VisitaResponseSchema):
         from_attributes = True
 
 class ActualizarVisitaSchema(BaseModel):
-    
+    """Schema para actualizar una visita (campos opcionales)."""
     inicio: Optional[datetime] = Field(None, description="Hora y fecha de inicio real de la visita")
     fin: Optional[datetime] = Field(None, description="Hora y fecha de fin real de la visita")
     cliente_contacto: Optional[str] = Field(None, max_length=100, description="Nombre del contacto en el cliente")

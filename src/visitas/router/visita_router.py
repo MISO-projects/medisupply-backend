@@ -1,14 +1,17 @@
-# src/visitas/router/visita_router.py
-
 from fastapi import APIRouter, Depends, Query, Path, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict
 import logging
+from datetime import date
+from pydantic import UUID4
 from http import HTTPStatus
 
 from schemas.visita_schema import (
     CrearRutaVisitaSchema, 
-    VisitaResponseSchema
+    VisitaResponseSchema,
+    RutaVisitaItemSchema,
+    VisitaDetalleResponseSchema,
+    ActualizarVisitaSchema
 )
 from typing import List
 
@@ -53,4 +56,91 @@ async def crear_nueva_ruta_visita(
             detail=f"Error inesperado al crear la ruta: {str(e)}"
         )
 
-# ... (Tus otros endpoints) ...
+@visita_router.get(
+    "/rutas-del-dia",
+    response_model=List[RutaVisitaItemSchema],
+    summary="Obtener las rutas de visita para una fecha y vendedor", 
+    description="""
+    Obtiene todas las visitas programadas para una FECHA específica (YYYY-MM-DD)
+    y un VENDEDOR específico (UUID), ordenadas por hora. 
+    La respuesta incluye detalles del cliente (nombre, dirección).
+    """ 
+)
+async def get_rutas_por_fecha_y_vendedor( 
+    fecha: date = Query(..., description="Fecha a consultar en formato YYYY-MM-DD"),
+    vendedor_id: UUID4 = Query(..., description="ID del vendedor a consultar"), 
+    service: VisitaService = Depends(get_visita_service)
+):
+    """
+    Obtiene la lista de rutas de visita para una fecha y vendedor dados.
+    """
+    try:
+        rutas = await service.get_rutas_por_fecha_y_vendedor(fecha, vendedor_id)
+        return rutas
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Error inesperado en endpoint GET /rutas-del-dia: {str(e)}")
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail=f"Error inesperado al obtener las rutas: {str(e)}"
+        )
+    
+@visita_router.get(
+    "/{visita_id}", 
+    response_model=VisitaDetalleResponseSchema,
+    summary="Obtener el detalle de una visita específica",
+    description="""
+    Obtiene toda la información almacenada de una visita,
+    dado su ID. Además, enriquece la respuesta con
+    el nombre, la dirección y el contacto del cliente.
+    """
+)
+async def get_detalle_visita(
+    visita_id: UUID4 = Path(..., description="ID de la visita a consultar"), 
+    service: VisitaService = Depends(get_visita_service)
+):
+    """
+    Obtiene los detalles completos de una visita por su ID.
+    """
+    try:
+        visita_detalle = await service.get_visita_detalle_por_id(visita_id)
+        return visita_detalle
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Error inesperado en endpoint GET /visita/{visita_id}: {str(e)}")
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail=f"Error inesperado al obtener la visita: {str(e)}"
+        )
+    
+@visita_router.put(
+    "/{visita_id}",
+    response_model=VisitaDetalleResponseSchema, 
+    summary="Actualizar una visita existente",
+    description="""
+    Actualiza uno o más campos de una visita.
+    Ideal para marcar una visita como 'TOMADA' y registrar
+    el detalle, la evidencia (URL), y las horas de inicio/fin.
+    """
+)
+async def actualizar_visita_endpoint(
+    data: ActualizarVisitaSchema, 
+    visita_id: UUID4 = Path(..., description="ID de la visita a actualizar"), 
+    service: VisitaService = Depends(get_visita_service)
+):
+    """
+    Actualiza los detalles de una visita específica por su ID.
+    """
+    try:
+        visita_actualizada = await service.actualizar_visita(visita_id, data)
+        return visita_actualizada
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Error inesperado en endpoint PUT /visita/{visita_id}: {str(e)}")
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail=f"Error inesperado al actualizar la visita: {str(e)}"
+        )

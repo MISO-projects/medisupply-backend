@@ -427,7 +427,7 @@ services:
       - PRODUCTOS_SERVICE_URL=http://productos-service:3000
       - ORDENES_COMMANDS_SERVICE_URL=http://order-command-api:3000
       - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
-      - VISITAS_SERVICE_URL=http//visitas-service:3000
+      - VISITAS_SERVICE_URL=http://visitas-service:3000
     volumes:
       - ./src/bff-movil:/app
     networks:

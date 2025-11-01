@@ -17,6 +17,7 @@ class Visita(Base):
     evidencia = Column(String(100), nullable=True)
     inicio =  Column(DateTime(timezone=True), nullable=True) 
     fin = Column(DateTime(timezone=True), nullable=True)
+    estado = Column(String(50), nullable=False, default='PENDIENTE')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now()) 
 
@@ -29,7 +30,8 @@ class Visita(Base):
         detalle: Optional[str] = None,          
         evidencia: Optional[str] = None,        
         inicio: Optional[datetime] = None,      
-        fin: Optional[datetime] = None          
+        fin: Optional[datetime] = None,
+        estado: Optional[str] = 'PENDIENTE'          
     ):
         """
         Constructor para crear una instancia de Visita.
@@ -44,6 +46,7 @@ class Visita(Base):
         self.evidencia = evidencia
         self.inicio = inicio
         self.fin = fin
+        self.estado = estado
 
     def to_dict(self):
         """
@@ -59,6 +62,7 @@ class Visita(Base):
             "evidencia": self.evidencia,
             "inicio": self.inicio.isoformat() if self.inicio else None,
             "fin": self.fin.isoformat() if self.fin else None,
+            "estado": self.estado,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

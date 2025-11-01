@@ -4,6 +4,7 @@ from .autenticacion_service import AutenticacionService
 from .clientes_service import ClientesService
 from .ordenes_commands_service import OrdenesCommandsService
 from .ordenes_queries_service import OrdenesQueriesService
+from .visitas_service import VisitasService
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,7 @@ class HealthService:
             "clientes": ClientesService(),
             "ordenes_commands": OrdenesCommandsService(),
             "ordenes_queries": OrdenesQueriesService(),
+            "visitas":VisitasService(),
         }
 
     def check_overall_health(self, include_details: bool = False) -> Dict[str, Any]:
