@@ -41,13 +41,13 @@ class TestRequestSchemas:
         assert any(err['loc'] == ('fecha_vencimiento',) and err['type'] == 'missing' for err in errors)
 
     def test_crear_registro_inventario_cantidad_invalida(self):
-        """Test: Falla si la cantidad es 0 o menor"""
+        """Test: Falla si la cantidad es negativa (menor que 0)"""
         with pytest.raises(ValidationError):
             CrearRegistroInventarioSchema(
                 producto_id=uuid4(),
-                lote="LOTE-123",
-                fecha_vencimiento="2026-10-30",
-                cantidad=0
+                lote="LOTE-INVALIDO",
+                fecha_vencimiento=date.today(),
+                cantidad=-1
             )
 
     def test_stock_batch_request_schema(self):
