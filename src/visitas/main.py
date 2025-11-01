@@ -9,6 +9,8 @@ import os
 logging.basicConfig(level=logging.DEBUG, force=True)
 logger = logging.getLogger(__name__)
 
+TESTING = os.getenv("TESTING", "0") == "1"
+
 
 app = FastAPI(
     title="MediSupply - Visita Service",
@@ -18,8 +20,12 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-Base.metadata.create_all(bind=engine)
-logger.info("Database tables created successfully")
+if not TESTING:
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
+else:
+    logger.info("TESTING mode: Skipping table creation")
+
 
 app.include_router(visita_router, prefix="/api/visitas", tags=["visitas"])
 

@@ -12,8 +12,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-# --- Imports de la App (se importan DESPUÉS de arreglar el path) ---
-from visitas.services.visita_service import VisitaService, get_visita_service
+from services.visita_service import VisitaService, get_visita_service
 from services.health_service import HealthService, get_health_service
 from db.database import get_db
 
@@ -55,11 +54,14 @@ def mock_db() -> Mock:
     return Mock(spec=Session)
 
 @pytest.fixture(scope="function")
-def mock_inventory_service() -> Mock:
+def mock_visita_service() -> Mock:
     """Mock del VisitaService (para pruebas de router)"""
     mock = Mock(spec=VisitaService)
-    mock.listar_registros_paginados = AsyncMock()
-    mock._get_detalles_productos = AsyncMock()
+    
+    mock.crear_ruta_visita = AsyncMock()
+    mock.get_rutas_por_fecha_y_vendedor = AsyncMock()
+    mock.get_visita_detalle_por_id = AsyncMock()
+    mock.actualizar_visita = AsyncMock()
     return mock
 
 @pytest.fixture(scope="function")
@@ -68,7 +70,10 @@ def mock_health_service() -> Mock:
     return Mock(spec=HealthService)
 
 @pytest.fixture(scope="function")
-def client(mock_inventory_service: Mock, mock_health_service: Mock) -> Generator[TestClient, None, None]:
+def client(
+    mock_visita_service: Mock,
+    mock_health_service: Mock
+) -> Generator[TestClient, None, None]:
     """
     Fixture principal de TestClient.
     Importa la app y sobrescribe TODAS sus dependencias.
@@ -76,7 +81,7 @@ def client(mock_inventory_service: Mock, mock_health_service: Mock) -> Generator
     
     from main import app 
     
-    app.dependency_overrides[get_visita_service] = lambda: mock_inventory_service
+    app.dependency_overrides[get_visita_service] = lambda: mock_visita_service
     app.dependency_overrides[get_health_service] = lambda: mock_health_service
     app.dependency_overrides[get_db] = lambda: Mock(spec=Session) 
     
@@ -90,8 +95,8 @@ def client(mock_inventory_service: Mock, mock_health_service: Mock) -> Generator
 
 
 @pytest.fixture(scope="function")
-def producto_id_1() -> str:
+def cliente_id_1() -> str:
     return str(uuid4())
 @pytest.fixture(scope="function")
-def producto_id_2() -> str:
+def vendedor_id_1() -> str:
     return str(uuid4())

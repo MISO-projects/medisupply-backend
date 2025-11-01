@@ -24,7 +24,7 @@ class VisitasService:
 
     def health_check(self) -> Dict[str, Any]:
         try:
-            response = httpx.get(f"{self.base_url}/api/visitas/health", timeout=self.timeout)
+            response = httpx.get(f"{self.base_url}/health", timeout=self.timeout)
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
