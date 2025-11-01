@@ -33,7 +33,8 @@ class TestInventarioService:
             service_instance = InventarioService(db=mock_db)
             yield service_instance 
 
-    def test_crear_registro_inventario_success(self, service: InventarioService, mock_db: Mock):
+    @pytest.mark.asyncio 
+    async def test_crear_registro_inventario_success(self, service: InventarioService, mock_db: Mock):
         """Test: Crear un registro de inventario exitosamente (con mock DB)"""
         data = CrearRegistroInventarioSchema(
             producto_id=uuid4(),
@@ -41,15 +42,16 @@ class TestInventarioService:
             fecha_vencimiento=date.today() + timedelta(days=30),
             cantidad=100
         )
-        
+    
         mock_inventario = Mock(spec=Inventario)
         mock_inventario.to_dict.return_value = {"id": str(uuid4()), "lote": "LOTE-123"}
         mock_db.refresh.side_effect = lambda x: setattr(x, 'to_dict', mock_inventario.to_dict)
-
-        resultado = service.crear_registro_inventario(data)
-        
+    
+        resultado = await service.crear_registro_inventario(data)
+    
         mock_db.add.assert_called_once()
         mock_db.commit.assert_called_once()
+        mock_db.refresh.assert_called_once()
         assert resultado["lote"] == "LOTE-123"
 
     @patch("services.inventario_service.httpx.AsyncClient")
