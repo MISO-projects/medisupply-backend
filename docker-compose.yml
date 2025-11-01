@@ -319,6 +319,7 @@ services:
       - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
       - VENTAS_SERVICE_URL=http://ventas-service:3000
+      - VISITAS_SERVICE_URL=http://visitas-service:3000
     volumes:
       - ./src/clientes:/app
     networks:

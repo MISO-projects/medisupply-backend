@@ -1,0 +1,3904 @@
+{
+	"info": {
+		"_postman_id": "d70b0ff5-5edd-46ca-bd72-36983507448e",
+		"name": "Medisupply",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "34079454"
+	},
+	"item": [
+		{
+			"name": "bff-web",
+			"item": [
+				{
+					"name": "proveedores",
+					"item": [
+						{
+							"name": "health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/proveedores/health",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"proveedores",
+										"health"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "crear proveedor",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"id_tributario = (Math.floor(Math.random() * 9e10) + 1e10).toString();",
+											"pm.collectionVariables.set(\"id_tributario\", id_tributario);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"const id = response.data?.id",
+											"pm.collectionVariables.set(\"id_proveedor\", id);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"id_tributario\": \"{{id_tributario}}\",\n\t\"tipo_proveedor\": \"Fabricante\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"pais\": \"Perú\",\n\t\"contacto1\": \"Juan Pérez - +51 999 888 777\",\n\t\"condiciones_entrega1\": \"Entrega en 5 días hábiles, cobertura nacional\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/proveedores/",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"proveedores",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "listar proveedores",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/proveedores/",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"proveedores",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "obtener proveedor",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/proveedores/:id",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"proveedores",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{id_proveedor}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "actualizar proveedor",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"id_tributario\": \"{{id_tributario}}\",\n\t\"tipo_proveedor\": \"Fabricante\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"pais\": \"Perú\",\n\t\"contacto\": \"Juan Pérez - +51 999 888 777\",\n\t\"condiciones_entrega\": \"Entrega en 5 días hábiles, cobertura nacional\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/proveedores/:id",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"proveedores",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{id_proveedor}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "eliminar proveedor",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/proveedores/:id",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"proveedores",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{id_proveedor}}"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "productos",
+					"item": [
+						{
+							"name": "health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/productos/health",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"productos",
+										"health"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "health Copy",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/productos/disponibles",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"productos",
+										"disponibles"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "crear producto",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"const id = response.id",
+											"pm.collectionVariables.set(\"id_producto\", id);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"nombre\": \"Arroz Blanco 1Kg\",\n  \"descripcion\": \"Arroz blanco premium, grano largo.\",\n  \"categoria\": \"Abarrotes\",\n  \"imagen_url\": \"https://example.com/images/arroz.jpg\",\n  \"precio_unitario\": 4500.00,\n  \"stock_disponible\": 120,\n  \"disponible\": true,\n  \"unidad_medida\": \"KILOGRAMO\",\n  \"sku\": \"PRD-202510221-XYZ11\",\n  \"tipo_almacenamiento\": \"AMBIENTE\",\n  \"observaciones\": \"Producto no requiere refrigeración.\",\n  \"proveedor_id\": \"{{id_proveedor}}\",\n  \"proveedor_nombre\": \"Molinos del Norte S.A.\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/productos/",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"productos",
+										""
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "reportes",
+					"item": [
+						{
+							"name": "health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/reportes/health",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"reportes",
+										"health"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "logistica",
+					"item": [
+						{
+							"name": "health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/logistica/health",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"logistica",
+										"health"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "inventario",
+					"item": [
+						{
+							"name": "health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/inventario/health",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"inventario",
+										"health"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Crear registro de inventario",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// Paso 1: Crear una fecha futura (Ej: Hoy + 3 años)",
+											"var today = new Date();",
+											"today.setFullYear(today.getFullYear() + 3);",
+											"",
+											"// Paso 2: Formatear la fecha como YYYY-MM-DD",
+											"// Esto es crucial para que Pydantic lo acepte como un 'date'",
+											"var year = today.getFullYear();",
+											"var month = String(today.getMonth() + 1).padStart(2, '0'); // Añade 0 inicial",
+											"var day = String(today.getDate()).padStart(2, '0');         // Añade 0 inicial",
+											"",
+											"var futureDate = year + '-' + month + '-' + day;",
+											"",
+											"// Paso 3: Almacenar el valor formateado en una variable de entorno/colección",
+											"pm.environment.set(\"futureDateFormatted\", futureDate);",
+											"",
+											"// Genera una cantidad aleatoria y la guarda como variable de entorno",
+											"var randomQuantity = Math.floor(Math.random() * (1000 - 100 + 1)) + 100;",
+											"pm.environment.set(\"randomQuantity\", randomQuantity);",
+											"",
+											"// ... (El resto de tu script, incluyendo futureDateFormatted)"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{bff_access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"producto_id\": \"615bc25a-465d-41b3-bcf0-efbd4f8b5462\", \n    \"lote\": \"LOTE-{{$randomInt}}\",\n    \"fecha_vencimiento\": \"{{futureDateFormatted}}\",\n    \"cantidad\": {{randomQuantity}}, \n    \"ubicacion\": \"Bodega {{$randomLetter}} - Estante {{$randomInt(1, 10)}}\",\n    \"temperatura_requerida\": \"REFRIGERADO\",\n    \"estado\": \"DISPONIBLE\",\n    \"observaciones\": \"Test automatizado {{$randomPhrase}}\",\n    \"condiciones_especiales\": null\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/inventario/",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"inventario",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Crear registro de inventario Copy",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// Paso 1: Crear una fecha futura (Ej: Hoy + 3 años)",
+											"var today = new Date();",
+											"today.setFullYear(today.getFullYear() + 3);",
+											"",
+											"// Paso 2: Formatear la fecha como YYYY-MM-DD",
+											"// Esto es crucial para que Pydantic lo acepte como un 'date'",
+											"var year = today.getFullYear();",
+											"var month = String(today.getMonth() + 1).padStart(2, '0'); // Añade 0 inicial",
+											"var day = String(today.getDate()).padStart(2, '0');         // Añade 0 inicial",
+											"",
+											"var futureDate = year + '-' + month + '-' + day;",
+											"",
+											"// Paso 3: Almacenar el valor formateado en una variable de entorno/colección",
+											"pm.environment.set(\"futureDateFormatted\", futureDate);",
+											"",
+											"// Genera una cantidad aleatoria y la guarda como variable de entorno",
+											"var randomQuantity = Math.floor(Math.random() * (1000 - 100 + 1)) + 100;",
+											"pm.environment.set(\"randomQuantity\", randomQuantity);",
+											"",
+											"// ... (El resto de tu script, incluyendo futureDateFormatted)"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{bff_access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/inventario/?page=1&page_size=5",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"inventario",
+										""
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "page_size",
+											"value": "5"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "ventas",
+					"item": [
+						{
+							"name": "health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/health",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"health"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "crear vendedor",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"const id = response.data?.id",
+											"pm.collectionVariables.set(\"id_vendedor\", id);",
+											"",
+											"const correo_vendedor = response.data?.email",
+											"pm.collectionVariables.set(\"correo_vendedor\", correo_vendedor);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"documento_identidad\": \"{{$randomInt}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Perú\",\n\t\"plan_venta_id\": \"{{plan_venta_id}}\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/vendedores",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"vendedores"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "crear plan de venta",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"const id = response.data?.id",
+											"pm.collectionVariables.set(\"id_vendedor\", id);",
+											"",
+											"const plan_venta_id = response.data?.id",
+											"pm.collectionVariables.set(\"plan_venta_id\", plan_venta_id);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// Paso 1: Crear una fecha futura (Ej: Hoy + 3 años)",
+											"var today = new Date();",
+											"today.setFullYear(today.getFullYear());",
+											"",
+											"// Paso 2: Formatear la fecha como YYYY-MM-DD",
+											"// Esto es crucial para que Pydantic lo acepte como un 'date'",
+											"var year = today.getFullYear();",
+											"var month = String(today.getMonth() + 1).padStart(2, '0'); // Añade 0 inicial",
+											"var day = String(today.getDate()).padStart(2, '0');         // Añade 0 inicial",
+											"",
+											"var futureDate = year + '-' + month + '-' + day;",
+											"",
+											"// Paso 3: Almacenar el valor formateado en una variable de entorno/colección",
+											"pm.environment.set(\"fecha_inicio\", futureDate);",
+											"",
+											"today.setFullYear(today.getFullYear() + 2);",
+											"// Paso 2: Formatear la fecha como YYYY-MM-DD",
+											"// Esto es crucial para que Pydantic lo acepte como un 'date'",
+											"var year = today.getFullYear();",
+											"var month = String(today.getMonth() + 1).padStart(2, '0'); // Añade 0 inicial",
+											"var day = String(today.getDate()).padStart(2, '0');         // Añade 0 inicial",
+											"",
+											"var futureDate = year + '-' + month + '-' + day;",
+											"",
+											"// Paso 3: Almacenar el valor formateado en una variable de entorno/colección",
+											"pm.environment.set(\"fecha_fin\", futureDate);",
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"fecha_inicio\": \"{{fecha_inicio}}\",\n    \"fecha_fin\": \"{{fecha_fin}}\",\n    \"meta_venta\":\"{{$randomInt}}\",\n    \"descripción\" :\" \",\n    \"zona_asignada\": \"Colombia\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/planes",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"planes"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "listar vendedores",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/vendedores",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"vendedores"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "obtener vendedor",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/vendedores/:id",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"vendedores",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{id_vendedor}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "actualizar vendedor",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Colombia\",\n\t\"meta_venta\": 75000.00\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ventas/vendedores/:id",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ventas",
+										"vendedores",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{id_vendedor}}"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "clientes",
+					"item": [
+						{
+							"name": "health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/clientes/health",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"clientes",
+										"health"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "auditoria",
+					"item": [
+						{
+							"name": "health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/auditoria/health",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"auditoria",
+										"health"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "autenticacion",
+					"item": [
+						{
+							"name": "health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/autenticacion/health",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"autenticacion",
+										"health"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "registrar usuario-seller",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"pm.collectionVariables.set(\"bff_user_id\", response.id);",
+											"pm.collectionVariables.set(\"bff_user_email\", response.email);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"email\": \"{{correo_vendedor}}\",\n\t\"username\": \"{{$randomFullName}}\",\n\t\"password\": \"Password123!\",\n    \"role\":\"seller\",\n    \"id_seller\":\"{{id_vendedor}}\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/autenticacion/register",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"autenticacion",
+										"register"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "iniciar sesion",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"pm.collectionVariables.set(\"bff_access_token\", response.access_token);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"email\": \"{{bff_user_email}}\",\n\t\"password\": \"Password123!\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_url }}/autenticacion/login",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"autenticacion",
+										"login"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "obtener usuario actual",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{bff_access_token}}"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/autenticacion/me",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"autenticacion",
+										"me"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "ordenes",
+					"item": [
+						{
+							"name": "commands health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ordenes/commands/health",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ordenes",
+										"commands",
+										"health"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "queries health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/ordenes/queries/health",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"ordenes",
+										"queries",
+										"health"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "health",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.bff_web_url }}/health",
+							"host": [
+								"{{ _.bff_web_url }}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "bff-movil",
+			"item": [
+				{
+					"name": "clientes",
+					"item": [
+						{
+							"name": "health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/clientes/health",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"clientes",
+										"health"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "obtener clientes asignados",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{bff_movil_access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/clientes/asignados/",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"clientes",
+										"asignados",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Crear clientes",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"pm.collectionVariables.set(\"id_clienteInstitucional\", response.id);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"nombre\": \"Hospital {{$randomWord}}\",\n    \"nit\": \"900{{$randomInt}}00\",\n    \"logoUrl\": \"https://storage.googleapis.com/logos/hospital-general.png\",\n    \"address\": \"Calle 123, Ciudad\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/clientes/",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"clientes",
+										""
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "productos",
+					"item": [
+						{
+							"name": "health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/productos/health",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"productos",
+										"health"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "listar productos",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false,
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/productos/disponibles/",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"productos",
+										"disponibles",
+										""
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "autenticacion",
+					"item": [
+						{
+							"name": "health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/autenticacion/health",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"autenticacion",
+										"health"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "registrar usuario-seller",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"pm.collectionVariables.set(\"bff_movil_user_id\", response.id);",
+											"pm.collectionVariables.set(\"bff_movil_user_email\", response.email);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"email\": \"{{$randomEmail}}\",\n\t\"username\": \"{{$randomFullName}}\",\n\t\"password\": \"Password123!\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/autenticacion/register",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"autenticacion",
+										"register"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "registrar usuario-client",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"pm.collectionVariables.set(\"bff_movil_user_id\", response.id);",
+											"pm.collectionVariables.set(\"bff_movil_user_email\", response.email);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"email\": \"{{$randomEmail}}\",\n\t\"username\": \"{{$randomFullName}}\",\n    \"role\":\"client\",\n\t\"password\": \"Password123!\",\n    \"id_client\":\"{{id_clienteInstitucional}}\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/autenticacion/register",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"autenticacion",
+										"register"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "iniciar sesion",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const response = pm.response.json();",
+											"pm.collectionVariables.set(\"bff_movil_access_token\", response.access_token);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"email\": \"{{bff_movil_user_email}}\",\n\t\"password\": \"Password123!\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/autenticacion/login",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"autenticacion",
+										"login"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "obtener usuario actual",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{bff_movil_access_token}}"
+									},
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/autenticacion/me",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"autenticacion",
+										"me"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "ordenes",
+					"item": [
+						{
+							"name": "commands health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/ordenes/commands/health",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"ordenes",
+										"commands",
+										"health"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "queries health",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/ordenes/queries/health",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"ordenes",
+										"queries",
+										"health"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "visitas",
+					"item": [
+						{
+							"name": "crear visita",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// Paso 1: Crear una fecha futura (Ej: Hoy + 3 años)",
+											"var today = new Date();",
+											"today.setFullYear(today.getFullYear() + 3);",
+											"",
+											"// Paso 2: Formatear la fecha como YYYY-MM-DD",
+											"// Esto es crucial para que Pydantic lo acepte como un 'date'",
+											"var year = today.getFullYear();",
+											"var month = String(today.getMonth() + 1).padStart(2, '0'); // Añade 0 inicial",
+											"var day = String(today.getDate()).padStart(2, '0');         // Añade 0 inicial",
+											"",
+											"var futureDate = year + '-' + month + '-' + day;",
+											"",
+											"// Paso 3: Almacenar el valor formateado en una variable de entorno/colección",
+											"pm.environment.set(\"futureDateFormatted\", futureDate);",
+											"",
+											"// Genera una cantidad aleatoria y la guarda como variable de entorno",
+											"var randomQuantity = Math.floor(Math.random() * (1000 - 100 + 1)) + 100;",
+											"pm.environment.set(\"randomQuantity\", randomQuantity);",
+											"",
+											"// ... (El resto de tu script, incluyendo futureDateFormatted)"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"cliente_id\": \"e39f57fb-4c5d-4351-a726-fd75b4f2ac2d\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/visitas",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"visitas"
+									]
+								},
+								"description": "Generated from cURL: curl --location --request POST 'http://localhost:3008/api/inventario/registros' \\\n--header 'Content-Type: application/json' \\\n--data '{\n    \"producto_id\": \"8a32d1e0-c4f5-4b6a-9e7d-1c3f8e5b0a9d\",\n    \"lote\": \"LOTE-COVID-202510\",\n    \"fecha_vencimiento\": \"2026-12-31\",\n    \"cantidad\": 500,\n    \"ubicacion\": \"Bodega A - Estante 1\",\n    \"temperatura_requerida\": \"REFRIGERADO\",\n    \"estado\": \"DISPONIBLE\",\n    \"observaciones\": \"Lote recibido bajo cadena de frío.\",\n    \"condiciones_especiales\": \"No exponer a luz solar\"\n}'"
+							},
+							"response": []
+						},
+						{
+							"name": "obtener ruta",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/visitas/rutas-del-dia/?fecha=2025-11-01&vendedor_id=ca4a2cd5-8945-470f-af9d-e0e5a34076e0",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"visitas",
+										"rutas-del-dia",
+										""
+									],
+									"query": [
+										{
+											"key": "fecha",
+											"value": "2025-11-01"
+										},
+										{
+											"key": "vendedor_id",
+											"value": "ca4a2cd5-8945-470f-af9d-e0e5a34076e0"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "detalle visita",
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_movil }}/visitas/295bbea1-4166-4201-bc29-08337d97741e",
+									"host": [
+										"{{ _.bff_web_movil }}"
+									],
+									"path": [
+										"visitas",
+										"295bbea1-4166-4201-bc29-08337d97741e"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "registrar visita",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"detalle\": \"Visita exitosa. Cliente interesado en producto X.\",\n    \"evidencia\": \"https://mi-storage.com/fotos/visita-123.jpg\",\n    \"cliente_contacto\": \"Ana Pérez - Jefe de Compras\",\n    \"inicio\": \"2025-11-01T10:05:00Z\",\n    \"fin\": \"2025-11-01T10:45:00Z\",\n    \"estado\": \"TOMADA\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.visitas_url }}/api/visitas/47638438-a425-4afe-a2e1-e6912ee6df42",
+									"host": [
+										"{{ _.visitas_url }}"
+									],
+									"path": [
+										"api",
+										"visitas",
+										"47638438-a425-4afe-a2e1-e6912ee6df42"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "cancelar cita",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"detalle\": \"No habia personal disponible.\",\n    \"estado\": \"CANCELADA\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ _.visitas_url }}/api/visitas/56711fa2-25ac-49b3-90aa-413dac943179",
+									"host": [
+										"{{ _.visitas_url }}"
+									],
+									"path": [
+										"api",
+										"visitas",
+										"56711fa2-25ac-49b3-90aa-413dac943179"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "health",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.bff_web_movil }}/health",
+							"host": [
+								"{{ _.bff_web_movil }}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "orders",
+			"item": [
+				{
+					"name": "command",
+					"item": [
+						{
+							"name": "api",
+							"item": [
+								{
+									"name": "create order",
+									"protocolProfileBehavior": {
+										"followRedirects": true,
+										"disableUrlEncoding": false,
+										"disableCookies": false
+									},
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "User-Agent",
+												"value": "insomnia/10.1.1"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n\t\"id_cliente\": \"{{$guid}}\",\n\t\"id_vendedor\": \"{{$guid}}\",\n\t\"id_bodega_origen\": \"{{$guid}}\",\n\t\"fecha_entrega_estimada\": \"2024-12-31T10:00:00\",\n\t\"observaciones\": \"Entrega urgente - cliente VIP\",\n\t\"creado_por\": \"{{$guid}}\",\n\t\"detalles\": [\n\t\t{\n\t\t\t\"id_producto\": \"{{$guid}}\",\n\t\t\t\"cantidad\": 2,\n\t\t\t\"precio_unitario\": 150.50,\n\t\t\t\"observaciones\": \"Producto frágil - manejar con cuidado\"\n\t\t},\n\t\t{\n\t\t\t\"id_producto\": \"{{$guid}}\",\n\t\t\t\"cantidad\": 1,\n\t\t\t\"precio_unitario\": 75.25\n\t\t}\n\t]\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{ _.command_order_url }}/",
+											"host": [
+												"{{ _.command_order_url }}"
+											],
+											"path": [
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "health",
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true,
+										"followRedirects": true,
+										"disableUrlEncoding": false,
+										"disableCookies": false
+									},
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "User-Agent",
+												"value": "insomnia/10.1.1"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n\t\"id_cliente\": \"{% faker 'randomUUID' %}\",\n\t\"id_vendedor\": \"{% faker 'randomUUID' %}\",\n\t\"id_bodega_origen\": \"{% faker 'randomUUID' %}\",\n\t\"fecha_entrega_estimada\": \"2024-12-31T10:00:00\",\n\t\"observaciones\": \"Entrega urgente - cliente VIP\",\n\t\"creado_por\": \"{% faker 'randomUUID' %}\",\n\t\"detalles\": [\n\t\t{\n\t\t\t\"id_producto\": \"{% faker 'randomUUID' %}\",\n\t\t\t\"cantidad\": 2,\n\t\t\t\"precio_unitario\": 150.50,\n\t\t\t\"observaciones\": \"Producto frágil - manejar con cuidado\"\n\t\t},\n\t\t{\n\t\t\t\"id_producto\": \"{% faker 'randomUUID' %}\",\n\t\t\t\"cantidad\": 1,\n\t\t\t\"precio_unitario\": 75.25\n\t\t}\n\t]\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{ _.command_order_url }}/health",
+											"host": [
+												"{{ _.command_order_url }}"
+											],
+											"path": [
+												"health"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "handler",
+							"item": [
+								{
+									"name": "handle order",
+									"protocolProfileBehavior": {
+										"followRedirects": true,
+										"disableUrlEncoding": false,
+										"disableCookies": false
+									},
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "User-Agent",
+												"value": "insomnia/10.1.1"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n\t\"message\": {\n\t\t\"data\": \"{% base64 'encode', 'normal', '{\"fecha_entrega_estimada\": \"2024-12-31T10:00:00\", \"observaciones\": \"Entrega urgente - cliente VIP\", \"id_cliente\": \"4c998c39-e699-453b-9722-7e5cb9cadf4d\", \"id_vendedor\": \"7c03ffec-4fd6-4f69-93fc-62c3f547c02c\", \"id_bodega_origen\": \"6096c11c-8f5b-497a-b4b1-72ad913f0319\", \"creado_por\": \"c597757b-e49c-47d1-b413-b53fd0ba4a0d\", \"detalles\": [{\"id_producto\": \"2f59d7ce-07b1-4dde-9c76-3841bcae6e4d\", \"cantidad\": 2, \"precio_unitario\": 150.5, \"observaciones\": \"Producto fr\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\u00e1gil - manejar con cuidado\"}, {\"id_producto\": \"742fdd7a-e00f-4d3e-a34f-458ebabf1d88\", \"cantidad\": 1, \"precio_unitario\": 75.25, \"observaciones\": null}], \"id\": \"c30f28c5-3875-493d-856d-a1f91df5b3a7\", \t\"numero_orden\": \"ORD-251002-F8C01BBF\"}' %}\"\n\t}\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{ _.handle_order_url }}/",
+											"host": [
+												"{{ _.handle_order_url }}"
+											],
+											"path": [
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "health",
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true,
+										"followRedirects": true,
+										"disableUrlEncoding": false,
+										"disableCookies": false
+									},
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "User-Agent",
+												"value": "insomnia/10.1.1"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n\t\"message\": {\n\t\t\"data\": \"{% base64 'encode', 'normal', '{\"fecha_entrega_estimada\": \"2024-12-31T10:00:00\", \"observaciones\": \"Entrega urgente - cliente VIP\", \"id_cliente\": \"4c998c39-e699-453b-9722-7e5cb9cadf4d\", \"id_vendedor\": \"7c03ffec-4fd6-4f69-93fc-62c3f547c02c\", \"id_bodega_origen\": \"6096c11c-8f5b-497a-b4b1-72ad913f0319\", \"creado_por\": \"c597757b-e49c-47d1-b413-b53fd0ba4a0d\", \"detalles\": [{\"id_producto\": \"2f59d7ce-07b1-4dde-9c76-3841bcae6e4d\", \"cantidad\": 2, \"precio_unitario\": 150.5, \"observaciones\": \"Producto fr\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\u00e1gil - manejar con cuidado\"}, {\"id_producto\": \"742fdd7a-e00f-4d3e-a34f-458ebabf1d88\", \"cantidad\": 1, \"precio_unitario\": 75.25, \"observaciones\": null}], \"id\": \"c30f28c5-3875-493d-856d-a1f91df5b3a7\", \t\"numero_orden\": \"ORD-251002-F8C01BBF\"}' %}\"\n\t}\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{ _.handle_order_url }}/health",
+											"host": [
+												"{{ _.handle_order_url }}"
+											],
+											"path": [
+												"health"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "query",
+					"item": [
+						{
+							"name": "api",
+							"item": [
+								{
+									"name": "get order",
+									"protocolProfileBehavior": {
+										"followRedirects": true,
+										"disableUrlEncoding": false,
+										"disableCookies": false
+									},
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "User-Agent",
+												"value": "insomnia/10.1.1"
+											}
+										],
+										"url": {
+											"raw": "{{ _.query_order_url }}/orders/:id",
+											"host": [
+												"{{ _.query_order_url }}"
+											],
+											"path": [
+												"orders",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "{% response 'body', 'req_0f1bcbc384c7472c954c0e38b866715d', 'b64::JC5pZA==::46b', 'never', 60 %}"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get all",
+									"protocolProfileBehavior": {
+										"followRedirects": true,
+										"disableUrlEncoding": false,
+										"disableCookies": false
+									},
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "User-Agent",
+												"value": "insomnia/10.1.1"
+											}
+										],
+										"url": {
+											"raw": "{{ _.query_order_url }}/orders/ids",
+											"host": [
+												"{{ _.query_order_url }}"
+											],
+											"path": [
+												"orders",
+												"ids"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "health",
+									"protocolProfileBehavior": {
+										"followRedirects": true,
+										"disableUrlEncoding": false,
+										"disableCookies": false
+									},
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "User-Agent",
+												"value": "insomnia/10.1.1"
+											}
+										],
+										"url": {
+											"raw": "{{ _.query_order_url }}/health",
+											"host": [
+												"{{ _.query_order_url }}"
+											],
+											"path": [
+												"health"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "projection",
+							"item": [
+								{
+									"name": "handle projection",
+									"protocolProfileBehavior": {
+										"followRedirects": true,
+										"disableUrlEncoding": false,
+										"disableCookies": false
+									},
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "User-Agent",
+												"value": "insomnia/10.1.1"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n\t\"message\": {\n\t\t\"data\": \"{% base64 'encode', 'normal', '{\t\"id\": \"cee97d71-9dd7-4e44-9809-d5abc248980a\", \t\"numero_orden\": \"ORD-251003-5208174D\",\"fecha_creacion\": \"2025-09-21T16:18:32.189330\", \"fecha_actualizacion\": \"2025-09-21T16:18:32.189330\", \"estado\": \"PENDIENTE\", \"valor_total\": 376.25, \"id_cliente\": \"ecd354cf-2d2f-4fe3-ba37-d4deb9ac76ed\", \"id_vendedor\": \"2e2dd918-1a54-4a07-8a9c-bca495e2f2ce\", \"id_bodega_origen\": \"e46c17bb-b2ea-4b52-83fe-7fa1f7842dfe\", \"creado_por\": \"d1334094-1fb8-4983-b050-ac0140e7abe8\", \"fecha_entrega_estimada\": \"2024-12-31T10:00:00\", \"observaciones\": \"Entrega urgente - cliente VIP\", \"detalles\": [{\"id\": \"eee3423a-7df3-4b2b-8956-b12379b2740e\", \"fecha_creacion\": \"2025-09-21T16:18:32.190156\", \"fecha_actualizacion\": \"2025-09-21T16:18:32.190156\", \"id_orden\": \"76bc9fce-a4a9-4d10-9c09-d1136a4db082\", \"id_producto\": \"f6109945-f526-456e-a711-4ce396a6f1d9\", \"cantidad\": 2, \"precio_unitario\": 150.5, \"subtotal\": 301.0, \"observaciones\": \"Producto fr\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\u00e1gil - manejar con cuidado\"}, {\"id\": \"4272d605-0ee6-4b77-9628-2ea83bfa073d\", \"fecha_creacion\": \"2025-09-21T16:18:32.190258\", \"fecha_actualizacion\": \"2025-09-21T16:18:32.190258\", \"id_orden\": \"76bc9fce-a4a9-4d10-9c09-d1136a4db082\", \"id_producto\": \"cccdf07a-f515-460e-9d94-f594013f8458\", \"cantidad\": 1, \"precio_unitario\": 75.25, \"subtotal\": 75.25, \"observaciones\": null}]}' %}\"\n\t}\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{ _.order_projection_handler_url }}/",
+											"host": [
+												"{{ _.order_projection_handler_url }}"
+											],
+											"path": [
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "health",
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true,
+										"followRedirects": true,
+										"disableUrlEncoding": false,
+										"disableCookies": false
+									},
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "User-Agent",
+												"value": "insomnia/10.1.1"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n\t\"message\": {\n\t\t\"data\": \"{% base64 'encode', 'normal', '{\t\"id\": \"cee97d71-9dd7-4e44-9809-d5abc248980a\", \t\"numero_orden\": \"ORD-251003-5208174D\",\"fecha_creacion\": \"2025-09-21T16:18:32.189330\", \"fecha_actualizacion\": \"2025-09-21T16:18:32.189330\", \"estado\": \"PENDIENTE\", \"valor_total\": 376.25, \"id_cliente\": \"ecd354cf-2d2f-4fe3-ba37-d4deb9ac76ed\", \"id_vendedor\": \"2e2dd918-1a54-4a07-8a9c-bca495e2f2ce\", \"id_bodega_origen\": \"e46c17bb-b2ea-4b52-83fe-7fa1f7842dfe\", \"creado_por\": \"d1334094-1fb8-4983-b050-ac0140e7abe8\", \"fecha_entrega_estimada\": \"2024-12-31T10:00:00\", \"observaciones\": \"Entrega urgente - cliente VIP\", \"detalles\": [{\"id\": \"eee3423a-7df3-4b2b-8956-b12379b2740e\", \"fecha_creacion\": \"2025-09-21T16:18:32.190156\", \"fecha_actualizacion\": \"2025-09-21T16:18:32.190156\", \"id_orden\": \"76bc9fce-a4a9-4d10-9c09-d1136a4db082\", \"id_producto\": \"f6109945-f526-456e-a711-4ce396a6f1d9\", \"cantidad\": 2, \"precio_unitario\": 150.5, \"subtotal\": 301.0, \"observaciones\": \"Producto fr\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\u00e1gil - manejar con cuidado\"}, {\"id\": \"4272d605-0ee6-4b77-9628-2ea83bfa073d\", \"fecha_creacion\": \"2025-09-21T16:18:32.190258\", \"fecha_actualizacion\": \"2025-09-21T16:18:32.190258\", \"id_orden\": \"76bc9fce-a4a9-4d10-9c09-d1136a4db082\", \"id_producto\": \"cccdf07a-f515-460e-9d94-f594013f8458\", \"cantidad\": 1, \"precio_unitario\": 75.25, \"subtotal\": 75.25, \"observaciones\": null}]}' %}\"\n\t}\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{ _.order_projection_handler_url }}/health",
+											"host": [
+												"{{ _.order_projection_handler_url }}"
+											],
+											"path": [
+												"health"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "productos",
+			"item": [
+				{
+					"name": "health",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.productos_url }}/health",
+							"host": [
+								"{{ _.productos_url }}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "health Copy",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.productos_url }}/api/productos/creados",
+							"host": [
+								"{{ _.productos_url }}"
+							],
+							"path": [
+								"api",
+								"productos",
+								"creados"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "proveedores",
+			"item": [
+				{
+					"name": "health",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.proveedores_url }}/health",
+							"host": [
+								"{{ _.proveedores_url }}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "crear proveedor",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"id_tributario = (Math.floor(Math.random() * 9e10) + 1e10).toString();",
+									"pm.collectionVariables.set(\"id_tributario\", id_tributario);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"const id = response.data?.id",
+									"pm.collectionVariables.set(\"id_proveedor\", id);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"id_tributario\": \"{{id_tributario}}\",\n\t\"tipo_proveedor\": \"Fabricante\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"pais\": \"Perú\",\n\t\"contacto1\": \"Juan Pérez - +51 999 888 777\",\n\t\"condiciones_entrega1\": \"Entrega en 5 días hábiles, cobertura nacional\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ _.proveedores_url }}/proveedores",
+							"host": [
+								"{{ _.proveedores_url }}"
+							],
+							"path": [
+								"proveedores"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "listar proveedores",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.proveedores_url }}/proveedores",
+							"host": [
+								"{{ _.proveedores_url }}"
+							],
+							"path": [
+								"proveedores"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "obtener proveedor",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.proveedores_url }}/proveedores/:id",
+							"host": [
+								"{{ _.proveedores_url }}"
+							],
+							"path": [
+								"proveedores",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{id_proveedor}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "actualizar proveedor",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"id_tributario\": \"{{id_tributario}}\",\n\t\"tipo_proveedor\": \"Fabricante\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"pais\": \"Perú\",\n\t\"contacto\": \"Juan Pérez - +51 999 888 777\",\n\t\"condiciones_entrega\": \"Entrega en 5 días hábiles, cobertura nacional\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ _.proveedores_url }}/proveedores/:id",
+							"host": [
+								"{{ _.proveedores_url }}"
+							],
+							"path": [
+								"proveedores",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{id_proveedor}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "eliminar proveedor",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.proveedores_url }}/proveedores/:id",
+							"host": [
+								"{{ _.proveedores_url }}"
+							],
+							"path": [
+								"proveedores",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{id_proveedor}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "reportes",
+			"item": [
+				{
+					"name": "health",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.reportes_url }}/health",
+							"host": [
+								"{{ _.reportes_url }}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "logistica",
+			"item": [
+				{
+					"name": "health",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.logistica_url }}/health",
+							"host": [
+								"{{ _.logistica_url }}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "inventario",
+			"item": [
+				{
+					"name": "health",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.inventario_url }}/health",
+							"host": [
+								"{{ _.inventario_url }}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:3001/inventario/?page=1&page_size=5",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{ _.inventario_url }}/api/inventario/?page=1&page_size=1",
+							"host": [
+								"{{ _.inventario_url }}"
+							],
+							"path": [
+								"api",
+								"inventario",
+								""
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:3001/inventario/?page=2&page_size=5\""
+					},
+					"response": []
+				},
+				{
+					"name": "Crear registro de inventario",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"producto_ids\": [\n        \"1a476d62-3734-42a9-8b5b-d770bf213099\"\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3008/api/inventario/stock/batch",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3008",
+							"path": [
+								"api",
+								"inventario",
+								"stock",
+								"batch"
+							]
+						},
+						"description": "Generated from cURL: curl --location --request POST 'http://localhost:3008/api/inventario/registros' \\\n--header 'Content-Type: application/json' \\\n--data '{\n    \"producto_id\": \"8a32d1e0-c4f5-4b6a-9e7d-1c3f8e5b0a9d\",\n    \"lote\": \"LOTE-COVID-202510\",\n    \"fecha_vencimiento\": \"2026-12-31\",\n    \"cantidad\": 500,\n    \"ubicacion\": \"Bodega A - Estante 1\",\n    \"temperatura_requerida\": \"REFRIGERADO\",\n    \"estado\": \"DISPONIBLE\",\n    \"observaciones\": \"Lote recibido bajo cadena de frío.\",\n    \"condiciones_especiales\": \"No exponer a luz solar\"\n}'"
+					},
+					"response": []
+				},
+				{
+					"name": "Crear registro de inventario Copy",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Paso 1: Crear una fecha futura (Ej: Hoy + 3 años)",
+									"var today = new Date();",
+									"today.setFullYear(today.getFullYear() + 3);",
+									"",
+									"// Paso 2: Formatear la fecha como YYYY-MM-DD",
+									"// Esto es crucial para que Pydantic lo acepte como un 'date'",
+									"var year = today.getFullYear();",
+									"var month = String(today.getMonth() + 1).padStart(2, '0'); // Añade 0 inicial",
+									"var day = String(today.getDate()).padStart(2, '0');         // Añade 0 inicial",
+									"",
+									"var futureDate = year + '-' + month + '-' + day;",
+									"",
+									"// Paso 3: Almacenar el valor formateado en una variable de entorno/colección",
+									"pm.environment.set(\"futureDateFormatted\", futureDate);",
+									"",
+									"// Genera una cantidad aleatoria y la guarda como variable de entorno",
+									"var randomQuantity = Math.floor(Math.random() * (1000 - 100 + 1)) + 100;",
+									"pm.environment.set(\"randomQuantity\", randomQuantity);",
+									"",
+									"// ... (El resto de tu script, incluyendo futureDateFormatted)"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"producto_id\": \"615bc25a-465d-41b3-bcf0-efbd4f8b5462\", \n    \"lote\": \"LOTE-{{$randomInt}}\",\n    \"fecha_vencimiento\": \"{{futureDateFormatted}}\",\n    \"cantidad\": {{randomQuantity}}, \n    \"ubicacion\": \"Bodega {{$randomLetter}} - Estante {{$randomInt(1, 10)}}\",\n    \"temperatura_requerida\": \"REFRIGERADO\",\n    \"estado\": \"DISPONIBLE\",\n    \"observaciones\": \"Test automatizado {{$randomPhrase}}\",\n    \"condiciones_especiales\": null\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3008/api/inventario/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3008",
+							"path": [
+								"api",
+								"inventario",
+								""
+							]
+						},
+						"description": "Generated from cURL: curl --location --request POST 'http://localhost:3008/api/inventario/registros' \\\n--header 'Content-Type: application/json' \\\n--data '{\n    \"producto_id\": \"8a32d1e0-c4f5-4b6a-9e7d-1c3f8e5b0a9d\",\n    \"lote\": \"LOTE-COVID-202510\",\n    \"fecha_vencimiento\": \"2026-12-31\",\n    \"cantidad\": 500,\n    \"ubicacion\": \"Bodega A - Estante 1\",\n    \"temperatura_requerida\": \"REFRIGERADO\",\n    \"estado\": \"DISPONIBLE\",\n    \"observaciones\": \"Lote recibido bajo cadena de frío.\",\n    \"condiciones_especiales\": \"No exponer a luz solar\"\n}'"
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:3001/inventario/stock/batch",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"producto_ids\": [\n        \"615bc25a-465d-41b3-bcf0-efbd4f8b5462\"\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3008/api/inventario/stock/batch",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3008",
+							"path": [
+								"api",
+								"inventario",
+								"stock",
+								"batch"
+							]
+						},
+						"description": "Generated from cURL: curl -X POST \"http://localhost:3001/inventario/stock/batch\" \\\n-H \"Content-Type: application/json\" \\\n-d '{\n    \"producto_ids\": [\n        \"aqui-va-un-uuid-real-de-tu-db\",\n        \"aqui-va-otro-uuid-real-de-tu-db\",\n        \"aqui-va-un-uuid-de-un-producto-vencido\"\n    ]\n}'"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "visitas",
+			"item": [
+				{
+					"name": "health",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.visitas_url }}/health",
+							"host": [
+								"{{ _.visitas_url }}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "crear visita",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Paso 1: Crear una fecha futura (Ej: Hoy + 3 años)",
+									"var today = new Date();",
+									"today.setFullYear(today.getFullYear() + 3);",
+									"",
+									"// Paso 2: Formatear la fecha como YYYY-MM-DD",
+									"// Esto es crucial para que Pydantic lo acepte como un 'date'",
+									"var year = today.getFullYear();",
+									"var month = String(today.getMonth() + 1).padStart(2, '0'); // Añade 0 inicial",
+									"var day = String(today.getDate()).padStart(2, '0');         // Añade 0 inicial",
+									"",
+									"var futureDate = year + '-' + month + '-' + day;",
+									"",
+									"// Paso 3: Almacenar el valor formateado en una variable de entorno/colección",
+									"pm.environment.set(\"futureDateFormatted\", futureDate);",
+									"",
+									"// Genera una cantidad aleatoria y la guarda como variable de entorno",
+									"var randomQuantity = Math.floor(Math.random() * (1000 - 100 + 1)) + 100;",
+									"pm.environment.set(\"randomQuantity\", randomQuantity);",
+									"",
+									"// ... (El resto de tu script, incluyendo futureDateFormatted)"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"cliente_id\": \"8adcbb0d-fa84-478b-9c3e-312c827d9adb\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ _.visitas_url }}/api/visitas/",
+							"host": [
+								"{{ _.visitas_url }}"
+							],
+							"path": [
+								"api",
+								"visitas",
+								""
+							]
+						},
+						"description": "Generated from cURL: curl --location --request POST 'http://localhost:3008/api/inventario/registros' \\\n--header 'Content-Type: application/json' \\\n--data '{\n    \"producto_id\": \"8a32d1e0-c4f5-4b6a-9e7d-1c3f8e5b0a9d\",\n    \"lote\": \"LOTE-COVID-202510\",\n    \"fecha_vencimiento\": \"2026-12-31\",\n    \"cantidad\": 500,\n    \"ubicacion\": \"Bodega A - Estante 1\",\n    \"temperatura_requerida\": \"REFRIGERADO\",\n    \"estado\": \"DISPONIBLE\",\n    \"observaciones\": \"Lote recibido bajo cadena de frío.\",\n    \"condiciones_especiales\": \"No exponer a luz solar\"\n}'"
+					},
+					"response": []
+				},
+				{
+					"name": "obtener ruta",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.visitas_url }}/api/visitas/rutas-del-dia?fecha=2025-11-01&vendedor_id=f4d5a8cd-5f3f-41eb-a0f3-28a3924c7f55",
+							"host": [
+								"{{ _.visitas_url }}"
+							],
+							"path": [
+								"api",
+								"visitas",
+								"rutas-del-dia"
+							],
+							"query": [
+								{
+									"key": "fecha",
+									"value": "2025-11-01"
+								},
+								{
+									"key": "vendedor_id",
+									"value": "f4d5a8cd-5f3f-41eb-a0f3-28a3924c7f55"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "detalle visita",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.visitas_url }}/api/visitas/9a40d782-a6f1-49db-b53a-ed9889ab895d",
+							"host": [
+								"{{ _.visitas_url }}"
+							],
+							"path": [
+								"api",
+								"visitas",
+								"9a40d782-a6f1-49db-b53a-ed9889ab895d"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "registrar visita",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"detalle\": \"Visita exitosa. Cliente interesado en producto X.\",\n    \"evidencia\": \"https://mi-storage.com/fotos/visita-123.jpg\",\n    \"cliente_contacto\": \"Ana Pérez - Jefe de Compras\",\n    \"inicio\": \"2025-11-01T10:05:00Z\",\n    \"fin\": \"2025-11-01T10:45:00Z\",\n    \"estado\": \"TOMADA\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ _.visitas_url }}/api/visitas/47638438-a425-4afe-a2e1-e6912ee6df42",
+							"host": [
+								"{{ _.visitas_url }}"
+							],
+							"path": [
+								"api",
+								"visitas",
+								"47638438-a425-4afe-a2e1-e6912ee6df42"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "cancelar cita",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"detalle\": \"No habia personal disponible.\",\n    \"estado\": \"CANCELADA\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ _.visitas_url }}/api/visitas/56711fa2-25ac-49b3-90aa-413dac943179",
+							"host": [
+								"{{ _.visitas_url }}"
+							],
+							"path": [
+								"api",
+								"visitas",
+								"56711fa2-25ac-49b3-90aa-413dac943179"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ventas",
+			"item": [
+				{
+					"name": "health",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.ventas_url }}/health",
+							"host": [
+								"{{ _.ventas_url }}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "crear vendedor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"const id = response.data?.id",
+									"pm.collectionVariables.set(\"id_vendedor\", id);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"documento_identidad\": \"{{$randomInt}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Perú\",\n\t\"plan_venta\": \"plan-{{$randomInt}}\",\n\t\"meta_venta\": 50000.00\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ _.ventas_url }}/vendedores",
+							"host": [
+								"{{ _.ventas_url }}"
+							],
+							"path": [
+								"vendedores"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "listar vendedores",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.ventas_url }}/vendedores",
+							"host": [
+								"{{ _.ventas_url }}"
+							],
+							"path": [
+								"vendedores"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "obtener vendedor",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.ventas_url }}/vendedores/:id",
+							"host": [
+								"{{ _.ventas_url }}"
+							],
+							"path": [
+								"vendedores",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{id_vendedor}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "actualizar vendedor",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"zona_asignada\": \"Colombia\",\n\t\"meta_venta\": 75000.00\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ _.ventas_url }}/vendedores/:id",
+							"host": [
+								"{{ _.ventas_url }}"
+							],
+							"path": [
+								"vendedores",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{id_vendedor}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "clientes",
+			"item": [
+				{
+					"name": "Crear clientes",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"pm.collectionVariables.set(\"id_clienteInstitucional\", response.id);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nombre\": \"Hospital {{$randomWord}}\",\n    \"nit\": \"900{{$randomInt}}00\",\n    \"logoUrl\": \"https://storage.googleapis.com/logos/hospital-general.png\",\n    \"address\": \"Calle 123, Ciudad\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ _.clientes_url }}/api/clientes/",
+							"host": [
+								"{{ _.clientes_url }}"
+							],
+							"path": [
+								"api",
+								"clientes",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "listar clientes",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.clientes_url }}/api/clientes/",
+							"host": [
+								"{{ _.clientes_url }}"
+							],
+							"path": [
+								"api",
+								"clientes",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "health",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.clientes_url }}/health",
+							"host": [
+								"{{ _.clientes_url }}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "auditoria",
+			"item": [
+				{
+					"name": "health",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.auditoria_url }}/health",
+							"host": [
+								"{{ _.auditoria_url }}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "autenticacion",
+			"item": [
+				{
+					"name": "health",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.autenticacion_url }}/health",
+							"host": [
+								"{{ _.autenticacion_url }}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "registrar usuario-seller",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"pm.collectionVariables.set(\"user_id\", response.id);",
+									"pm.collectionVariables.set(\"user_email\", response.email);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"email\": \"{{$randomEmail}}\",\n\t\"username\": \"{{$randomFullName}}\",\n\t\"password\": \"Password123!\",\n    \"role\":\"seller\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ _.autenticacion_url }}/auth/register",
+							"host": [
+								"{{ _.autenticacion_url }}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "registrar usuario-client",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"pm.collectionVariables.set(\"user_id\", response.id);",
+									"pm.collectionVariables.set(\"user_email\", response.email);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"email\": \"{{$randomEmail}}\",\n\t\"username\": \"{{$randomFullName}}\",\n    \"role\":\"client\",\n\t\"password\": \"Password123!\",\n    \"id_client\":\"{{id_clienteInstitucional}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ _.autenticacion_url }}/auth/register",
+							"host": [
+								"{{ _.autenticacion_url }}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "iniciar sesion",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"pm.collectionVariables.set(\"access_token\", response.access_token);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"email\": \"{{user_email}}\",\n\t\"password\": \"Password123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ _.autenticacion_url }}/auth/login",
+							"host": [
+								"{{ _.autenticacion_url }}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "obtener usuario actual",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.autenticacion_url }}/auth/me",
+							"host": [
+								"{{ _.autenticacion_url }}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener ids de vendedores",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"disabled": true
+							},
+							{
+								"key": "User-Agent",
+								"value": "insomnia/11.6.1"
+							}
+						],
+						"url": {
+							"raw": "{{ _.autenticacion_url }}/auth/sellers",
+							"host": [
+								"{{ _.autenticacion_url }}"
+							],
+							"path": [
+								"auth",
+								"sellers"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": " _.bff_web_url ",
+			"value": ""
+		},
+		{
+			"key": " _.bff_web_movil ",
+			"value": ""
+		},
+		{
+			"key": " _.command_order_url ",
+			"value": ""
+		},
+		{
+			"key": " _.handle_order_url ",
+			"value": ""
+		},
+		{
+			"key": " _.query_order_url ",
+			"value": ""
+		},
+		{
+			"key": " _.order_projection_handler_url ",
+			"value": ""
+		},
+		{
+			"key": " _.productos_url ",
+			"value": ""
+		},
+		{
+			"key": " _.proveedores_url ",
+			"value": ""
+		},
+		{
+			"key": " _.reportes_url ",
+			"value": ""
+		},
+		{
+			"key": " _.logistica_url ",
+			"value": ""
+		},
+		{
+			"key": " _.inventario_url ",
+			"value": ""
+		},
+		{
+			"key": " _.ventas_url ",
+			"value": ""
+		},
+		{
+			"key": " _.clientes_url ",
+			"value": ""
+		},
+		{
+			"key": " _.auditoria_url ",
+			"value": ""
+		},
+		{
+			"key": " _.autenticacion_url ",
+			"value": ""
+		},
+		{
+			"key": "id_tributario",
+			"value": ""
+		},
+		{
+			"key": "id_proveedor",
+			"value": ""
+		},
+		{
+			"key": "id_vendedor",
+			"value": ""
+		},
+		{
+			"key": "user_id",
+			"value": ""
+		},
+		{
+			"key": "user_email",
+			"value": ""
+		},
+		{
+			"key": "access_token",
+			"value": ""
+		},
+		{
+			"key": "bff_user_id",
+			"value": ""
+		},
+		{
+			"key": "bff_user_email",
+			"value": ""
+		},
+		{
+			"key": "bff_access_token",
+			"value": ""
+		},
+		{
+			"key": "bff_movil_user_id",
+			"value": ""
+		},
+		{
+			"key": "bff_movil_user_email",
+			"value": ""
+		},
+		{
+			"key": "bff_movil_access_token",
+			"value": ""
+		},
+		{
+			"key": "id_clienteInstitucional",
+			"value": ""
+		},
+		{
+			"key": "id_producto",
+			"value": ""
+		},
+		{
+			"key": "plan_venta_id",
+			"value": ""
+		},
+		{
+			"key": "correo_vendedor",
+			"value": ""
+		}
+	]
+}

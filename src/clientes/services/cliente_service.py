@@ -15,6 +15,8 @@ import random
 
 AUTENTICACION_PATH = os.getenv("AUTENTICACION_SERVICE_URL", "http://autenticacion-service:3000")
 VENTAS_PATH = os.getenv("VENTAS_SERVICE_URL", "http://ventas-service:3000")
+VISITAS_PATH = os.getenv("VISITAS_SERVICE_URL", "http://visitas-service:3000") 
+
 logger = logging.getLogger(__name__)
 
 
@@ -273,6 +275,19 @@ class ClienteService:
             db.add(new_client)
             db.commit()
             db.refresh(new_client)
+            
+            try:
+                visita_payload = {"cliente_id": str(new_client.id)}
+                visita_url = f"{VISITAS_PATH}/api/visitas/"
+                
+                response = httpx.post(visita_url, json=visita_payload, timeout=5.0)
+                response.raise_for_status() # Lanza error si es 4xx o 5xx
+                
+                logger.info(f"Visita inicial creada exitosamente para cliente {new_client.id}")
+            
+            except Exception as e:
+                logger.error(f"Error al crear la visita inicial para el cliente {new_client.id}: {e}")
+
             try:
                 self.invalidate_cache(str(id_vendedor))
                 logger.info(f"Cache invalidado para vendedor {id_vendedor} tras registro de cliente.")
