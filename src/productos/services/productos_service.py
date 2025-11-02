@@ -1,8 +1,16 @@
+# src/productos/services/productos_service.py
+
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from typing import List, Optional, Union
 from models.producto import Producto
-from schemas.producto_schema import ProductoCreate, ProductoUpdate, ProductoConStock, ProductoResponse
+# ¡Importa los schemas correctos!
+from schemas.producto_schema import (
+    ProductoCreate, 
+    ProductoUpdate, 
+    ProductoResponse,
+    MobileProducto 
+)
 from fastapi import HTTPException
 import logging
 import httpx
@@ -17,9 +25,8 @@ logger = logging.getLogger(__name__)
 
 
 class ProductosService:
-    CACHE_TTL_PRODUCTO = 3600  # 1 hour for individual product
-    CACHE_TTL_LIST = 300  # 5 minutes for lists
-    CACHE_TTL_COUNT = 300  # 5 minutes for counts
+    CACHE_TTL_PRODUCTO = 3600
+    CACHE_TTL_LIST = 300
 
     def __init__(self, db: Session):
         self.db = db
@@ -27,15 +34,16 @@ class ProductosService:
         self.proveedores_service_url = os.getenv(
             "PROVEEDORES_SERVICE_URL", "http://proveedores-service:3000"
         )
-
+        self.inventario_service_url = os.getenv(
+            "INVENTARIO_SERVICE_URL", "http://inventario-service:3000"
+        )
+    
     def _get_cache(self, key: str) -> Optional[Any]:
         """Get data from cache"""
         try:
-            if self.redis_client is None:
-                return None
+            if self.redis_client is None: return None
             cached_data = self.redis_client.get(key)
-            if cached_data:
-                return json.loads(cached_data)
+            if cached_data: return json.loads(cached_data)
             return None
         except Exception as e:
             logger.warning(f"Error getting cache for key {key}: {e}")
@@ -68,41 +76,63 @@ class ProductosService:
                 self._delete_cache(f"producto:{producto_id}")
             # Invalidate list caches
             self._delete_cache("productos:list:*")
+            self._delete_cache("productos:mobile:list:*")
         except Exception as e:
             logger.warning(f"Error invalidating caches: {e}")
-
-    def get_productos_disponibles(
-        self,
-        solo_con_stock: bool = True,
-        categoria: Optional[str] = None,
-        nombre: Optional[str] = None,
-        skip: int = 0,
-        limit: int = 100,
-    ) -> tuple[List[ProductoConStock], int]:
+    
+    def invalidar_cache_de_listas(self) -> None:
         """
-        Obtiene la lista de productos disponibles con stock
-
-        Args:
-            solo_con_stock: Si True, solo retorna productos con stock > 0
-            categoria: Filtro opcional por categoría
-            nombre: Filtro opcional por nombre (búsqueda parcial, case-insensitive)
-            skip: Número de registros a saltar (paginación)
-            limit: Número máximo de registros a retornar
-
-        Returns:
-            Tupla con (lista de productos, total de productos)
+        Invalida todos los cachés de listas (móvil y web).
+        Este método está diseñado para ser llamado por un webhook
+        (ej. desde el servicio de inventario) cuando el stock cambia.
         """
         try:
-            cache_key = f"productos:list:{solo_con_stock}:{categoria or 'all'}:{nombre or 'all'}:{skip}:{limit}"
+            logger.info("Iniciando invalidación de caché de listas (webhook)...")
+            self._delete_cache("productos:list:*")
+            self._delete_cache("productos:mobile:list:*")
+            logger.info("Cachés de listas de productos invalidados (webhook).")
+        except Exception as e:
+            logger.warning(f"Error durante la invalidación de caché por webhook: {e}")
+    
+    async def _get_stock_para_productos(self, producto_ids: List[str]) -> Dict[str, int]:
+        if not producto_ids: return {}
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    f"{self.inventario_service_url}/api/inventario/stock/batch",
+                    json={"producto_ids": producto_ids}
+                )
+                if response.status_code == 200:
+                    return response.json().get("stock_data", {}) 
+                else:
+                    logger.error(f"Error al obtener stock: {response.status_code} - {response.text}")
+                    return {}
+        except httpx.RequestError as e:
+            logger.error(f"Error de conexión al servicio de inventario: {e}")
+            return {}
+
+    async def get_productos_disponibles_mobile(
+        self,
+        nombre: Optional[str] = None,
+        categoria: Optional[str] = None,      
+        disponibilidad: Optional[bool] = None,
+        skip: int = 0,
+        limit: int = 20,
+    ) -> tuple[List[MobileProducto], int]:
+        """
+        Obtiene la lista de productos disponibles, enriquecida con stock
+        del servicio de inventario para el móvil, con filtros.
+        """
+        try:
+            cache_key = f"productos:mobile:list:{nombre or 'all'}:{categoria or 'all'}:{disponibilidad}:{skip}:{limit}"
             cached_data = self._get_cache(cache_key)
             
             if cached_data is not None:
-                logger.debug(f"Cache hit for productos list")
-                # Return cached productos and total
-                productos_list = [ProductoConStock(**p) for p in cached_data.get('productos', [])]
+                logger.debug(f"Cache hit for productos mobile list")
+                productos_list = [MobileProducto(**p) for p in cached_data.get('productos', [])]
                 return productos_list, cached_data.get('total', 0)
             
-            logger.debug(f"Cache miss for productos list")
+            logger.debug(f"Cache miss for productos mobile list")
             
             # Construir query base
             query = self.db.query(Producto)
@@ -110,41 +140,91 @@ class ProductosService:
             # Aplicar filtros
             filters = [Producto.disponible == True]
 
-            if solo_con_stock:
-                filters.append(Producto.stock_disponible > 0)
-
+            if nombre:
+                filters.append(Producto.nombre.ilike(f"%{nombre}%"))
+            
             if categoria:
                 filters.append(Producto.categoria == categoria)
 
-            if nombre:
-                filters.append(Producto.nombre.ilike(f"%{nombre}%"))
-
             query = query.filter(and_(*filters))
 
-            # Obtener total
-            total = query.count()
+            total_en_catalogo = query.count()
+            logger.debug(f"Total productos en catálogo (sin filtro stock): {total_en_catalogo}")
 
-            # Aplicar paginación y ordenamiento
-            productos = query.order_by(Producto.nombre).offset(skip).limit(limit).all()
+            productos_db = query.order_by(Producto.nombre).offset(skip).limit(limit).all()
+            
+            if not productos_db:
+                return [], 0
+            producto_ids = [str(p.id) for p in productos_db]
+            stock_map = await self._get_stock_para_productos(producto_ids)
+            productos_finales = []
+            for producto in productos_db:
+                stock_actual = stock_map.get(str(producto.id), 0)
+                if disponibilidad is None:
+                    pass
+                elif disponibilidad is True and stock_actual == 0:
+                    continue
+                elif disponibilidad is False and stock_actual > 0:
+                    continue
 
-            # Convertir a schema
-            productos_response = [
-                ProductoConStock.model_validate(producto) for producto in productos
-            ]
-
+                producto_dict = producto.to_dict() 
+                producto_dict['stock_disponible'] = stock_actual
+                
+                productos_finales.append(MobileProducto.model_validate(producto_dict))
             cache_data = {
-                'productos': [p.model_dump(mode='json') for p in productos_response],
-                'total': total
+                'productos': [p.model_dump(mode='json', by_alias=True) for p in productos_finales],
+                'total': total_en_catalogo 
             }
             self._set_cache(cache_key, cache_data, self.CACHE_TTL_LIST)
 
-            logger.info(f"Se encontraron {total} productos disponibles")
-            return productos_response, total
+            logger.info(f"Retornando {len(productos_finales)} productos para el móvil")
+            return productos_finales, total_en_catalogo
 
         except Exception as e:
             logger.error(f"Error al obtener productos disponibles: {str(e)}")
             raise HTTPException(
                 status_code=500, detail="Error al obtener productos disponibles"
+            )
+        
+    async def get_productos_creados_web(
+        self,
+        categoria: Optional[str] = None,      
+        nombre: Optional[str] = None, 
+        skip: int = 0,
+        limit: int = 20,
+    ) -> tuple[List[ProductoResponse], int]: 
+        """
+        Obtiene la lista de productos creados para la WEB (SIN STOCK).
+        """
+        try:
+            query = self.db.query(Producto)
+            filters = [] 
+
+            if nombre:
+                filters.append(Producto.nombre.ilike(f"%{nombre}%"))
+            if categoria:
+                filters.append(Producto.categoria == categoria)
+            
+            if filters:
+                query = query.filter(and_(*filters))
+
+            total_en_catalogo = query.count()
+            logger.debug(f"Total productos en catálogo: {total_en_catalogo}")
+
+            productos_db = query.order_by(Producto.nombre).offset(skip).limit(limit).all()
+            
+            if not productos_db:
+                return [], 0
+
+            productos_finales = [ProductoResponse.model_validate(p) for p in productos_db]
+
+            logger.info(f"Retornando {len(productos_finales)} productos creados")
+            return productos_finales, total_en_catalogo
+
+        except Exception as e:
+            logger.error(f"Error al obtener productos creados: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail="Error al obtener productos creados"
             )
 
     def _get_producto_model_by_id(self, producto_id: str) -> Producto:
@@ -231,54 +311,27 @@ class ProductosService:
     async def crear_producto(self, producto_data: ProductoCreate) -> Dict[str, Any]:
         """Crea un nuevo producto"""
         try:
-
             proveedor_info = await self._verificar_proveedor_activo(
                 producto_data.proveedor_id
             )
-            # Verificar si ya existe un producto con el mismo SKU
             if producto_data.sku:
-                existing = (
-                    self.db.query(Producto)
-                    .filter(Producto.sku == producto_data.sku)
-                    .first()
-                )
+                existing = self.db.query(Producto).filter(Producto.sku == producto_data.sku).first()
                 if existing:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Ya existe un producto con el SKU {producto_data.sku}",
-                    )
+                    raise HTTPException(status_code=400, detail=f"Ya existe un producto con el SKU {producto_data.sku}")
 
             nuevo_producto = Producto(
-                nombre=producto_data.nombre,
-                descripcion=producto_data.descripcion,
-                categoria=producto_data.categoria,
-                imagen_url=producto_data.imagen_url,
-                precio_unitario=producto_data.precio_unitario,
-                stock_disponible=(
-                    producto_data.stock_disponible
-                    if producto_data.stock_disponible is not None
-                    else 100
-                ),
-                disponible=producto_data.disponible,
-                unidad_medida=producto_data.unidad_medida,
-                sku=producto_data.sku,
-                tipo_almacenamiento=producto_data.tipo_almacenamiento,
-                observaciones=producto_data.observaciones,
-                proveedor_id=producto_data.proveedor_id,
-                proveedor_nombre=proveedor_info.get(
-                    "nombre", "Proveedor (no verificado)"
-                ),
+                **producto_data.model_dump(),
+                proveedor_nombre=proveedor_info.get("nombre", "Proveedor (no verificado)")
             )
+            
             self.db.add(nuevo_producto)
             self.db.commit()
             self.db.refresh(nuevo_producto)
 
             self._invalidate_producto_caches()
-
-            logger.info(
-                f"Producto creado: {nuevo_producto.id} - {nuevo_producto.nombre}"
-            )
-            return nuevo_producto
+            logger.info(f"Producto creado: {nuevo_producto.id} - {nuevo_producto.nombre}")
+            
+            return nuevo_producto.to_dict()
 
         except HTTPException:
             raise
@@ -286,7 +339,6 @@ class ProductosService:
             self.db.rollback()
             logger.error(f"Error al crear producto: {str(e)}")
             raise HTTPException(status_code=500, detail="Error al crear producto")
-
     def actualizar_producto(
         self, producto_id: str, producto_data: ProductoUpdate
     ) -> Producto:
@@ -349,34 +401,33 @@ class ProductosService:
             logger.error(f"Error al eliminar producto {producto_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Error al eliminar producto")
 
-    def actualizar_stock(self, producto_id: str, cantidad: int) -> Producto:
-        """Actualiza el stock de un producto"""
+    def get_detalles_por_ids(self, producto_ids: List[str]) -> Dict[str, Dict[str, str]]:
+        """
+        Obtiene detalles clave (nombre y SKU) para una lista de IDs de productos.
+        """
         try:
-            producto = self._get_producto_model_by_id(producto_id)
+            unique_ids = list(set(producto_ids))
+            productos_db = self.db.query(
+                Producto.id, 
+                Producto.nombre, 
+                Producto.sku
+            ).filter(
+                Producto.id.in_(unique_ids)
+            ).all()
 
-            nuevo_stock = producto.stock_disponible + cantidad
-            if nuevo_stock < 0:
-                raise HTTPException(
-                    status_code=400, detail="No hay suficiente stock disponible"
-                )
+            # Convertimos la lista en un diccionario para búsqueda rápida
+            # Ej: {"uuid-1": {"nombre": "Guantes", "sku": "SKU-123"}, ...}
+            detalles_map = {
+                str(p.id): {"nombre": p.nombre, "sku": p.sku}
+                for p in productos_db
+            }
+            
+            logger.info(f"Se obtuvieron detalles para {len(detalles_map)} productos.")
+            return detalles_map
 
-            producto.stock_disponible = nuevo_stock
-            self.db.commit()
-            self.db.refresh(producto)
-
-            self._invalidate_producto_caches(producto_id)
-
-            logger.info(f"Stock actualizado para producto {producto_id}: {nuevo_stock}")
-            return producto
-
-        except HTTPException:
-            raise
         except Exception as e:
-            self.db.rollback()
-            logger.error(
-                f"Error al actualizar stock del producto {producto_id}: {str(e)}"
-            )
-            raise HTTPException(status_code=500, detail="Error al actualizar stock")
+            logger.error(f"Error al obtener detalles de productos por IDs: {str(e)}")
+            return {}
 
     def get_productos_by_ids(self, ids: List[str]) -> List[ProductoResponse]:
         """Obtiene productos por una lista de IDs."""

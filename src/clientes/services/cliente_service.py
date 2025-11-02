@@ -14,6 +14,7 @@ import httpx
 import random  
 
 AUTENTICACION_PATH = os.getenv("AUTENTICACION_SERVICE_URL", "http://autenticacion-service:3000")
+VENTAS_PATH = os.getenv("VENTAS_SERVICE_URL", "http://ventas-service:3000")
 logger = logging.getLogger(__name__)
 
 
@@ -239,13 +240,14 @@ class ClienteService:
                 detail="Error interno al obtener la información del cliente."
             )
 
-    # 🚀 Aquí es donde cambiamos la lógica
     def register_client(self, db: Session, register_data: RegisterRequest) -> ClientResponse: 
         # 1️⃣ Llamar al servicio de autenticación para traer los vendedores activos
         try:
-            response = httpx.get(f"{AUTENTICACION_PATH}/auth/sellers", timeout=10.0)
+            response = httpx.get(f"{VENTAS_PATH}/vendedores/", timeout=30.0)
             response.raise_for_status()
-            sellers = response.json()
+            response_json = response.json() 
+            sellers_list = response_json.get('data', [])
+            sellers_ids = [seller.get('id') for seller in sellers_list if seller.get('id')]
         except Exception as e:
             logger.error(f"Error al obtener vendedores activos: {e}")
             raise HTTPException(
@@ -254,10 +256,9 @@ class ClienteService:
             )
 
         # 2️⃣ Escoger uno al azar
-        if not sellers:
-            raise HTTPException(status_code=400, detail="No hay vendedores activos disponibles")
-        random_seller = random.choice(sellers)
-        id_vendedor = random_seller
+        if not sellers_ids:
+            raise HTTPException(status_code=400, detail="No hay vendedores creados para asignar al cliente.")
+        id_vendedor = random.choice(sellers_ids)
 
         # 3️⃣ Crear el cliente con ese vendedor
         new_client = ClienteInstitucional(
@@ -272,6 +273,11 @@ class ClienteService:
             db.add(new_client)
             db.commit()
             db.refresh(new_client)
+            try:
+                self.invalidate_cache(str(id_vendedor))
+                logger.info(f"Cache invalidado para vendedor {id_vendedor} tras registro de cliente.")
+            except Exception as e:
+                logger.error(f"Error al invalidar caché para {id_vendedor}: {e}")
             user_dict = new_client.to_dict()
             return ClientResponse(**user_dict)
 

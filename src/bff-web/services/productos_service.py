@@ -30,19 +30,15 @@ class ProductosService:
 
     
     
-    def get_productos_disponibles(
+    def get_productos_creados(
         self,
-        solo_con_stock: bool = True,
-        categoria: Optional[str] = None,
         page: int = 1,
         page_size: int = 20,
     ) -> Dict[str, Any]:
         """
-        Obtiene la lista de productos disponibles con stock
+        Obtiene la lista de productos que han sido creados
         
         Args:
-            solo_con_stock: Si True, solo retorna productos con stock > 0
-            categoria: Filtro opcional por categoría
             page: Número de página
             page_size: Tamaño de página
             
@@ -51,22 +47,16 @@ class ProductosService:
         """
         try:
             params = {
-                "solo_con_stock": solo_con_stock,
                 "page": page,
                 "page_size": page_size,
             }
             
-            if categoria:
-                params["categoria"] = categoria
-            
             response = httpx.get(
-                f"{self.base_url}/api/productos/disponibles",
+                f"{self.base_url}/api/productos/creados",
                 params=params,
                 timeout=self.timeout
             )
             response.raise_for_status()
-            
-            logger.info(f"Successfully retrieved productos disponibles from service")
             return response.json()
             
         except httpx.HTTPStatusError as e:

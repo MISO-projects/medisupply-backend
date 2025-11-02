@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends, Query, Path
+from fastapi import APIRouter, Depends, Query, Path, HTTPException
 from sqlalchemy.orm import Session
+from typing import List, Dict
+from pydantic import BaseModel, Field
 from typing import Optional, List
 import logging
+from http import HTTPStatus
 
 from db.database import get_db
 from services.productos_service import ProductosService
@@ -11,7 +14,7 @@ from schemas.producto_schema import (
     ProductoCreate,
     ProductoUpdate,
     ProductosListResponse,
-    ProductoConStock,
+    MobileProductoResponse,
     GetProductosByIdsRequest
 )
 
@@ -23,60 +26,79 @@ productos_router = APIRouter()
 
 @productos_router.get(
     "/disponibles",
-    response_model=ProductosListResponse,
-    summary="Obtener productos con stock disponible",
-    description="""
-    Retorna la lista de productos disponibles con su información de stock.
-    
-    Criterios:
-    - Solo productos marcados como disponibles
-    - Opcionalmente filtrar solo productos con stock > 0
-    - Incluye: imagen, nombre, cantidad disponible, categoría, disponibilidad
-    """
+    response_model=MobileProductoResponse,
+    summary="Obtener productos disponibles para el móvil",
+    description="Retorna la lista de productos con stock para la app móvil."
 )
-def get_productos_disponibles(
-    solo_con_stock: bool = Query(
-        True,
-        description="Si es True, solo retorna productos con stock mayor a 0"
+async def get_productos_disponibles_mobile(
+    # Filtro de búsqueda
+    nombre: Optional[str] = Query(
+        None,
+        description="Buscar productos por nombre (búsqueda parcial, case-insensitive)"
     ),
     categoria: Optional[str] = Query(
         None,
         description="Filtrar por categoría específica"
     ),
-    nombre: Optional[str] = Query(
+    disponibilidad: Optional[bool] = Query(
         None,
-        description="Buscar productos por nombre (búsqueda parcial, case-insensitive)"
+        description="Filtrar por disponibilidad (True=con stock, False=sin stock, None=todos)"
     ),
     page: int = Query(1, ge=1, description="Número de página"),
-    page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
+    page_size: int = Query(20, ge=1, le=100, description="Tamaño de página"),
     db: Session = Depends(get_db)
 ):
-    """
-    Endpoint principal para que representantes de ventas consulten productos disponibles.
-    
-    Retorna productos con:
-    - ID del producto
-    - Nombre del producto
-    - Categoría
-    - Imagen del producto
-    - Cantidad disponible en inventario
-    - Disponibilidad (activo/inactivo)
-    - Precio unitario
-    - Unidad de medida
-    """
     try:
-        logger.info(f"Consultando productos disponibles - solo_con_stock: {solo_con_stock}, categoria: {categoria}, nombre: {nombre}")
+        logger.info(f"Consultando productos disponibles para móvil - nombre: {nombre}, categoria: {categoria}, disponibilidad: {disponibilidad}")
 
         skip = (page - 1) * page_size
-        
         service = ProductosService(db)
-        productos, total = service.get_productos_disponibles(
-            solo_con_stock=solo_con_stock,
-            categoria=categoria,
+        productos, total = await service.get_productos_disponibles_mobile(
             nombre=nombre,
+            categoria=categoria,      
+            disponibilidad=disponibilidad,
             skip=skip,
             limit=page_size
         )
+        
+        logger.info(f"Retornando {len(productos)} productos de un total de {total}")
+        
+        return MobileProductoResponse(
+            total=total,
+            productos=productos
+        )
+        
+    except Exception as e:
+        logger.error(f"Error en endpoint de productos disponibles: {e}")
+        raise HTTPException(
+            status_code=500, detail=str(e)
+        )
+    
+@productos_router.get(
+    "/creados",
+    response_model=ProductosListResponse,
+    summary="Obtener productos creados (para la Web)",
+    description="Retorna la lista de productos paginada (solo catálogo, sin stock) para la web admin."
+)
+async def get_productos_creados(
+    categoria: Optional[str] = Query(None, description="Filtrar por categoría"),
+    nombre: Optional[str] = Query(None, description="Buscar por nombre"), 
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(20, ge=1, le=100, description="Tamaño de página"),
+    db: Session = Depends(get_db)
+):
+    try:
+        logger.info(f"Consultando productos creados para WEB - nombre: {nombre}, categoria: {categoria}")
+        skip = (page - 1) * page_size
+        service = ProductosService(db)
+        
+        productos, total = await service.get_productos_creados_web(
+            categoria=categoria,      
+            nombre=nombre, 
+            skip=skip,
+            limit=page_size
+        )
+        total_pages = (total + page_size - 1) // page_size if total > 0 else 0
         
         logger.info(f"Retornando {len(productos)} productos de un total de {total}")
         
@@ -84,13 +106,15 @@ def get_productos_disponibles(
             total=total,
             page=page,
             page_size=page_size,
-            total_pages=(total + page_size - 1) // page_size if total > 0 else 0,
+            total_pages=total_pages, 
             productos=productos
         )
         
     except Exception as e:
-        logger.error(f"Error en endpoint de productos disponibles: {str(e)}")
-        raise
+        logger.error(f"Error en endpoint de productos creados: {e}")
+        raise HTTPException(
+            status_code=500, detail=str(e)
+        )
 
 
 @productos_router.get(
@@ -283,6 +307,72 @@ def limpiar_productos(db: Session = Depends(get_db)):
         logger.error(f"Error al limpiar productos: {str(e)}")
         raise
 
+@productos_router.post(
+    "/internal/cache/invalidate-lists",
+    status_code=HTTPStatus.OK, 
+    summary="[Interno] Invalidar caché de listas",
+    description="""
+    Endpoint interno (webhook) para que otros servicios 
+    (como Inventario) notifiquen que el stock ha cambiado
+    y los cachés de listas de productos deben ser eliminados.
+    """,
+    response_model=Dict[str, str]
+)
+def invalidar_cache_de_listas_endpoint(
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint interno para invalidar cachés de listas de productos.
+    """
+    try:
+        service = ProductosService(db)
+        service.invalidar_cache_de_listas()
+        
+        return {"status": "ok", "message": "Solicitud de invalidación de caché procesada."}
+    except Exception as e:
+        logger.error(f"Error crítico en endpoint de invalidación de caché: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Error interno al procesar la invalidación de caché."
+        )
+class BatchDetailsRequest(BaseModel):
+    producto_ids: List[str] = Field(..., description="Lista de IDs de productos (UUIDs como string)")
+
+class ProductoDetalleItem(BaseModel):
+    nombre: str
+    sku: Optional[str]
+
+class BatchDetailsResponse(BaseModel):
+    detalles: Dict[str, ProductoDetalleItem]
+
+    
+@productos_router.post(
+    "/batch-details",
+    response_model=BatchDetailsResponse,
+    summary="Obtener detalles (SKU, Nombre) para múltiples productos",
+    description="Recibe una lista de IDs de productos y retorna su SKU y Nombre."
+)
+def get_productos_batch_details(
+    request: BatchDetailsRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint interno para que otros servicios consulten detalles de productos
+    en lote.
+    """
+    try:
+        service = ProductosService(db)
+        detalles_map = service.get_detalles_por_ids(request.producto_ids)
+        
+        # El schema de respuesta espera un dict con la clave "detalles"
+        return {"detalles": detalles_map}
+        
+    except Exception as e:
+        logger.error(f"Error en endpoint de batch details: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Error al obtener detalles de productos"
+        )
 @productos_router.post(
     "/by-ids",
     response_model=List[ProductoResponse],

@@ -176,6 +176,7 @@ services:
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - INVENTARIO_SERVICE_URL=http://inventario-service:3000
     volumes:
       - ./src/productos:/app
     networks:
@@ -268,6 +269,8 @@ services:
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
+      - PRODUCTOS_SERVICE_URL=http://productos-service:3000
     volumes:
       - ./src/inventario:/app
     networks:
@@ -315,6 +318,7 @@ services:
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
+      - VENTAS_SERVICE_URL=http://ventas-service:3000
     volumes:
       - ./src/clientes:/app
     networks:

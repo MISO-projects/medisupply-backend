@@ -62,37 +62,20 @@ async def crear_producto(
 
 @productos_router.get(
     "/disponibles",
-    summary="Consultar productos con stock disponible",
+    summary="Consultar productos creados",
 
 )
-def get_productos_disponibles(
-    solo_con_stock: bool = Query(
-        True,
-        description="Si es True, solo retorna productos con stock mayor a 0"
-    ),
-    categoria: Optional[str] = Query(
-        None,
-        description="Filtrar por categoría específica (ej: MEDICAMENTOS, INSUMOS, EQUIPOS)"
-    ),
+def get_productos_creados(
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
     productos_service: ProductosService = Depends(get_productos_service)
 ):
-
     try:
-        logger.info(
-            f"BFF Móvil: Solicitud de productos disponibles - "
-            f"solo_con_stock: {solo_con_stock}, categoria: {categoria}"
-        )
-        
-        result = productos_service.get_productos_disponibles(
-            solo_con_stock=solo_con_stock,
-            categoria=categoria,
+        logger.info(f"BFF Móvil: Solicitud de productos creados recibida")
+        result = productos_service.get_productos_creados(
             page=page,
             page_size=page_size
         )
-        
-        logger.info(f"BFF Móvil: Retornando {result.get('total', 0)} productos disponibles")
         return result
         
     except HTTPException:
