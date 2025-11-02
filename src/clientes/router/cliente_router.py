@@ -32,8 +32,6 @@ def get_clientes(
 ):
     return client_service.get_all_clients(db)
 
-# ... (el resto del código del archivo cliente_router.py)
-
 def get_vendedor_id_from_auth(authorization: Optional[str] = Header(None)) -> str:
 
     if not authorization:

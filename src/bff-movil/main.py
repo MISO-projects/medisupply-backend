@@ -5,6 +5,7 @@ from router.autenticacion import autenticacion_router
 from router.clientes import clientes_router
 from router.productos import productos_router
 from router.ordenes import ordenes_router
+from router.visitas import visitas_router
 import logging
 
 logging.basicConfig(level=logging.DEBUG, force=True)
@@ -37,6 +38,7 @@ app.include_router(autenticacion_router, prefix="/autenticacion", tags=["autenti
 app.include_router(clientes_router, prefix="/clientes", tags=["clientes"])
 app.include_router(productos_router, prefix="/productos", tags=["productos"])
 app.include_router(ordenes_router, prefix="/ordenes", tags=["ordenes"])
+app.include_router(visitas_router, prefix="/visitas", tags=["Visitas"])
 
 @app.get("/health")
 def health_check(
