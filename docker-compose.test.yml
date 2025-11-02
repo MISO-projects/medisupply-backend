@@ -1,0 +1,154 @@
+services:
+  # PostgreSQL database for integration tests
+  postgres-test:
+    image: postgres:17.6
+    environment:
+      POSTGRES_DB: "test_medisupply"
+      POSTGRES_USER: "test_user"
+      POSTGRES_PASSWORD: "test_password"
+      POSTGRES_ROOT_PASSWORD: "test_password"
+    networks:
+      - test-network
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d test_medisupply"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis for inventario service
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - test-network
+
+  # Inventario service for integration tests
+  inventario-test:
+    build:
+      context: ./src/inventario
+      dockerfile: Dockerfile
+    ports:
+      - "9001:3000"
+      - "5694:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=test-project
+      - AUTENTICACION_SERVICE_URL=http://autenticacion-mock:3000
+      - PRODUCTOS_SERVICE_URL=http://productos-mock:3000
+      - POSTGRES_HOST=postgres-test
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=test_medisupply
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+      - REDIS_HOST=redis-test
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    volumes:
+      - ./src/inventario:/app
+    networks:
+      - test-network
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # Order handler service for integration tests
+  order-handler-test:
+    build:
+      context: ./src/ordenes/commands/handlers
+      dockerfile: Dockerfile
+    ports:
+      - "9002:3000"
+      - "5679:5678"
+    command:
+      - sh
+      - -c
+      - |
+        python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=test-project
+      - PUBSUB_TOPIC_NAME=order-created
+      - PUBSUB_EMULATOR_HOST=pubsub-test:8085
+      - DATABASE_URL=postgresql://test_user:test_password@postgres-test:5432/test_medisupply
+      - INVENTARIO_SERVICE_URL=http://inventario-test:3000
+      - POSTGRES_HOST=postgres-test
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=test_medisupply
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+      - REDIS_HOST=redis-test
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    volumes:
+      - ./src/ordenes/commands/handlers:/app
+    networks:
+      - test-network
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      inventario-test:
+        condition: service_healthy
+      pubsub-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # Pub/Sub emulator for integration tests
+  pubsub-test:
+    image: google/cloud-sdk:latest
+    platform: linux/amd64
+    command: >
+      sh -c "gcloud beta emulators pubsub start --host-port=0.0.0.0:8085 --project=test-project"
+    ports:
+      - "8086:8085"
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3s bash -c '</dev/tcp/localhost/8085' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  # Mock services (simple HTTP servers that return 200)
+  productos-mock:
+    image: curlimages/curl:latest
+    command: >
+      sh -c "echo 'Mock productos service' && while true; do sleep 3600; done"
+    networks:
+      - test-network
+
+  autenticacion-mock:
+    image: curlimages/curl:latest
+    command: >
+      sh -c "echo 'Mock autenticacion service' && while true; do sleep 3600; done"
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge
+

@@ -1,0 +1,115 @@
+name: Integration Tests
+
+on:
+  push:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log Docker info
+        run: |
+          docker --version
+          docker-compose --version
+
+      - name: Clean up any existing containers
+        run: |
+          docker-compose -f docker-compose.test.yml down -v || true
+          docker system prune -f || true
+
+      - name: Start test services
+        run: |
+          echo "Starting Docker Compose services..."
+          docker-compose -f docker-compose.test.yml up -d
+        env:
+          COMPOSE_DOCKER_CLI_BUILD: 1
+          DOCKER_BUILDKIT: 1
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for services to become healthy..."
+          MAX_WAIT=180
+          ELAPSED=0
+          INTERVAL=5
+          
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            HEALTHY_COUNT=$(docker-compose -f docker-compose.test.yml ps | grep -c "healthy" || echo "0")
+            echo "Healthy services: $HEALTHY_COUNT/3 (elapsed: ${ELAPSED}s/${MAX_WAIT}s)"
+            
+            if [ "$HEALTHY_COUNT" -ge 3 ]; then
+              echo "Checking if services are responding..."
+              if curl -sf http://localhost:9001/health > /dev/null 2>&1 && \
+                 curl -sf http://localhost:9002/health > /dev/null 2>&1; then
+                echo "✅ All services are healthy and responding!"
+                break
+              fi
+            fi
+            
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+          
+          if [ $ELAPSED -ge $MAX_WAIT ]; then
+            echo "❌ Services did not become healthy in time"
+            echo "Service status:"
+            docker-compose -f docker-compose.test.yml ps
+            echo "Service logs:"
+            docker-compose -f docker-compose.test.yml logs --tail=100
+            exit 1
+          fi
+
+      - name: Show service status
+        run: |
+          echo "Service status:"
+          docker-compose -f docker-compose.test.yml ps
+          echo ""
+          echo "Testing health endpoints:"
+          curl -s http://localhost:9001/health | jq '.' || echo "Inventario health check failed"
+          curl -s http://localhost:9002/health | jq '.' || echo "Order handler health check failed"
+
+      - name: Install test dependencies in container
+        run: |
+          echo "Installing test dependencies..."
+          docker-compose -f docker-compose.test.yml exec -T order-handler-test \
+            pip install -q pytest pytest-asyncio httpx
+
+      - name: Run integration tests
+        run: |
+          echo "Running integration tests inside order-handler-test container..."
+          docker-compose -f docker-compose.test.yml exec -T order-handler-test \
+            python -m pytest tests/integration/test_order_stock_integration.py \
+            -v \
+            --tb=short \
+            --asyncio-mode=auto \
+            --color=yes
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== Order Handler Logs ==="
+          docker-compose -f docker-compose.test.yml logs --tail=200 order-handler-test
+          echo ""
+          echo "=== Inventario Service Logs ==="
+          docker-compose -f docker-compose.test.yml logs --tail=200 inventario-test
+          echo ""
+          echo "=== PostgreSQL Logs ==="
+          docker-compose -f docker-compose.test.yml logs --tail=100 postgres-test
+
+      - name: Clean up
+        if: always()
+        run: |
+          echo "Cleaning up Docker Compose services..."
+          docker-compose -f docker-compose.test.yml down -v
+          docker system prune -f || true
