@@ -1,12 +1,12 @@
 from typing import Dict, Any, List, Tuple 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from ..db.order_model import Orden, DetalleOrden
+from db.order_model import Orden, DetalleOrden
 from fastapi import Depends
-from ..db.database import get_db
+from db.database import get_db
 from datetime import datetime, timedelta, timezone
-from ..services.pubsub_service import PubSubService
-from ..services.pubsub_service import get_pubsub_service
+from services.pubsub_service import PubSubService
+from services.pubsub_service import get_pubsub_service
 import logging
 import httpx  
 import os     
