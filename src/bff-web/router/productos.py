@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, UploadFile, File
 from typing import Optional
 import logging
 
@@ -99,19 +99,76 @@ def get_producto(
 ):
 
     try:
-        logger.info(f"BFF Móvil: Solicitud de producto {producto_id} recibida")
+        logger.info(f"BFF Web: Solicitud de producto {producto_id} recibida")
         
         result = productos_service.get_producto_by_id(producto_id)
         
-        logger.info(f"BFF Móvil: Producto {producto_id} encontrado y retornado")
+        logger.info(f"BFF Web: Producto {producto_id} encontrado y retornado")
         return result
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"BFF Móvil: Error interno al procesar solicitud de producto {producto_id}: {str(e)}")
+        logger.error(f"BFF Web: Error interno al procesar solicitud de producto {producto_id}: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="Error interno del servidor BFF móvil"
+            detail="Error interno del servidor BFF web"
+        )
+
+
+@productos_router.post(
+    "/bulk-upload",
+    status_code=201,
+    summary="Carga masiva de productos desde Excel",
+    description="""
+    Permite cargar múltiples productos desde un archivo Excel (.xlsx).
+    
+    El archivo debe contener las siguientes columnas:
+    - **nombre** (requerido)
+    - **categoria** (requerido)
+    - **precio_unitario** (requerido)
+    - **proveedor_id** (requerido, UUID)
+    - descripcion (opcional)
+    - imagen_url (opcional)
+    - disponible (opcional, default: true)
+    - unidad_medida (opcional, default: UNIDAD)
+    - sku (opcional, se genera automáticamente)
+    - tipo_almacenamiento (opcional, default: AMBIENTE)
+    - observaciones (opcional)
+    
+    Retorna un resumen detallado con productos creados, actualizados y errores.
+    """
+)
+async def bulk_upload_productos(
+    file: UploadFile = File(..., description="Archivo Excel con productos"),
+    productos_service: ProductosService = Depends(get_productos_service)
+):
+    """
+    Carga masiva de productos desde archivo Excel.
+    
+    Si un producto ya existe (mismo nombre y proveedor), se actualiza.
+    Si es nuevo, se crea.
+    """
+    try:
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            raise HTTPException(
+                status_code=400,
+                detail="El archivo debe ser un Excel (.xlsx o .xls)"
+            )
+        
+        logger.info(f"BFF Web: Iniciando carga masiva desde archivo: {file.filename}")
+        
+        result = await productos_service.bulk_upload_productos(file)
+        
+        logger.info(f"BFF Web: Carga masiva completada - {result.get('successful', 0)} exitosos, {result.get('failed', 0)} fallidos")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"BFF Web: Error interno al procesar carga masiva: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error interno del servidor BFF web"
         )
 

@@ -1,7 +1,7 @@
 import httpx
 import os
 from typing import Dict, Any, Optional
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 import logging
 
 logger = logging.getLogger(__name__)
@@ -144,6 +144,55 @@ class ProductosService:
             raise HTTPException(status_code=503, detail="No se puede conectar con el servicio de productos")
         except Exception as e:
             logger.error(f"Unexpected error creating producto: {e}")
+            raise HTTPException(status_code=500, detail="Error interno del servidor")
+
+    async def bulk_upload_productos(self, file: UploadFile) -> Dict[str, Any]:
+        """
+        Carga masiva de productos desde archivo Excel
+        
+        Args:
+            file: Archivo Excel con los productos a cargar
+            
+        Returns:
+            Diccionario con el resumen de la carga (creados, actualizados, errores)
+        """
+        try:
+            contents = await file.read()
+            await file.seek(0)
+            
+            files = {
+                'file': (file.filename, contents, file.content_type)
+            }
+            
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/api/productos/bulk-upload",
+                    files=files
+                )
+                response.raise_for_status()
+                
+                result = response.json()
+                logger.info(f"Bulk upload completed: {result.get('successful', 0)} successful, {result.get('failed', 0)} failed")
+                return result
+                
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error in bulk upload: {e}")
+            error_detail = "Error al procesar carga masiva"
+            try:
+                error_data = e.response.json()
+                error_detail = error_data.get("detail", error_detail)
+            except:
+                pass
+            
+            if e.response.status_code == 400:
+                raise HTTPException(status_code=400, detail=error_detail)
+            else:
+                raise HTTPException(status_code=e.response.status_code, detail=f"Error del servicio de productos: {error_detail}")
+        except httpx.RequestError as e:
+            logger.error(f"Failed to connect to Productos microservice: {e}")
+            raise HTTPException(status_code=503, detail="No se puede conectar con el servicio de productos")
+        except Exception as e:
+            logger.error(f"Unexpected error in bulk upload: {e}")
             raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 
