@@ -500,9 +500,20 @@ class ProductosService:
                     detail=f"Columnas requeridas faltantes: {', '.join(missing_columns)}"
                 )
             
-            df['disponible'] = df['disponible'].fillna(True)
-            df['unidad_medida'] = df['unidad_medida'].fillna('UNIDAD')
-            df['tipo_almacenamiento'] = df['tipo_almacenamiento'].fillna('AMBIENTE')
+            if 'disponible' in df.columns:
+                df['disponible'] = df['disponible'].fillna(True)
+            else:
+                df['disponible'] = True
+            
+            if 'unidad_medida' in df.columns:
+                df['unidad_medida'] = df['unidad_medida'].fillna('UNIDAD')
+            else:
+                df['unidad_medida'] = 'UNIDAD'
+            
+            if 'tipo_almacenamiento' in df.columns:
+                df['tipo_almacenamiento'] = df['tipo_almacenamiento'].fillna('AMBIENTE')
+            else:
+                df['tipo_almacenamiento'] = 'AMBIENTE'
             
             missing_data_errors = []
             for idx, row in df.iterrows():
@@ -578,7 +589,7 @@ class ProductosService:
                         ))
                         continue
                     
-                    sku_value = row['sku'] if pd.notna(row['sku']) and str(row['sku']).strip() else None
+                    sku_value = row['sku'] if 'sku' in row.index and pd.notna(row['sku']) and str(row['sku']).strip() else None
                     
                     if not sku_value:
                         sku_value = Producto._generate_sku()
@@ -593,7 +604,7 @@ class ProductosService:
                     seen_skus.add(sku_value)
                     
                     disponible_value = True
-                    if pd.notna(row['disponible']):
+                    if 'disponible' in row.index and pd.notna(row['disponible']):
                         disponible_str = str(row['disponible']).lower().strip()
                         disponible_value = disponible_str in ['true', '1', 'si', 'yes', 'sí']
                     
@@ -602,15 +613,15 @@ class ProductosService:
                     producto_dict = {
                         'id': str(uuid_module.uuid4()),
                         'nombre': nombre_producto,
-                        'descripcion': str(row['descripcion']).strip() if pd.notna(row['descripcion']) else None,
+                        'descripcion': str(row['descripcion']).strip() if 'descripcion' in row.index and pd.notna(row['descripcion']) else None,
                         'categoria': str(row['categoria']).strip(),
-                        'imagen_url': str(row['imagen_url']).strip() if pd.notna(row['imagen_url']) else None,
+                        'imagen_url': str(row['imagen_url']).strip() if 'imagen_url' in row.index and pd.notna(row['imagen_url']) else None,
                         'precio_unitario': precio,
                         'disponible': disponible_value,
-                        'unidad_medida': str(row['unidad_medida']).strip() if pd.notna(row['unidad_medida']) else 'UNIDAD',
+                        'unidad_medida': str(row['unidad_medida']).strip() if 'unidad_medida' in row.index and pd.notna(row['unidad_medida']) else 'UNIDAD',
                         'sku': sku_value,
-                        'tipo_almacenamiento': str(row['tipo_almacenamiento']).strip() if pd.notna(row['tipo_almacenamiento']) else 'AMBIENTE',
-                        'observaciones': str(row['observaciones']).strip() if pd.notna(row['observaciones']) else None,
+                        'tipo_almacenamiento': str(row['tipo_almacenamiento']).strip() if 'tipo_almacenamiento' in row.index and pd.notna(row['tipo_almacenamiento']) else 'AMBIENTE',
+                        'observaciones': str(row['observaciones']).strip() if 'observaciones' in row.index and pd.notna(row['observaciones']) else None,
                         'proveedor_id': proveedor_uuid,
                         'proveedor_nombre': proveedores_cache[proveedor_id_str]
                     }
