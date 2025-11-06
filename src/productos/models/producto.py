@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Numeric, Boolean, Text, DateTime
+from sqlalchemy import Column, String, Integer, Numeric, Boolean, Text, DateTime, Index
 from sqlalchemy.sql import func
 from db.database import Base
 import uuid
@@ -19,7 +19,7 @@ class Producto(Base):
     precio_unitario = Column(Numeric(10, 2), nullable=False)
     disponible = Column(Boolean, nullable=False, default=True)
     unidad_medida = Column(String(50), nullable=False, default="UNIDAD")
-    sku = Column(String(100), nullable=True, unique=True)
+    sku = Column(String(100), nullable=False, unique=True)
     tipo_almacenamiento = Column(String(50), nullable=False, default="AMBIENTE")
     observaciones = Column(Text, nullable=True)
     proveedor_id = Column(UUID(as_uuid=True), nullable=False) 
