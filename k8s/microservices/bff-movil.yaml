@@ -42,7 +42,7 @@ spec:
             - name: ORDENES_COMMANDS_SERVICE_URL
               value: "http://ordenes-commands-api-service"
             - name: ORDENES_QUERIES_SERVICE_URL
-              value: "http://order-query-api"
+              value: "http://ordenes-queries-api-service"
             - name: VISITAS_SERVICE_URL
               value: "http://visitas-service"
 
