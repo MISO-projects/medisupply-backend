@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: order-query-api-service
+  name: ordenes-queries-api-service
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: order-query-api-service
+      app: ordenes-queries-api-service
   template:
     metadata:
       labels:
-        app: order-query-api-service
+        app: ordenes-queries-api-service
     spec:
       containers:
-        - name: order-query-api-container
+        - name: ordenes-queries-api-container
           image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/ordenes-queries-api:latest
           resources:
             requests:
@@ -68,7 +68,7 @@ spec:
 apiVersion: cloud.google.com/v1
 kind: BackendConfig
 metadata:
-  name: order-query-api-backend-config
+  name: ordenes-queries-api-backend-config
 spec:
   healthCheck:
     checkIntervalSec: 30
@@ -80,14 +80,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: order-query-api-service
+  name: ordenes-queries-api-service
   namespace: default
   annotations:
-    cloud.google.com/backend-config: '{"default": "order-query-api-backend-config"}'
+    cloud.google.com/backend-config: '{"default": "ordenes-queries-api-backend-config"}'
 spec:
   type: NodePort
   selector:
-    app: order-query-api-service
+    app: ordenes-queries-api-service
   ports:
     - protocol: TCP
       port: 80

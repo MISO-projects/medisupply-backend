@@ -40,7 +40,7 @@ spec:
             - name: PRODUCTOS_SERVICE_URL
               value: "http://productos-service"
             - name: ORDENES_COMMANDS_SERVICE_URL
-              value: "http://order-command-api"
+              value: "http://ordenes-commands-api-service"
             - name: ORDENES_QUERIES_SERVICE_URL
               value: "http://order-query-api"
             - name: VISITAS_SERVICE_URL

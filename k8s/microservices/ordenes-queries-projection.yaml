@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: order-query-projection-service
+  name: ordenes-queries-projection-service
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: order-query-projection-service
+      app: ordenes-queries-projection-service
   template:
     metadata:
       labels:
-        app: order-query-projection-service
+        app: ordenes-queries-projection-service
     spec:
       containers:
         - name: order-query-projection-container
@@ -85,14 +85,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: order-query-projection-service
+  name: ordenes-queries-projection-service
   namespace: default
   annotations:
     cloud.google.com/backend-config: '{"default": "order-query-projection-backend-config"}'
 spec:
   type: NodePort
   selector:
-    app: order-query-api-service
+    app: ordenes-queries-projection-service
   ports:
     - protocol: TCP
       port: 80
