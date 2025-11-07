@@ -1,6 +1,7 @@
 name: Build & Deploy
 
 on:
+  pull_request: # TODO: remove this, just for testing
   push:
     branches:
       - main
