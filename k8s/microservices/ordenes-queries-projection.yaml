@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: order-query-projection-container
-          image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/order-query-projection:latest
+          image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/ordenes-queries-projection:latest
           resources:
             requests:
               memory: "64Mi"

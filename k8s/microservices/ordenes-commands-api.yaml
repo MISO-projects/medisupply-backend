@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: order-command-handler-service
+  name: order-command-api-service
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: order-command-handler-service
+      app: order-command-api-service
   template:
     metadata:
       labels:
-        app: order-command-handler-service
+        app: order-command-api-service
     spec:
       containers:
-        - name: order-command-handler-container
-          image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/order-command-handler:latest
+        - name: order-command-api-container
+          image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/ordenes-commands-api:latest
           resources:
             requests:
               memory: "64Mi"
@@ -68,13 +68,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: google-cloud-secret
-                  key: pubsub-topic-name-ordenes-command-handler
-
+                  key: pubsub-topic-name-ordenes-command-api
 ---
 apiVersion: cloud.google.com/v1
 kind: BackendConfig
 metadata:
-  name: order-command-handler-backend-config
+  name: order-command-api-backend-config
 spec:
   healthCheck:
     checkIntervalSec: 30
@@ -86,16 +85,16 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: order-command-handler-service
+  name: order-command-api-service
   namespace: default
   annotations:
-    cloud.google.com/backend-config: '{"default": "order-command-handler-backend-config"}'
+    cloud.google.com/backend-config: '{"default": "order-command-api-backend-config"}'
 spec:
   type: NodePort
   selector:
-    app: order-command-handler-service
+    app: order-command-api-service
   ports:
     - protocol: TCP
       port: 80
       targetPort: 8000
-      nodePort: 30001
+      nodePort: 30000

@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: order-query-api-container
-          image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/order-query-api:latest
+          image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/ordenes-queries-api:latest
           resources:
             requests:
               memory: "64Mi"
