@@ -14,7 +14,7 @@ spec:
         app: ordenes-queries-projection-service
     spec:
       containers:
-        - name: order-query-projection-container
+        - name: ordenes-queries-projection-container
           image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/ordenes-queries-projection:latest
           resources:
             requests:
@@ -73,7 +73,7 @@ spec:
 apiVersion: cloud.google.com/v1
 kind: BackendConfig
 metadata:
-  name: order-query-projection-backend-config
+  name: ordenes-queries-projection-backend-config
 spec:
   healthCheck:
     checkIntervalSec: 30
@@ -88,7 +88,7 @@ metadata:
   name: ordenes-queries-projection-service
   namespace: default
   annotations:
-    cloud.google.com/backend-config: '{"default": "order-query-projection-backend-config"}'
+    cloud.google.com/backend-config: '{"default": "ordenes-queries-projection-backend-config"}'
 spec:
   type: NodePort
   selector:
