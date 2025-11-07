@@ -52,6 +52,8 @@ spec:
                   name: postgres-secret
                   key: postgres-db
             - name: PYTHONUNBUFFERED
+            - name: PRODUCTOS_SERVICE_URL
+              value: "http://productos-service"
               value: "1"
             - name: REDIS_HOST
               value: "redis-service"
