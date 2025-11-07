@@ -32,16 +32,14 @@ jobs:
         id: changed
         shell: bash
         run: |
-          # Get the previous commit
-          if [[ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ]]; then
-            # First push to branch, compare with main
-            base="origin/main"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
           else
-            base="${{ github.event.before }}"
+            base="${{ github.sha }}^"
+            head="${{ github.sha }}"
           fi
-          head="${{ github.sha }}"
-          
-          git diff --name-only "$base" "$head" > changed_files.txt || echo "src/" > changed_files.txt
+          git diff --name-only "$base" "$head" > changed_files.txt
           echo "Changed files:" && cat changed_files.txt || true
 
       - name: Build matrix from changes

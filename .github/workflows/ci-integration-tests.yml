@@ -2,7 +2,7 @@ name: Integration Tests
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ develop ] # TODO: revert this, just for testing
   workflow_dispatch:
 
 jobs:
