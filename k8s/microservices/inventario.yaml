@@ -1,30 +1,21 @@
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: ordenes-queries-projection-sa
-  namespace: default
-  annotations:
-    iam.gke.io/gcp-service-account: medisupply-service-account@medisupply-474421.iam.gserviceaccount.com
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ordenes-queries-projection-service
+  name: inventario-service
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ordenes-queries-projection-service
+      app: inventario-service
   template:
     metadata:
       labels:
-        app: ordenes-queries-projection-service
+        app: inventario-service
     spec:
-      serviceAccountName: ordenes-queries-projection-sa
       containers:
-        - name: ordenes-queries-projection-container
-          image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/ordenes-queries-projection:latest
+        - name: inventario-container
+          image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/inventario:latest
           resources:
             requests:
               memory: "64Mi"
@@ -77,12 +68,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: google-cloud-secret
-                  key: pubsub-topic-name-ordenes-query-projection
+                  key: pubsub-topic-name-inventario
 ---
 apiVersion: cloud.google.com/v1
 kind: BackendConfig
 metadata:
-  name: ordenes-queries-projection-backend-config
+  name: inventario-backend-config
 spec:
   healthCheck:
     checkIntervalSec: 30
@@ -94,16 +85,16 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ordenes-queries-projection-service
+  name: inventario-service
   namespace: default
   annotations:
-    cloud.google.com/backend-config: '{"default": "ordenes-queries-projection-backend-config"}'
+    cloud.google.com/backend-config: '{"default": "inventario-backend-config"}'
 spec:
   type: NodePort
   selector:
-    app: ordenes-queries-projection-service
+    app: inventario-service
   ports:
     - protocol: TCP
       port: 80
       targetPort: 8000
-      nodePort: 30003
+      nodePort: 30005

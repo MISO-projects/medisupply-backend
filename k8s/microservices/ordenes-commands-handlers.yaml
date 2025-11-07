@@ -1,3 +1,11 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ordenes-commands-handlers-sa
+  namespace: default
+  annotations:
+    iam.gke.io/gcp-service-account: medisupply-service-account@medisupply-474421.iam.gserviceaccount.com
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -13,6 +21,7 @@ spec:
       labels:
         app: ordenes-commands-handlers-service
     spec:
+      serviceAccountName: ordenes-commands-handlers-sa
       containers:
         - name: ordenes-commands-handlers-container
           image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/ordenes-commands-handlers:latest
@@ -53,6 +62,8 @@ spec:
                   key: postgres-db
             - name: PYTHONUNBUFFERED
               value: "1"
+            - name: INVENTARIO_SERVICE_URL
+              value: "http://inventario-service"
             - name: REDIS_HOST
               value: "redis-service"
             - name: REDIS_PORT
