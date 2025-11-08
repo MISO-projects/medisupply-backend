@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException
-from .services.order_service import OrderService
+from services.order_service import OrderService
 from services.health_service import HealthService, get_health_service
 import logging
-from .router.command_ordenes import command_ordenes_router
+from router.command_ordenes import command_ordenes_router
 
 
 order_service = OrderService()
