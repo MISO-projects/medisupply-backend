@@ -106,14 +106,14 @@ def ruta_payload_valida():
         "condiciones_almacenamiento": "Refrigerado",
         "paradas": [
             {
-                "cliente_id": "32",
+                "pedido_id": "00000000-0000-0000-0000-000000000032",
                 "direccion": "Calle 80 #45-20",
                 "contacto": "Carlos Ríos",
                 "latitud": 4.7110,
                 "longitud": -74.0721
             },
             {
-                "cliente_id": "15",
+                "pedido_id": "00000000-0000-0000-0000-000000000015",
                 "direccion": "Av. 30 #22-10",
                 "contacto": "María López",
                 "latitud": 4.6097,
@@ -282,7 +282,7 @@ class TestRutaRouter:
             "conductor_id": 4,
             "paradas": [
                 {
-                    "cliente_id": "32",
+                    "pedido_id": "00000000-0000-0000-0000-000000000032",
                     "direccion": "Calle 80 #45-20",
                     "contacto": "Carlos Ríos"
                 }

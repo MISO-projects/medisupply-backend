@@ -62,7 +62,7 @@ class RutaService:
             for idx, parada_data in enumerate(paradas_ordenadas, start=1):
                 nueva_parada = Parada(
                     ruta_id=nueva_ruta.id,
-                    cliente_id=parada_data.cliente_id,
+                    pedido_id=parada_data.pedido_id,
                     direccion=parada_data.direccion,
                     contacto=parada_data.contacto,
                     latitud=parada_data.latitud,
@@ -125,7 +125,7 @@ class RutaService:
                 ParadaResponse(
                     id=parada.id,
                     ruta_id=parada.ruta_id,
-                    cliente_id=parada.cliente_id,
+                    pedido_id=parada.pedido_id,
                     direccion=parada.direccion,
                     contacto=parada.contacto,
                     latitud=float(parada.latitud) if parada.latitud else None,
@@ -249,7 +249,7 @@ class RutaService:
                         ParadaResponse(
                             id=parada.id,
                             ruta_id=parada.ruta_id,
-                            cliente_id=parada.cliente_id,
+                            pedido_id=parada.pedido_id,
                             direccion=parada.direccion,
                             contacto=parada.contacto,
                             latitud=float(parada.latitud) if parada.latitud else None,
