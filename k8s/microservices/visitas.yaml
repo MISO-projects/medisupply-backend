@@ -53,6 +53,8 @@ spec:
                   key: postgres-db
             - name: PYTHONUNBUFFERED
               value: "1"
+            - name: CLIENTES_SERVICE_URL
+              value: "http://clientes-service"
             - name: REDIS_HOST
               value: "redis-service"
             - name: REDIS_PORT

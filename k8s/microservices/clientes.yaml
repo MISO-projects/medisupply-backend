@@ -53,6 +53,12 @@ spec:
                   key: postgres-db
             - name: PYTHONUNBUFFERED
               value: "1"
+            - name: AUTENTICACION_SERVICE_URL
+              value: "http://autenticacion-service"
+            - name: VENTAS_SERVICE_URL
+              value: "http://ventas-service"
+            - name: VISITAS_SERVICE_URL
+              value: "http://visitas-service"
             - name: REDIS_HOST
               value: "redis-service"
             - name: REDIS_PORT
