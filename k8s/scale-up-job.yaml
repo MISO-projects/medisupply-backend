@@ -1,45 +1,56 @@
 apiVersion: batch/v1
-kind: Job
+kind: CronJob
 metadata:
   name: scale-up-services
   namespace: default
   annotations:
-    description: "Manually scale up all services. Delete this job after completion to run again."
+    description: "Manually scale up all services. Can be manually triggered with: kubectl create job --from=cronjob/scale-up-services manual-scale-up-$(date +%s)"
 spec:
-  ttlSecondsAfterFinished: 300  # Auto-delete 5 minutes after completion
-  template:
+  schedule: "0 0 31 2 *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
     spec:
-      serviceAccountName: scaler-sa
-      restartPolicy: Never
-      containers:
-        - name: scaler
-          image: bitnami/kubectl:latest
-          command:
-            - /bin/bash
-            - -c
-            - |
-              echo "☀️  Scaling up services at $(date)"
-              
-              # List of services to scale up
-              SERVICES=(
-                "redis"
-                "proveedores-service"
-                "productos-service"
-                "inventario-service"
-                "clientes-service"
-                "ventas-service"
-                "logistica-service"
-                "auditoria-service"
-                "reportes-service"
-                "bff-movil-service"
-                "bff-web-service"
-                "frontend-web"
-              )
-              
-              for service in "${SERVICES[@]}"; do
-                echo "⬆️  Scaling up $service to 1 replica"
-                kubectl scale deployment/$service --replicas=1 -n default || echo "⚠️  Failed to scale $service (might not exist yet)"
-              done
-              
-              echo "✅ Scale up complete"
-              kubectl get deployments -n default
+      template:
+        spec:
+          serviceAccountName: scaler-sa
+          restartPolicy: OnFailure
+          containers:
+            - name: scaler
+              image: bitnami/kubectl:latest
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  echo "☀️  Scaling up services at $(date)"
+                  
+                  # List of services to scale up
+                  SERVICES=(
+                    "redis"
+                    "proveedores-service"
+                    "productos-service"
+                    "inventario-service"
+                    "clientes-service"
+                    "ventas-service"
+                    "logistica-service"
+                    "auditoria-service"
+                    "reportes-service"
+                    "autenticacion-service"
+                    "visitas-service"
+                    "ordenes-commands-api-service"
+                    "ordenes-commands-handlers-service"
+                    "ordenes-queries-api-service"
+                    "ordenes-queries-projection-service"
+                    "bff-movil-service"
+                    "bff-web-service"
+                    "frontend-web"
+                  )
+                  
+                  for service in "${SERVICES[@]}"; do
+                    echo "⬆️  Scaling up $service to 1 replica"
+                    kubectl scale deployment/$service --replicas=1 -n default || echo "⚠️  Failed to scale $service (might not exist yet)"
+                  done
+                  
+                  echo "✅ Scale up complete"
+                  kubectl get deployments -n default

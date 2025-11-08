@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: clientes-service
+  name: inventario-service
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: clientes-service
+      app: inventario-service
   template:
     metadata:
       labels:
-        app: clientes-service
+        app: inventario-service
     spec:
       containers:
-        - name: clientes-container
-          image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/clientes:latest
+        - name: inventario-container
+          image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/inventario:latest
           resources:
             requests:
               memory: "64Mi"
@@ -53,12 +53,8 @@ spec:
                   key: postgres-db
             - name: PYTHONUNBUFFERED
               value: "1"
-            - name: AUTENTICACION_SERVICE_URL
-              value: "http://autenticacion-service"
-            - name: VENTAS_SERVICE_URL
-              value: "http://ventas-service"
-            - name: VISITAS_SERVICE_URL
-              value: "http://visitas-service"
+            - name: PRODUCTOS_SERVICE_URL
+              value: "http://productos-service"
             - name: REDIS_HOST
               value: "redis-service"
             - name: REDIS_PORT
@@ -74,12 +70,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: google-cloud-secret
-                  key: pubsub-topic-name-clientes
+                  key: pubsub-topic-name-inventario
 ---
 apiVersion: cloud.google.com/v1
 kind: BackendConfig
 metadata:
-  name: clientes-backend-config
+  name: inventario-backend-config
 spec:
   healthCheck:
     checkIntervalSec: 30
@@ -91,16 +87,16 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: clientes-service
+  name: inventario-service
   namespace: default
   annotations:
-    cloud.google.com/backend-config: '{"default": "clientes-backend-config"}'
+    cloud.google.com/backend-config: '{"default": "inventario-backend-config"}'
 spec:
   type: NodePort
   selector:
-    app: clientes-service
+    app: inventario-service
   ports:
     - protocol: TCP
       port: 80
       targetPort: 8000
-      nodePort: 30010
+      nodePort: 30008

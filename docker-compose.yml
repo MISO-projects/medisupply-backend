@@ -102,6 +102,7 @@ services:
       - PUBSUB_TOPIC_NAME=order-created
       - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
       - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+      - INVENTARIO_SERVICE_URL=http://inventario-service:3000
     volumes:
       - ./src/ordenes/commands/handlers:/app
     networks:

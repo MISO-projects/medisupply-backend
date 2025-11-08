@@ -44,9 +44,9 @@ spec:
             - name: LOGISTICA_SERVICE_URL
               value: "http://logistica-service"
             - name: ORDENES_COMMANDS_SERVICE_URL
-              value: "http://order-command-api"
+              value: "http://ordenes-commands-api-service"
             - name: ORDENES_QUERIES_SERVICE_URL
-              value: "http://order-query-api"
+              value: "http://ordenes-queries-api-service"
             - name: PRODUCTOS_SERVICE_URL
               value: "http://productos-service"
             - name: PROVEEDORES_SERVICE_URL

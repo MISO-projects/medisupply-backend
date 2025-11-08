@@ -71,6 +71,8 @@ spec:
                   key: pubsub-topic-name-productos
             - name: PROVEEDORES_SERVICE_URL
               value: "http://proveedores-service"
+            - name: INVENTARIO_SERVICE_URL
+              value: "http://inventario-service"
 ---
 apiVersion: cloud.google.com/v1
 kind: BackendConfig
