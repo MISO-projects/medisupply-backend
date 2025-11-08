@@ -1,7 +1,6 @@
 name: Build & Deploy
 
 on:
-  pull_request: # TODO: remove this, just for testing
   push:
     branches:
       - main
@@ -32,14 +31,16 @@ jobs:
         id: changed
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            base="${{ github.event.pull_request.base.sha }}"
-            head="${{ github.event.pull_request.head.sha }}"
+          # Get the previous commit
+          if [[ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ]]; then
+            # First push to branch, compare with main
+            base="origin/main"
           else
-            base="${{ github.sha }}^"
-            head="${{ github.sha }}"
+            base="${{ github.event.before }}"
           fi
-          git diff --name-only "$base" "$head" > changed_files.txt
+          head="${{ github.sha }}"
+          
+          git diff --name-only "$base" "$head" > changed_files.txt || echo "src/" > changed_files.txt
           echo "Changed files:" && cat changed_files.txt || true
 
       - name: Build matrix from changes
@@ -225,3 +226,4 @@ jobs:
       - name: Deployment successful
         run: |
           echo "✅ Deployment workflow completed successfully"
+

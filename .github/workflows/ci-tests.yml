@@ -2,7 +2,8 @@ name: PR Tests
 
 on:
   pull_request:
-    branches: [ develop ] # TODO: revert this, just for testing
+    branches:
+      - main
 
 concurrency:
   group: pr-tests-${{ github.event.pull_request.number || github.ref }}
