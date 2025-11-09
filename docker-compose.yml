@@ -430,6 +430,7 @@ services:
       - ORDENES_COMMANDS_SERVICE_URL=http://order-command-api:3000
       - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
       - VISITAS_SERVICE_URL=http://visitas-service:3000
+      - LOGISTICA_SERVICE_URL=http://logistica-service:3000
     volumes:
       - ./src/bff-movil:/app
     networks:

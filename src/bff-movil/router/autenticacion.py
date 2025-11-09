@@ -81,7 +81,7 @@ def login(
     summary="Obtener usuario actual",
     description="Obtiene la información del usuario autenticado mediante el token JWT"
 )
-def get_current_user(
+async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     autenticacion_service: AutenticacionService = Depends(get_autenticacion_service)
 ):
@@ -103,5 +103,5 @@ def get_current_user(
         HTTPException 403: Si el usuario está inactivo
     """
     token = credentials.credentials
-    return autenticacion_service.get_current_user(token)
+    return await autenticacion_service.get_current_user(token)
 

@@ -96,7 +96,7 @@ class AutenticacionService:
             logger.error(f"Unexpected error during login: {e}")
             raise HTTPException(status_code=500, detail=f"Error inesperado: {e}")
 
-    def get_current_user(self, token: str) -> Dict[str, Any]:
+    async def get_current_user(self, token: str) -> Dict[str, Any]:
         """
         Obtiene la información del usuario actual mediante su token JWT
 
@@ -110,13 +110,13 @@ class AutenticacionService:
             HTTPException: Si el token es inválido o expiró
         """
         try:
-            response = httpx.get(
-                f"{self.base_url}/auth/me",
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=self.timeout
-            )
-            response.raise_for_status()
-            return response.json()
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(
+                    f"{self.base_url}/auth/me",
+                    headers={"Authorization": f"Bearer {token}"}
+                )
+                response.raise_for_status()
+                return response.json()
         except httpx.HTTPStatusError as e:
             logger.error(f"Error getting current user: {e}")
             if e.response.status_code in [401, 403]:
