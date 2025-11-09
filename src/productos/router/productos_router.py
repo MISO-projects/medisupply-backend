@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, Path, HTTPException
+from fastapi import APIRouter, Depends, Query, Path, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Dict
 from pydantic import BaseModel, Field
@@ -15,7 +15,8 @@ from schemas.producto_schema import (
     ProductoUpdate,
     ProductosListResponse,
     MobileProductoResponse,
-    GetProductosByIdsRequest
+    GetProductosByIdsRequest,
+    BulkUploadResponse
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -390,4 +391,65 @@ def get_productos_por_ids(
     except Exception as e:
         logger.error(f"Error al obtener productos por IDs: {str(e)}")
         raise
+
+
+@productos_router.post(
+    "/bulk-upload",
+    response_model=BulkUploadResponse,
+    status_code=201,
+    summary="Carga masiva de productos desde Excel",
+    description="""
+    Permite cargar múltiples productos desde un archivo Excel (.xlsx).
+    
+    **Importante**: El SKU es el identificador único para upsert.
+    - Si el SKU existe en la BD, el producto se actualiza.
+    - Si el SKU no existe, se crea un nuevo producto.
+    - Si no se provee SKU, se genera automáticamente.
+    
+    Columnas requeridas:
+    - nombre
+    - categoria
+    - precio_unitario
+    - proveedor_id (UUID)
+    
+    Columnas opcionales:
+    - sku (se genera automáticamente si no se provee)
+    - descripcion
+    - imagen_url
+    - disponible (true/false, default: true)
+    - unidad_medida (default: UNIDAD)
+    - tipo_almacenamiento (default: AMBIENTE)
+    - observaciones
+    
+    Retorna un resumen con productos creados, actualizados y errores por fila.
+    """
+)
+async def bulk_upload_productos(
+    file: UploadFile = File(..., description="Archivo Excel con productos"),
+    db: Session = Depends(get_db)
+):
+    """Carga masiva de productos desde archivo Excel"""
+    try:
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            raise HTTPException(
+                status_code=400,
+                detail="El archivo debe ser un Excel (.xlsx o .xls)"
+            )
+        
+        logger.info(f"Iniciando carga masiva desde archivo: {file.filename}")
+        
+        service = ProductosService(db)
+        result = await service.bulk_upload_productos(file)
+        
+        logger.info(f"Carga masiva completada: {result.successful} exitosos, {result.failed} fallidos")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error en bulk upload: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al procesar carga masiva: {str(e)}"
+        )
 
