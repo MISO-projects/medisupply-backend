@@ -47,6 +47,21 @@
       ]
     },
     {
+      "name": "Attach to productos-service",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5690
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/src/productos",
+          "remoteRoot": "/app"
+        }
+      ]
+    },
+    {
       "name": "Attach to clientes-service",
       "type": "debugpy",
       "request": "attach",
@@ -90,7 +105,6 @@
           "remoteRoot": "/app"
         }
       ]
-
     }
   ]
 }

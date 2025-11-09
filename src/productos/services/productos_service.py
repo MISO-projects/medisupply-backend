@@ -2,22 +2,31 @@
 
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
+from sqlalchemy.dialects.postgresql import insert
 from typing import List, Optional, Union
+import uuid as uuid_module
 from models.producto import Producto
-# ¡Importa los schemas correctos!
 from schemas.producto_schema import (
     ProductoCreate, 
     ProductoUpdate, 
     ProductoResponse,
-    MobileProducto 
+    MobileProducto,
+    BulkUploadError,
+    BulkUploadResponse,
+    MissingFieldError,
+    BulkUploadValidationError
 )
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 import logging
 import httpx
 import os
 from http import HTTPStatus
 from typing import Dict, Any
 import json
+import pandas as pd
+from decimal import Decimal, InvalidOperation
+from uuid import UUID
+import io
 
 from db.redis_client import get_redis_client
 
@@ -445,3 +454,273 @@ class ProductosService:
         except Exception as e:
             logger.error(f"Error al obtener productos por IDs: {str(e)}")
             raise HTTPException(status_code=500, detail="Error al obtener productos por IDs")
+
+    async def bulk_upload_productos(self, file: UploadFile) -> BulkUploadResponse:
+        """
+        Procesa un archivo Excel con productos y los crea en lote.
+        
+        Columnas esperadas en el Excel:
+        - nombre (requerido)
+        - descripcion (opcional)
+        - categoria (requerido)
+        - imagen_url (opcional)
+        - precio_unitario (requerido)
+        - disponible (opcional, default: true)
+        - unidad_medida (opcional, default: UNIDAD)
+        - sku (opcional, se genera automático si no se provee)
+        - tipo_almacenamiento (opcional, default: AMBIENTE)
+        - observaciones (opcional)
+        - proveedor_id (requerido, UUID)
+        """
+        errors = []
+        created_products = []
+        updated_products = []
+        duplicate_rows = []
+        total_rows = 0
+        
+        try:
+            contents = await file.read()
+            df = pd.read_excel(io.BytesIO(contents), engine='openpyxl')
+            total_rows = len(df)
+            
+            logger.info(f"Procesando archivo Excel con {total_rows} filas")
+            
+            if total_rows == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="El archivo Excel está vacío"
+                )
+            
+            required_columns = ['nombre', 'categoria', 'precio_unitario', 'proveedor_id']
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            
+            if missing_columns:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Columnas requeridas faltantes: {', '.join(missing_columns)}"
+                )
+            
+            if 'disponible' in df.columns:
+                df['disponible'] = df['disponible'].fillna(True)
+            else:
+                df['disponible'] = True
+            
+            if 'unidad_medida' in df.columns:
+                df['unidad_medida'] = df['unidad_medida'].fillna('UNIDAD')
+            else:
+                df['unidad_medida'] = 'UNIDAD'
+            
+            if 'tipo_almacenamiento' in df.columns:
+                df['tipo_almacenamiento'] = df['tipo_almacenamiento'].fillna('AMBIENTE')
+            else:
+                df['tipo_almacenamiento'] = 'AMBIENTE'
+            
+            missing_data_errors = []
+            for idx, row in df.iterrows():
+                row_number = idx + 2
+                missing_fields = []
+                
+                if pd.isna(row['nombre']) or str(row['nombre']).strip() == '':
+                    missing_fields.append('nombre')
+                if pd.isna(row['categoria']) or str(row['categoria']).strip() == '':
+                    missing_fields.append('categoria')
+                if pd.isna(row['precio_unitario']):
+                    missing_fields.append('precio_unitario')
+                if pd.isna(row['proveedor_id']) or str(row['proveedor_id']).strip() == '':
+                    missing_fields.append('proveedor_id')
+                
+                if missing_fields:
+                    missing_data_errors.append(
+                        MissingFieldError(
+                            row=row_number,
+                            missing_fields=missing_fields
+                        )
+                    )
+            
+            if missing_data_errors:
+                validation_error = BulkUploadValidationError(
+                    message="Campos requeridos faltantes en algunas filas",
+                    missing_data=missing_data_errors
+                )
+                raise HTTPException(
+                    status_code=400,
+                    detail=validation_error.model_dump()
+                )
+            
+            proveedor_ids = df['proveedor_id'].unique().tolist()
+            proveedores_cache = await self._verificar_proveedores_batch(proveedor_ids)
+            
+            seen_skus = set()
+            productos_to_upsert = []
+            
+            for idx, row in df.iterrows():
+                row_number = idx + 2
+                
+                try:
+                    proveedor_id_str = str(row['proveedor_id']).strip()
+                    
+                    try:
+                        proveedor_uuid = UUID(proveedor_id_str)
+                    except (ValueError, AttributeError):
+                        errors.append(BulkUploadError(
+                            row=row_number,
+                            error=f"proveedor_id inválido: {proveedor_id_str}",
+                            data={"proveedor_id": proveedor_id_str}
+                        ))
+                        continue
+                    
+                    if proveedor_id_str not in proveedores_cache:
+                        errors.append(BulkUploadError(
+                            row=row_number,
+                            error=f"Proveedor no encontrado: {proveedor_id_str}",
+                            data={"proveedor_id": proveedor_id_str}
+                        ))
+                        continue
+                    
+                    try:
+                        precio = Decimal(str(row['precio_unitario']))
+                        if precio <= 0:
+                            raise ValueError("El precio debe ser mayor a 0")
+                    except (InvalidOperation, ValueError) as e:
+                        errors.append(BulkUploadError(
+                            row=row_number,
+                            error=f"precio_unitario inválido: {str(e)}",
+                            data={"precio_unitario": str(row['precio_unitario'])}
+                        ))
+                        continue
+                    
+                    sku_value = row['sku'] if 'sku' in row.index and pd.notna(row['sku']) and str(row['sku']).strip() else None
+                    
+                    if not sku_value:
+                        sku_value = Producto._generate_sku()
+                        while sku_value in seen_skus:
+                            sku_value = Producto._generate_sku()
+                    
+                    if sku_value in seen_skus:
+                        duplicate_rows.append(row_number)
+                        logger.debug(f"Fila {row_number} con SKU duplicado en el archivo, ignorando")
+                        continue
+                    
+                    seen_skus.add(sku_value)
+                    
+                    disponible_value = True
+                    if 'disponible' in row.index and pd.notna(row['disponible']):
+                        disponible_str = str(row['disponible']).lower().strip()
+                        disponible_value = disponible_str in ['true', '1', 'si', 'yes', 'sí']
+                    
+                    nombre_producto = str(row['nombre']).strip()
+                    
+                    producto_dict = {
+                        'id': str(uuid_module.uuid4()),
+                        'nombre': nombre_producto,
+                        'descripcion': str(row['descripcion']).strip() if 'descripcion' in row.index and pd.notna(row['descripcion']) else None,
+                        'categoria': str(row['categoria']).strip(),
+                        'imagen_url': str(row['imagen_url']).strip() if 'imagen_url' in row.index and pd.notna(row['imagen_url']) else None,
+                        'precio_unitario': precio,
+                        'disponible': disponible_value,
+                        'unidad_medida': str(row['unidad_medida']).strip() if 'unidad_medida' in row.index and pd.notna(row['unidad_medida']) else 'UNIDAD',
+                        'sku': sku_value,
+                        'tipo_almacenamiento': str(row['tipo_almacenamiento']).strip() if 'tipo_almacenamiento' in row.index and pd.notna(row['tipo_almacenamiento']) else 'AMBIENTE',
+                        'observaciones': str(row['observaciones']).strip() if 'observaciones' in row.index and pd.notna(row['observaciones']) else None,
+                        'proveedor_id': proveedor_uuid,
+                        'proveedor_nombre': proveedores_cache[proveedor_id_str]
+                    }
+                    
+                    productos_to_upsert.append(producto_dict)
+                    
+                except Exception as e:
+                    logger.error(f"Error procesando fila {row_number}: {str(e)}")
+                    errors.append(BulkUploadError(
+                        row=row_number,
+                        error=str(e),
+                        data=row.to_dict() if hasattr(row, 'to_dict') else None
+                    ))
+                    continue
+            
+            if productos_to_upsert:
+                existing_skus_in_db = {p.sku for p in self.db.query(Producto.sku).filter(
+                    Producto.sku.in_([p['sku'] for p in productos_to_upsert])
+                ).all()}
+                
+                stmt = insert(Producto).values(productos_to_upsert)
+                
+                update_dict = {
+                    'nombre': stmt.excluded.nombre,
+                    'descripcion': stmt.excluded.descripcion,
+                    'categoria': stmt.excluded.categoria,
+                    'imagen_url': stmt.excluded.imagen_url,
+                    'precio_unitario': stmt.excluded.precio_unitario,
+                    'disponible': stmt.excluded.disponible,
+                    'unidad_medida': stmt.excluded.unidad_medida,
+                    'tipo_almacenamiento': stmt.excluded.tipo_almacenamiento,
+                    'observaciones': stmt.excluded.observaciones,
+                    'proveedor_id': stmt.excluded.proveedor_id,
+                    'proveedor_nombre': stmt.excluded.proveedor_nombre,
+                }
+                
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=['sku'],
+                    set_=update_dict
+                )
+                
+                self.db.execute(stmt)
+                self.db.flush()
+                
+                for producto in productos_to_upsert:
+                    if producto['sku'] in existing_skus_in_db:
+                        updated_products.append(producto['id'])
+                    else:
+                        created_products.append(producto['id'])
+            
+            if created_products or updated_products:
+                self.db.commit()
+                self._invalidate_producto_caches()
+                logger.info(f"Bulk upload completado: {len(created_products)} creados, {len(updated_products)} actualizados, {len(errors)} errores, {len(duplicate_rows)} duplicados")
+            else:
+                self.db.rollback()
+                logger.warning("No se creó ni actualizó ningún producto en el bulk upload")
+            
+            return BulkUploadResponse(
+                total_rows=total_rows,
+                successful=len(created_products) + len(updated_products),
+                failed=len(errors),
+                created=len(created_products),
+                updated=len(updated_products),
+                skipped_duplicates=len(duplicate_rows),
+                duplicate_rows=duplicate_rows,
+                errors=errors,
+                created_products=created_products,
+                updated_products=updated_products
+            )
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error crítico en bulk upload: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error al procesar archivo: {str(e)}"
+            )
+
+    async def _verificar_proveedores_batch(self, proveedor_ids: List) -> Dict[str, str]:
+        """
+        Verifica múltiples proveedores en una sola llamada y retorna un cache
+        con {proveedor_id: proveedor_nombre}
+        """
+        proveedores_cache = {}
+        
+        for proveedor_id in proveedor_ids:
+            if pd.isna(proveedor_id):
+                continue
+                
+            try:
+                proveedor_id_str = str(proveedor_id).strip()
+                proveedor_info = await self._verificar_proveedor_activo(proveedor_id_str)
+                proveedores_cache[proveedor_id_str] = proveedor_info.get("nombre", "Proveedor")
+            except HTTPException:
+                pass
+            except Exception as e:
+                logger.warning(f"Error verificando proveedor {proveedor_id}: {e}")
+                
+        return proveedores_cache

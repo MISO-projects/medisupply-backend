@@ -73,3 +73,32 @@ class MobileProductoResponse(BaseModel):
     productos: List[MobileProducto]
 class GetProductosByIdsRequest(BaseModel):
     ids: list[str] = Field(..., description="Lista de IDs de productos a consultar")
+
+
+class BulkUploadError(BaseModel):
+    row: int
+    error: str
+    data: Optional[Dict] = None
+
+
+class MissingFieldError(BaseModel):
+    row: int
+    missing_fields: List[str]
+
+
+class BulkUploadValidationError(BaseModel):
+    message: str
+    missing_data: List[MissingFieldError]
+
+
+class BulkUploadResponse(BaseModel):
+    total_rows: int
+    successful: int
+    failed: int
+    created: int = Field(default=0, description="Productos creados")
+    updated: int = Field(default=0, description="Productos actualizados")
+    skipped_duplicates: int = Field(default=0, description="Filas duplicadas ignoradas")
+    duplicate_rows: List[int] = Field(default_factory=list, description="Números de fila duplicados")
+    errors: List[BulkUploadError]
+    created_products: List[str] = Field(default_factory=list, description="IDs de productos creados")
+    updated_products: List[str] = Field(default_factory=list, description="IDs de productos actualizados")
