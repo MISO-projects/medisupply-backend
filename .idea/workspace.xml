@@ -4,8 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8998943f-9567-4dcf-8009-681626a1807f" name="Changes" comment="Feature | MEDSUP-182 | Nuevas rutas">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="8998943f-9567-4dcf-8009-681626a1807f" name="Changes" comment="Feature | MEDSUP-112 | Oredenes en rutas">
+      <change beforePath="$PROJECT_DIR$/.idea/copilot/chatSessions/00000000000.xd" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/copilot/chatSessions/00000000000.xd" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -14,6 +14,7 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RESET_MODE" value="SOFT" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
@@ -30,7 +31,7 @@
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feature/MEDSUP-182__rutas&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feature/MEDSUP-112__ordenes__programadas&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
@@ -60,6 +61,8 @@
       <workItem from="1761271806694" duration="2190000" />
       <workItem from="1761308030034" duration="3005000" />
       <workItem from="1761917083926" duration="1140000" />
+      <workItem from="1762603899496" duration="1403000" />
+      <workItem from="1762693650948" duration="2363000" />
     </task>
     <task id="LOCAL-00001" summary="Feature | MEDSUP-135 | Productos disponibles">
       <option name="closed" value="true" />
@@ -125,20 +128,61 @@
       <option name="project" value="LOCAL" />
       <updated>1761274056916</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="Feature | MEDSUP-112 | Ordenes programadas">
+      <option name="closed" value="true" />
+      <created>1762603993926</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1762603993926</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Feature | MEDSUP-112 | Ordenes programadas">
+      <option name="closed" value="true" />
+      <created>1762604077492</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1762604077492</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Feature | MEDSUP-112 | Oredenes en rutas">
+      <option name="closed" value="true" />
+      <created>1762714726204</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1762714726204</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Feature | MEDSUP-135 | Productos disponibles" />
     <MESSAGE value="Fix | MEDSUP-error | Mobile call" />
     <MESSAGE value="Feature | MEDSUP-182 | Nuevas rutas" />
-    <option name="LAST_COMMIT_MESSAGE" value="Feature | MEDSUP-182 | Nuevas rutas" />
+    <MESSAGE value="Feature | MEDSUP-112 | Ordenes programadas" />
+    <MESSAGE value="Feature | MEDSUP-112 | Oredenes en rutas" />
+    <option name="LAST_COMMIT_MESSAGE" value="Feature | MEDSUP-112 | Oredenes en rutas" />
   </component>
   <component name="WfRunsListSearchHistory"><![CDATA[{
   "history": [
+    {
+    },
+    {
+    },
     {
     },
     {

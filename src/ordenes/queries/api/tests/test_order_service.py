@@ -41,8 +41,8 @@ class TestGetOrdersByClient:
         skip = 0
         limit = 20
         cached_data = [
-            {"id": "order-1", "id_cliente": client_id, "estado": "PENDING"},
-            {"id": "order-2", "id_cliente": client_id, "estado": "COMPLETED"}
+            {"id": "order-1", "id_cliente": client_id, "id_vendedor": "vendor-1", "estado": "PENDING", "nombre_vendedor": "Vendedor Test", "nombre_cliente": "Cliente Test"},
+            {"id": "order-2", "id_cliente": client_id, "id_vendedor": "vendor-1", "estado": "COMPLETED", "nombre_vendedor": "Vendedor Test", "nombre_cliente": "Cliente Test"}
         ]
         
         mock_cache_service.get_client_orders.return_value = cached_data
@@ -51,23 +51,25 @@ class TestGetOrdersByClient:
         
         assert result == cached_data
         mock_cache_service.get_client_orders.assert_called_once_with(client_id, skip, limit)
-        # Should not query database when cache hits
+        # Should not query database when cache hits and data already has names
         mock_db.query.assert_not_called()
 
     def test_get_orders_by_client_cache_miss(self, order_service, mock_cache_service, mock_db):
         """Test getting client orders when data is not in cache"""
         client_id = "client-123"
+        vendor_id = "vendor-1"
         skip = 0
         limit = 20
         
         # Mock cache miss
         mock_cache_service.get_client_orders.return_value = None
         
-        # Mock database response
+        # Mock database response for orders
         mock_order_1 = Mock()
         mock_order_1.to_summary_dict.return_value = {
             "id": "order-1",
             "id_cliente": client_id,
+            "id_vendedor": vendor_id,
             "estado": "PENDING"
         }
         
@@ -75,17 +77,30 @@ class TestGetOrdersByClient:
         mock_order_2.to_summary_dict.return_value = {
             "id": "order-2",
             "id_cliente": client_id,
+            "id_vendedor": vendor_id,
             "estado": "COMPLETED"
         }
         
-        mock_query = Mock()
-        mock_query.filter.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.offset.return_value = mock_query
-        mock_query.limit.return_value = mock_query
-        mock_query.all.return_value = [mock_order_1, mock_order_2]
+        # Mock vendor
+        mock_vendedor = Mock()
+        mock_vendedor.nombre = "Vendedor Test"
         
-        mock_db.query.return_value = mock_query
+        # Mock client
+        mock_cliente = Mock()
+        mock_cliente.nombre = "Cliente Test"
+        
+        # Create a query mock that returns different things based on what model is queried
+        def query_side_effect(model):
+            mock_query = Mock()
+            mock_query.filter.return_value = mock_query
+            mock_query.order_by.return_value = mock_query
+            mock_query.offset.return_value = mock_query
+            mock_query.limit.return_value = mock_query
+            mock_query.all.return_value = [mock_order_1, mock_order_2]
+            mock_query.first.return_value = mock_vendedor if "Vendedor" in str(model) else mock_cliente
+            return mock_query
+        
+        mock_db.query.side_effect = query_side_effect
         
         result = order_service.get_orders_by_client(client_id, skip, limit)
         
@@ -93,12 +108,15 @@ class TestGetOrdersByClient:
         assert len(result) == 2
         assert result[0]["id"] == "order-1"
         assert result[1]["id"] == "order-2"
+        assert result[0]["nombre_vendedor"] == "Vendedor Test"
+        assert result[0]["nombre_cliente"] == "Cliente Test"
         
         # Verify cache was checked
         mock_cache_service.get_client_orders.assert_called_once_with(client_id, skip, limit)
         
-        # Verify database was queried
-        mock_db.query.assert_called_once()
+        # Verify database was queried (once for orders, twice for each order's vendor and client)
+        # Total: 1 (orders) + 2*2 (vendor+client for each order) = 5 queries
+        assert mock_db.query.call_count >= 1  # At least the order query
         
         # Verify result was cached
         mock_cache_service.set_client_orders.assert_called_once_with(

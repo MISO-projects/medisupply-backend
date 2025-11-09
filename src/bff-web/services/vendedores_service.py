@@ -3,6 +3,7 @@ import os
 from typing import Optional, Dict, Any
 from fastapi import HTTPException
 import logging
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +123,7 @@ class VendedoresService:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(
-                    f"{self.base_url}/vendedores/by-email/{email}"
+                    f"{self.base_url}/vendedores/by-email/{quote(email, safe='')}"
                 )
 
                 if response.status_code == 200:

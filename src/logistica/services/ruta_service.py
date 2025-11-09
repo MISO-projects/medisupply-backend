@@ -1,17 +1,19 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException, status
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 import logging
 import math
 from db.redis_client import RedisClient
 from models.ruta_model import Ruta, Parada, Conductor, Vehiculo
+from db.order_projection_model import OrderProjection, ClienteInstitucional
 from schemas.ruta_schema import (
     RutaCreateRequest, 
     RutaCreateResponse, 
     RutaResponse,
     RutasListResponse,
-    ParadaResponse
+    ParadaResponse,
+    PedidoInfo
 )
 from services.traffic_manager import optimize_route_order, TrafficAPIManager
 
@@ -22,6 +24,46 @@ class RutaService:
     def __init__(self, db: Session, redis_client: RedisClient = None):
         self.db = db
         self.redis_client = redis_client
+
+    def _get_pedido_info(self, pedido_id: str) -> Optional[PedidoInfo]:
+        """
+        Obtiene información del pedido desde order_projections.
+        
+        Args:
+            pedido_id: UUID del pedido
+            
+        Returns:
+            PedidoInfo con datos del pedido o None si no se encuentra
+        """
+        try:
+            # Consultar el pedido
+            orden = self.db.query(OrderProjection).filter(
+                OrderProjection.id == pedido_id
+            ).first()
+            
+            if not orden:
+                logger.warning(f"Pedido {pedido_id} no encontrado en order_projections")
+                return None
+            
+            # Obtener nombre del cliente
+            nombre_cliente = None
+            if orden.id_cliente:
+                cliente = self.db.query(ClienteInstitucional).filter(
+                    ClienteInstitucional.id == orden.id_cliente
+                ).first()
+                if cliente:
+                    nombre_cliente = cliente.nombre
+            
+            return PedidoInfo(
+                numero_orden=orden.numero_orden,
+                estado=orden.estado,
+                valor_total=float(orden.valor_total) if orden.valor_total else None,
+                cantidad_items=orden.cantidad_items,
+                nombre_cliente=nombre_cliente
+            )
+        except Exception as e:
+            logger.warning(f"Error al obtener información del pedido {pedido_id}: {e}")
+            return None
 
     def crear_ruta(self, ruta_data: RutaCreateRequest) -> RutaCreateResponse:
 
@@ -126,6 +168,7 @@ class RutaService:
                     id=parada.id,
                     ruta_id=parada.ruta_id,
                     pedido_id=parada.pedido_id,
+                    pedido=self._get_pedido_info(parada.pedido_id),
                     direccion=parada.direccion,
                     contacto=parada.contacto,
                     latitud=float(parada.latitud) if parada.latitud else None,
@@ -250,6 +293,7 @@ class RutaService:
                             id=parada.id,
                             ruta_id=parada.ruta_id,
                             pedido_id=parada.pedido_id,
+                            pedido=self._get_pedido_info(parada.pedido_id),
                             direccion=parada.direccion,
                             contacto=parada.contacto,
                             latitud=float(parada.latitud) if parada.latitud else None,
