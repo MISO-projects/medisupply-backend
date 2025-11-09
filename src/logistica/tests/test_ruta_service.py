@@ -73,14 +73,14 @@ def ruta_data_valida():
         condiciones_almacenamiento="Refrigerado",
         paradas=[
             ParadaRequest(
-                cliente_id="32",
+                pedido_id="00000000-0000-0000-0000-000000000032",
                 direccion="Calle 80 #45-20",
                 contacto="Carlos Ríos",
                 latitud=4.7110,
                 longitud=-74.0721
             ),
             ParadaRequest(
-                cliente_id="15",
+                pedido_id="00000000-0000-0000-0000-000000000015",
                 direccion="Av. 30 #22-10",
                 contacto="María López",
                 latitud=4.6097,
@@ -129,22 +129,22 @@ class TestRutaService:
         # Assert - Verificar que las paradas están en el orden optimizado
         assert len(paradas_db) == 2
         # La optimización reordena las paradas, así que verificamos que ambas paradas existen
-        cliente_ids = [p.cliente_id for p in paradas_db]
-        assert "32" in cliente_ids
-        assert "15" in cliente_ids
+        pedido_ids = [p.pedido_id for p in paradas_db]
+        assert "00000000-0000-0000-0000-000000000032" in pedido_ids
+        assert "00000000-0000-0000-0000-000000000015" in pedido_ids
         
         # Verificar que cada parada tiene los datos correctos
-        parada_cliente_32 = next(p for p in paradas_db if p.cliente_id == "32")
-        assert parada_cliente_32.direccion == "Calle 80 #45-20"
-        assert parada_cliente_32.contacto == "Carlos Ríos"
-        assert float(parada_cliente_32.latitud) == 4.7110
-        assert float(parada_cliente_32.longitud) == -74.0721
+        parada_pedido_32 = next(p for p in paradas_db if p.pedido_id == "00000000-0000-0000-0000-000000000032")
+        assert parada_pedido_32.direccion == "Calle 80 #45-20"
+        assert parada_pedido_32.contacto == "Carlos Ríos"
+        assert float(parada_pedido_32.latitud) == 4.7110
+        assert float(parada_pedido_32.longitud) == -74.0721
         
-        parada_cliente_15 = next(p for p in paradas_db if p.cliente_id == "15")
-        assert parada_cliente_15.direccion == "Av. 30 #22-10"
-        assert parada_cliente_15.contacto == "María López"
-        assert float(parada_cliente_15.latitud) == 4.6097
-        assert float(parada_cliente_15.longitud) == -74.0817
+        parada_pedido_15 = next(p for p in paradas_db if p.pedido_id == "00000000-0000-0000-0000-000000000015")
+        assert parada_pedido_15.direccion == "Av. 30 #22-10"
+        assert parada_pedido_15.contacto == "María López"
+        assert float(parada_pedido_15.latitud) == 4.6097
+        assert float(parada_pedido_15.longitud) == -74.0817
     
     def test_obtener_ruta_existente(self, ruta_service, ruta_data_valida):
         # Arrange
@@ -209,13 +209,13 @@ class TestRutaService:
             conductor_id=4,
             paradas=[
                 ParadaRequest(
-                    cliente_id="32",
+                    pedido_id="00000000-0000-0000-0000-000000000032",
                     direccion="Calle 80 #45-20",
                     contacto="Carlos Ríos",
                     orden=2
                 ),
                 ParadaRequest(
-                    cliente_id="15",
+                    pedido_id="00000000-0000-0000-0000-000000000015",
                     direccion="Av. 30 #22-10",
                     contacto="María López",
                     orden=1
@@ -232,9 +232,9 @@ class TestRutaService:
         ).order_by(Parada.orden).all()
         
         assert paradas_db[0].orden == 1
-        assert paradas_db[0].cliente_id == "15"
+        assert paradas_db[0].pedido_id == "00000000-0000-0000-0000-000000000015"
         assert paradas_db[1].orden == 2
-        assert paradas_db[1].cliente_id == "32"
+        assert paradas_db[1].pedido_id == "00000000-0000-0000-0000-000000000032"
     
     def test_crear_ruta_sin_orden_asigna_secuencial(self, ruta_service, db_session):
         # Arrange
@@ -246,12 +246,12 @@ class TestRutaService:
             conductor_id=4,
             paradas=[
                 ParadaRequest(
-                    cliente_id="32",
+                    pedido_id="00000000-0000-0000-0000-000000000032",
                     direccion="Calle 80 #45-20",
                     contacto="Carlos Ríos"
                 ),
                 ParadaRequest(
-                    cliente_id="15",
+                    pedido_id="00000000-0000-0000-0000-000000000015",
                     direccion="Av. 30 #22-10",
                     contacto="María López"
                 )

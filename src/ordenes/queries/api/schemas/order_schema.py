@@ -10,6 +10,9 @@ class OrderSummary(BaseModel):
     estado: str
     valor_total: float
     id_cliente: str
+    nombre_cliente: Optional[str] = None
+    id_vendedor: str
+    nombre_vendedor: Optional[str] = None
     cantidad_items: int
     fecha_entrega_estimada: datetime
 
@@ -35,7 +38,9 @@ class OrderDetail(BaseModel):
     estado: str
     valor_total: float
     id_cliente: str
+    nombre_cliente: Optional[str] = None
     id_vendedor: str
+    nombre_vendedor: Optional[str] = None
     creado_por: str
     cantidad_items: int
     observaciones: Optional[str] = None

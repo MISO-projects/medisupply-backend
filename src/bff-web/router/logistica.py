@@ -34,14 +34,14 @@ def crear_ruta(
             "condiciones_almacenamiento": "Refrigerado",
             "paradas": [
                 {
-                    "cliente_id": 32,
+                    "pedido_id": "f3a6b4c2-1234-4bcd-9e01-22aa33bb44cc",
                     "direccion": "Calle 80 #45-20",
                     "contacto": "Carlos Ríos",
                     "latitud": 4.7110,
                     "longitud": -74.0721
                 },
                 {
-                    "cliente_id": 15,
+                    "pedido_id": "a1b2c3d4-5678-49ef-9012-334455667788",
                     "direccion": "Av. 30 #22-10",
                     "contacto": "María López",
                     "latitud": 4.6097,

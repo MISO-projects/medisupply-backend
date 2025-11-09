@@ -11,6 +11,7 @@ from router.inventario import inventario_router
 from router.logistica import logistica_router
 from router.ordenes_commands import ordenes_commands_router
 from router.ordenes_queries import ordenes_queries_router
+from router.ordenes import ordenes_router
 from router.productos import productos_router
 from router.proveedores import proveedor_router
 from router.reportes import reportes_router
@@ -67,6 +68,7 @@ app.include_router(inventario_router, prefix="/inventario", tags=["inventario"])
 app.include_router(logistica_router, prefix="/logistica", tags=["logistica"])
 app.include_router(ordenes_commands_router, prefix="/ordenes/commands", tags=["ordenes-commands"])
 app.include_router(ordenes_queries_router, prefix="/ordenes/queries", tags=["ordenes-queries"])
+app.include_router(ordenes_router, prefix="/ordenes", tags=["ordenes"])
 app.include_router(productos_router, prefix="/productos", tags=["productos"])
 app.include_router(proveedor_router, prefix="/proveedores", tags=["proveedores"])
 app.include_router(reportes_router, prefix="/reportes", tags=["reportes"])

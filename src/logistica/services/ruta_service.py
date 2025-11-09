@@ -1,17 +1,19 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException, status
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 import logging
 import math
 from db.redis_client import RedisClient
 from models.ruta_model import Ruta, Parada, Conductor, Vehiculo
+from db.order_projection_model import OrderProjection, ClienteInstitucional
 from schemas.ruta_schema import (
     RutaCreateRequest, 
     RutaCreateResponse, 
     RutaResponse,
     RutasListResponse,
-    ParadaResponse
+    ParadaResponse,
+    PedidoInfo
 )
 from services.traffic_manager import optimize_route_order, TrafficAPIManager
 
@@ -22,6 +24,46 @@ class RutaService:
     def __init__(self, db: Session, redis_client: RedisClient = None):
         self.db = db
         self.redis_client = redis_client
+
+    def _get_pedido_info(self, pedido_id: str) -> Optional[PedidoInfo]:
+        """
+        Obtiene información del pedido desde order_projections.
+        
+        Args:
+            pedido_id: UUID del pedido
+            
+        Returns:
+            PedidoInfo con datos del pedido o None si no se encuentra
+        """
+        try:
+            # Consultar el pedido
+            orden = self.db.query(OrderProjection).filter(
+                OrderProjection.id == pedido_id
+            ).first()
+            
+            if not orden:
+                logger.warning(f"Pedido {pedido_id} no encontrado en order_projections")
+                return None
+            
+            # Obtener nombre del cliente
+            nombre_cliente = None
+            if orden.id_cliente:
+                cliente = self.db.query(ClienteInstitucional).filter(
+                    ClienteInstitucional.id == orden.id_cliente
+                ).first()
+                if cliente:
+                    nombre_cliente = cliente.nombre
+            
+            return PedidoInfo(
+                numero_orden=orden.numero_orden,
+                estado=orden.estado,
+                valor_total=float(orden.valor_total) if orden.valor_total else None,
+                cantidad_items=orden.cantidad_items,
+                nombre_cliente=nombre_cliente
+            )
+        except Exception as e:
+            logger.warning(f"Error al obtener información del pedido {pedido_id}: {e}")
+            return None
 
     def crear_ruta(self, ruta_data: RutaCreateRequest) -> RutaCreateResponse:
 
@@ -62,7 +104,7 @@ class RutaService:
             for idx, parada_data in enumerate(paradas_ordenadas, start=1):
                 nueva_parada = Parada(
                     ruta_id=nueva_ruta.id,
-                    cliente_id=parada_data.cliente_id,
+                    pedido_id=parada_data.pedido_id,
                     direccion=parada_data.direccion,
                     contacto=parada_data.contacto,
                     latitud=parada_data.latitud,
@@ -125,7 +167,8 @@ class RutaService:
                 ParadaResponse(
                     id=parada.id,
                     ruta_id=parada.ruta_id,
-                    cliente_id=parada.cliente_id,
+                    pedido_id=parada.pedido_id,
+                    pedido=self._get_pedido_info(parada.pedido_id),
                     direccion=parada.direccion,
                     contacto=parada.contacto,
                     latitud=float(parada.latitud) if parada.latitud else None,
@@ -249,7 +292,8 @@ class RutaService:
                         ParadaResponse(
                             id=parada.id,
                             ruta_id=parada.ruta_id,
-                            cliente_id=parada.cliente_id,
+                            pedido_id=parada.pedido_id,
+                            pedido=self._get_pedido_info(parada.pedido_id),
                             direccion=parada.direccion,
                             contacto=parada.contacto,
                             latitud=float(parada.latitud) if parada.latitud else None,
@@ -278,6 +322,114 @@ class RutaService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error al listar las rutas: {str(e)}"
+            )
+
+    def obtener_entregas_por_cliente(
+        self, 
+        id_cliente: str, 
+        estado_parada: Optional[str] = None,
+        estado_ruta: Optional[str] = None,
+        page: int = 1, 
+        page_size: int = 20
+    ) -> Dict[str, Any]:
+        """
+        Obtiene todas las entregas programadas (paradas) para un cliente específico.
+        
+        Args:
+            id_cliente: UUID del cliente
+            estado_parada: Filtro opcional por estado de parada
+            estado_ruta: Filtro opcional por estado de ruta
+            page: Número de página
+            page_size: Tamaño de página
+            
+        Returns:
+            Dict con paradas paginadas y sus rutas asociadas
+        """
+        try:
+            # Primero obtener todas las órdenes del cliente desde order_projections
+            ordenes_cliente = self.db.query(OrderProjection.id).filter(
+                OrderProjection.id_cliente == id_cliente
+            ).all()
+            
+            if not ordenes_cliente:
+                return {
+                    "data": [],
+                    "total": 0,
+                    "page": page,
+                    "page_size": page_size,
+                    "total_pages": 0
+                }
+            
+            # Extraer los IDs de las órdenes
+            order_ids = [str(orden.id) for orden in ordenes_cliente]
+            
+            # Consultar paradas que coincidan con esos pedidos
+            query = self.db.query(Parada).options(
+                joinedload(Parada.ruta).joinedload(Ruta.conductor),
+                joinedload(Parada.ruta).joinedload(Ruta.vehiculo)
+            ).filter(Parada.pedido_id.in_(order_ids))
+            
+            # Aplicar filtros opcionales
+            if estado_parada:
+                query = query.filter(Parada.estado == estado_parada)
+            
+            if estado_ruta:
+                query = query.join(Ruta).filter(Ruta.estado == estado_ruta)
+            
+            # Contar total antes de paginar
+            total = query.count()
+            
+            # Aplicar paginación
+            skip = (page - 1) * page_size
+            paradas = query.order_by(Parada.fecha_creacion.desc()).offset(skip).limit(page_size).all()
+            
+            # Construir respuesta
+            entregas = []
+            for parada in paradas:
+                pedido_info = self._get_pedido_info(parada.pedido_id)
+                
+                entrega = {
+                    "parada": {
+                        "id": parada.id,
+                        "pedido_id": parada.pedido_id,
+                        "direccion": parada.direccion,
+                        "contacto": parada.contacto,
+                        "latitud": float(parada.latitud) if parada.latitud else None,
+                        "longitud": float(parada.longitud) if parada.longitud else None,
+                        "orden": parada.orden,
+                        "estado": parada.estado,
+                        "fecha_creacion": parada.fecha_creacion.isoformat(),
+                        "fecha_actualizacion": parada.fecha_actualizacion.isoformat()
+                    },
+                    "pedido": pedido_info.dict() if pedido_info else None,
+                    "ruta": {
+                        "id": parada.ruta.id,
+                        "fecha": parada.ruta.fecha,
+                        "bodega_origen": parada.ruta.bodega_origen,
+                        "estado": parada.ruta.estado,
+                        "vehiculo_placa": parada.ruta.vehiculo.placa if parada.ruta.vehiculo else None,
+                        "vehiculo_info": f"{parada.ruta.vehiculo.marca} {parada.ruta.vehiculo.modelo}" if parada.ruta.vehiculo else None,
+                        "conductor_nombre": f"{parada.ruta.conductor.nombre} {parada.ruta.conductor.apellido}" if parada.ruta.conductor else None,
+                        "condiciones_almacenamiento": parada.ruta.condiciones_almacenamiento
+                    } if parada.ruta else None
+                }
+                entregas.append(entrega)
+            
+            total_pages = math.ceil(total / page_size) if total > 0 else 0
+            
+            return {
+                "data": entregas,
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": total_pages
+            }
+            
+        except Exception as e:
+            logger.error(f"Error al obtener entregas del cliente {id_cliente}: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error al obtener entregas programadas: {str(e)}"
             )
 
 

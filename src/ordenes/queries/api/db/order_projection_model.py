@@ -71,6 +71,7 @@ class OrderProjection(Base):
             "estado": self.estado,
             "valor_total": float(self.valor_total),
             "id_cliente": str(self.id_cliente),
+            "id_vendedor": str(self.id_vendedor),
             "cantidad_items": self.cantidad_items,
             "fecha_entrega_estimada": self.fecha_entrega_estimada,
         }

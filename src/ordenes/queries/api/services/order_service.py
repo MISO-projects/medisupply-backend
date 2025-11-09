@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 from fastapi import Depends
 from db.order_projection_model import OrderProjection
+from db.vendedor_model import Vendedor
+from db.cliente_model import ClienteInstitucional
 from fastapi import HTTPException
 from http import HTTPStatus
 from services.cache_service import CacheService
@@ -17,9 +19,51 @@ class OrderService:
         self.db = db
         self.cache_service = CacheService()
 
+    def _enrich_order_with_names(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enriquece los datos de una orden con los nombres de vendedor y cliente.
+        
+        Args:
+            order_data: Diccionario con los datos de la orden
+            
+        Returns:
+            Diccionario enriquecido con nombre_vendedor y nombre_cliente
+        """
+        try:
+            # Obtener nombre del vendedor
+            if order_data.get('id_vendedor'):
+                vendedor = self.db.query(Vendedor).filter(
+                    Vendedor.id == order_data['id_vendedor']
+                ).first()
+                if vendedor:
+                    order_data['nombre_vendedor'] = vendedor.nombre
+                else:
+                    order_data['nombre_vendedor'] = None
+            
+            # Obtener nombre del cliente
+            if order_data.get('id_cliente'):
+                cliente = self.db.query(ClienteInstitucional).filter(
+                    ClienteInstitucional.id == order_data['id_cliente']
+                ).first()
+                if cliente:
+                    order_data['nombre_cliente'] = cliente.nombre
+                else:
+                    order_data['nombre_cliente'] = None
+            
+            return order_data
+        except Exception as e:
+            logger.warning(f"Error enriching order data: {e}")
+            # Si falla, devolver los datos sin enriquecer
+            order_data['nombre_vendedor'] = None
+            order_data['nombre_cliente'] = None
+            return order_data
+
     def get_order(self, order_id: str) -> Dict[str, Any]:
         cached_order = self.cache_service.get_order(order_id)
         if cached_order:
+            # Enriquecer datos cacheados si no tienen los nombres
+            if 'nombre_vendedor' not in cached_order or 'nombre_cliente' not in cached_order:
+                return self._enrich_order_with_names(cached_order)
             return cached_order
 
         order = (
@@ -35,6 +79,9 @@ class OrderService:
             )
 
         order_data = order.to_dict()
+        
+        # Enriquecer con nombres de vendedor y cliente
+        order_data = self._enrich_order_with_names(order_data)
         
         self.cache_service.set_order(order_id, order_data)
         
@@ -82,7 +129,7 @@ class OrderService:
             limit: Maximum number of records to return
             
         Returns:
-            List of orders
+            List of orders enriched with vendor and client names
         """
         try:
             query = self.db.query(OrderProjection)
@@ -102,7 +149,10 @@ class OrderService:
             
             orders_list = [order.to_dict() for order in orders]
             
-            return orders_list
+            # Enriquecer cada orden con nombres de vendedor y cliente
+            enriched_orders = [self._enrich_order_with_names(order) for order in orders_list]
+            
+            return enriched_orders
             
         except Exception as e:
             logger.error(f"Error listing orders: {e}")
@@ -164,12 +214,15 @@ class OrderService:
             limit: Maximum number of records to return
             
         Returns:
-            List of orders for the specified client
+            List of orders for the specified client enriched with vendor and client names
         """
         try:
             # Try to get from cache first
             cached_orders = self.cache_service.get_client_orders(id_cliente, skip, limit)
             if cached_orders:
+                # Enriquecer datos cacheados si no tienen los nombres
+                if cached_orders and ('nombre_vendedor' not in cached_orders[0] if cached_orders else False):
+                    return [self._enrich_order_with_names(order) for order in cached_orders]
                 return cached_orders
             
             logger.info(f"Getting orders for client {id_cliente} from database")
@@ -184,10 +237,13 @@ class OrderService:
             
             orders_list = [order.to_summary_dict() for order in orders]
             
-            # Cache the result
-            self.cache_service.set_client_orders(id_cliente, skip, limit, orders_list)
+            # Enriquecer cada orden con nombres de vendedor y cliente
+            enriched_orders = [self._enrich_order_with_names(order) for order in orders_list]
             
-            return orders_list
+            # Cache the result
+            self.cache_service.set_client_orders(id_cliente, skip, limit, enriched_orders)
+            
+            return enriched_orders
             
         except Exception as e:
             logger.error(f"Error getting orders for client {id_cliente}: {e}")

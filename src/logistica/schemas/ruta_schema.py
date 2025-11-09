@@ -5,7 +5,7 @@ from datetime import datetime
 
 class ParadaRequest(BaseModel):
     """Schema para la solicitud de una parada en la ruta"""
-    cliente_id: str = Field(..., description="ID del cliente (UUID)", min_length=1)
+    pedido_id: str = Field(..., description="ID del pedido (UUID)", min_length=1)
     direccion: str = Field(..., min_length=1, description="Dirección de la parada")
     contacto: str = Field(..., min_length=1, description="Nombre del contacto en la parada")
     latitud: Optional[float] = Field(None, description="Latitud de la ubicación", ge=-90, le=90)
@@ -23,7 +23,7 @@ class ParadaRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "cliente_id": "c03d3c98-2224-4c89-883f-06c24f28ffdf",
+                "pedido_id": "c03d3c98-2224-4c89-883f-06c24f28ffdf",
                 "direccion": "Calle 80 #45-20",
                 "contacto": "Carlos Ríos",
                 "latitud": 4.7110,
@@ -33,11 +33,21 @@ class ParadaRequest(BaseModel):
         }
 
 
+class PedidoInfo(BaseModel):
+    """Información resumida del pedido"""
+    numero_orden: Optional[str] = Field(None, description="Número de la orden")
+    estado: Optional[str] = Field(None, description="Estado del pedido")
+    valor_total: Optional[float] = Field(None, description="Valor total del pedido")
+    cantidad_items: Optional[int] = Field(None, description="Cantidad de items en el pedido")
+    nombre_cliente: Optional[str] = Field(None, description="Nombre del cliente")
+
+
 class ParadaResponse(BaseModel):
     """Schema para la respuesta de una parada"""
     id: int = Field(..., description="ID de la parada")
     ruta_id: int = Field(..., description="ID de la ruta")
-    cliente_id: str = Field(..., description="ID del cliente (UUID)")
+    pedido_id: str = Field(..., description="ID del pedido (UUID)")
+    pedido: Optional[PedidoInfo] = Field(None, description="Información del pedido")
     direccion: str = Field(..., description="Dirección de la parada")
     contacto: str = Field(..., description="Nombre del contacto")
     latitud: Optional[float] = Field(None, description="Latitud de la ubicación")
@@ -52,7 +62,14 @@ class ParadaResponse(BaseModel):
             "example": {
                 "id": 1,
                 "ruta_id": 145,
-                "cliente_id": "c03d3c98-2224-4c89-883f-06c24f28ffdf",
+                "pedido_id": "c03d3c98-2224-4c89-883f-06c24f28ffdf",
+                "pedido": {
+                    "numero_orden": "ORD-251109-3BE26894",
+                    "estado": "PENDIENTE",
+                    "valor_total": 15.50,
+                    "cantidad_items": 1,
+                    "nombre_cliente": "Hospital Nacional Cayetano Heredia"
+                },
                 "direccion": "Calle 80 #45-20",
                 "contacto": "Carlos Ríos",
                 "latitud": 4.7110,
@@ -104,14 +121,14 @@ class RutaCreateRequest(BaseModel):
                 "condiciones_almacenamiento": "Refrigerado",
                 "paradas": [
                     {
-                        "cliente_id": "c03d3c98-2224-4c89-883f-06c24f28ffdf",
+                        "pedido_id": "c03d3c98-2224-4c89-883f-06c24f28ffdf",
                         "direccion": "Calle 80 #45-20",
                         "contacto": "Carlos Ríos",
                         "latitud": 4.7110,
                         "longitud": -74.0721
                     },
                     {
-                        "cliente_id": "2f08757a-8ca5-45d7-8e5f-aab7aed28fda",
+                        "pedido_id": "2f08757a-8ca5-45d7-8e5f-aab7aed28fda",
                         "direccion": "Av. 30 #22-10",
                         "contacto": "María López",
                         "latitud": 4.6097,
@@ -171,7 +188,7 @@ class RutaResponse(BaseModel):
                     {
                         "id": 1,
                         "ruta_id": 145,
-                        "cliente_id": "c03d3c98-2224-4c89-883f-06c24f28ffdf",
+                        "pedido_id": "c03d3c98-2224-4c89-883f-06c24f28ffdf",
                         "direccion": "Calle 80 #45-20",
                         "contacto": "Carlos Ríos",
                         "latitud": 4.7110,

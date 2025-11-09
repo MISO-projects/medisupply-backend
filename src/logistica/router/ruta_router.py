@@ -106,3 +106,40 @@ def listar_rutas(
             detail="Error interno del servidor al listar las rutas"
         )
 
+
+@router.get(
+    "/paradas/cliente/{id_cliente}",
+    summary="Obtener paradas de entregas por cliente",
+    description="Obtiene todas las paradas (entregas programadas) para un cliente específico"
+)
+def obtener_paradas_por_cliente(
+    id_cliente: str,
+    estado_parada: str = Query(None, description="Filtrar por estado de parada (Pendiente, En_Camino, Entregada)"),
+    estado_ruta: str = Query(None, description="Filtrar por estado de ruta"),
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
+    ruta_service: RutaService = Depends(get_ruta_service)
+):
+    """
+    Obtiene todas las entregas programadas (paradas) para un cliente específico.
+    
+    Una entrega programada es una orden que tiene una parada asignada en una ruta de logística.
+    """
+    try:
+        logger.info(f"Obteniendo entregas programadas para cliente {id_cliente}")
+        return ruta_service.obtener_entregas_por_cliente(
+            id_cliente=id_cliente,
+            estado_parada=estado_parada,
+            estado_ruta=estado_ruta,
+            page=page,
+            page_size=page_size
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al obtener entregas del cliente: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al obtener entregas programadas"
+        )
+

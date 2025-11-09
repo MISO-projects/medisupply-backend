@@ -7,6 +7,8 @@ from services.ordenes_commands_service import OrdenesCommandsService, get_ordene
 from services.ordenes_queries_service import OrdenesQueriesService, get_ordenes_queries_service
 from services.clientes_service import ClientesService, get_clientes_service
 from services.productos_service import ProductosService, get_productos_service
+from services.logistica_service import LogisticaService, get_logistica_service
+from services.autenticacion_service import AutenticacionService, get_autenticacion_service
 from schemas.orden_schema import (
     CrearOrdenRequest,
     CrearOrdenResponse,
@@ -14,6 +16,7 @@ from schemas.orden_schema import (
     PaginadoOrdenes,
     PaginadoOrdenesCliente,
     RespuestaOrden,
+    PaginadoEntregasProgramadas,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -243,6 +246,89 @@ async def obtener_mis_ordenes(
         raise HTTPException(
             status_code=500,
             detail=f"Error inesperado al obtener órdenes: {str(e)}"
+        )
+
+@ordenes_router.get(
+    "/mis-entregas-programadas",
+    response_model=PaginadoEntregasProgramadas,
+    summary="Obtener entregas programadas del cliente",
+    description="Obtiene todas las entregas que tienen ruta de logística asignada para el cliente autenticado"
+)
+async def obtener_mis_entregas_programadas(
+    estado_parada: Optional[str] = Query(None, description="Filtrar por estado de parada (Pendiente, En_Camino, Entregada)"),
+    estado_ruta: Optional[str] = Query(None, description="Filtrar por estado de ruta"),
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
+    logistica_service: LogisticaService = Depends(get_logistica_service),
+    autenticacion_service: AutenticacionService = Depends(get_autenticacion_service),
+    authorization: str = Header(..., alias="Authorization")
+):
+    """
+    Obtiene todas las entregas programadas del cliente autenticado.
+    
+    Una entrega programada es una orden que tiene asignada una ruta de logística
+    con fecha, conductor y vehículo para su entrega.
+    
+    - **Autenticación**: Requiere token JWT con rol 'client'
+    - **Filtros**: Por estado de parada y estado de ruta
+    - **Paginación**: Con page y page_size
+    
+    Returns:
+        dict: Entregas programadas con información de la orden, parada y ruta
+        
+    Raises:
+        HTTPException 401: Si el token JWT es inválido o no está presente
+        HTTPException 403: Si el usuario no tiene rol 'client'
+        HTTPException 503: Si el servicio de logística no está disponible
+    """
+    try:
+        logger.info("BFF Móvil: Obteniendo entregas programadas del cliente")
+        
+        # Extraer el token del header Authorization
+        if not authorization or not authorization.lower().startswith("bearer "):
+            raise HTTPException(
+                status_code=401,
+                detail="Token de autorización requerido con formato 'Bearer <token>'"
+            )
+        
+        token = authorization[7:].strip()  # Remover 'Bearer ' del inicio
+        
+        # Obtener el perfil del usuario a partir del token
+        perfil = await autenticacion_service.get_current_user(token)
+        
+        if perfil.get("role") != "client":
+            raise HTTPException(
+                status_code=403,
+                detail="Acceso denegado. Solo clientes pueden ver sus entregas programadas"
+            )
+        
+        id_cliente = perfil.get("id_client")
+        
+        if not id_cliente:
+            raise HTTPException(
+                status_code=401,
+                detail="Token no contiene id_client"
+            )
+        
+        # Consultar el servicio de logística
+        entregas = await logistica_service.obtener_entregas_programadas_cliente(
+            id_cliente=id_cliente,
+            estado_parada=estado_parada,
+            estado_ruta=estado_ruta,
+            page=page,
+            page_size=page_size
+        )
+        
+        logger.info(f"BFF Móvil: {entregas.get('total', 0)} entregas programadas encontradas")
+        return entregas
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"BFF Móvil: Error al obtener entregas programadas: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error inesperado al obtener entregas programadas: {str(e)}"
         )
 
 @ordenes_router.get(

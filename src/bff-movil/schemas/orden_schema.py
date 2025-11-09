@@ -165,3 +165,54 @@ class DetalleOrdenRespuesta(BaseModel):
     subtotal: float
     observaciones: Optional[str] = None
     nombre_producto: Optional[str] = None
+
+
+class EntregaProgramadaParada(BaseModel):
+    """Schema de parada de entrega"""
+    id: int
+    pedido_id: str
+    direccion: str
+    contacto: str
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
+    orden: Optional[int] = None
+    estado: str
+    fecha_creacion: str
+    fecha_actualizacion: str
+
+
+class EntregaProgramadaRuta(BaseModel):
+    """Schema de ruta de entrega"""
+    id: int
+    fecha: str
+    bodega_origen: str
+    estado: str
+    vehiculo_placa: Optional[str] = None
+    vehiculo_info: Optional[str] = None
+    conductor_nombre: Optional[str] = None
+    condiciones_almacenamiento: Optional[str] = None
+
+
+class EntregaProgramadaPedido(BaseModel):
+    """Schema de pedido en entrega"""
+    numero_orden: str
+    estado: str
+    valor_total: Optional[float] = None
+    cantidad_items: int
+    nombre_cliente: Optional[str] = None
+
+
+class EntregaProgramada(BaseModel):
+    """Schema completo de entrega programada"""
+    parada: EntregaProgramadaParada
+    pedido: Optional[EntregaProgramadaPedido] = None
+    ruta: Optional[EntregaProgramadaRuta] = None
+
+
+class PaginadoEntregasProgramadas(BaseModel):
+    """Schema paginado de entregas programadas"""
+    data: List[EntregaProgramada]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
