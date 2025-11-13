@@ -26,6 +26,12 @@ class RegistroInventarioResponseSchema(CrearRegistroInventarioSchema):
     updated_at: Optional[datetime]
     producto_nombre: Optional[str] = Field(None, description="Nombre del producto (enriquecido)")
     producto_sku: Optional[str] = Field(None, description="SKU del producto (enriquecido)")
+    producto_categoria: Optional[str] = Field(None, description="Categoría del producto (enriquecido)")
+    producto_unidad_medida: Optional[str] = Field(None, description="Unidad de medida del producto (enriquecido)")
+    producto_tipo_almacenamiento: Optional[str] = Field(None, description="Tipo de almacenamiento del producto (enriquecido)")
+    producto_precio_unitario: Optional[str] = Field(None, description="Precio unitario del producto (enriquecido)")
+    producto_descripcion: Optional[str] = Field(None, description="Descripción del producto (enriquecido)")
+    producto_imagen_url: Optional[str] = Field(None, description="URL de la imagen del producto (enriquecido)")
 
     class Config:
         from_attributes = True

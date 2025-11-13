@@ -321,19 +321,24 @@ class TestInventarioService:
     @patch("services.inventario_service.httpx.AsyncClient")
     async def test_listar_registros_paginados_text_search_no_productos_found(self, mock_http_client: Mock, service: InventarioService, mock_db: Mock):
         """Test: Retornar vacío cuando text_search no encuentra productos y no hay ubicacion match"""
-        # Mock productos service response (no matches)
+        # Mock productos service response (no matches) - this is for filter-ids endpoint
         mock_async_client = mock_http_client.return_value.__aenter__.return_value
-        mock_response = Mock(status_code=200)
-        mock_response.json.return_value = {
+        mock_filter_response = Mock(status_code=200)
+        mock_filter_response.json.return_value = {
             "producto_ids": []
         }
-        mock_async_client.post.return_value = mock_response
+        # When text_search is provided but no productos found, it still filters by ubicacion
+        # So we need to mock the filter-ids call, but the query will still run with ubicacion filter
+        mock_async_client.post.return_value = mock_filter_response
         
-        # Mock DB query - no ubicacion matches either
+        # Mock DB query chain - no ubicacion matches either
         mock_query = Mock()
         mock_db.query.return_value = mock_query
+        # filter() is called with or_() when text_search is provided
         mock_query.filter.return_value = mock_query
         mock_query.count.return_value = 0
+        # Mock the full query chain for order_by, offset, limit, all
+        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = []
         
         registros, total = await service.listar_registros_paginados(
             skip=0, limit=10, text_search="Inexistente"

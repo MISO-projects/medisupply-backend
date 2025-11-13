@@ -344,6 +344,12 @@ class BatchDetailsRequest(BaseModel):
 class ProductoDetalleItem(BaseModel):
     nombre: str
     sku: Optional[str]
+    categoria: Optional[str] = None
+    unidad_medida: Optional[str] = None
+    tipo_almacenamiento: Optional[str] = None
+    precio_unitario: Optional[str] = None
+    descripcion: Optional[str] = None
+    imagen_url: Optional[str] = None
 
 class BatchDetailsResponse(BaseModel):
     detalles: Dict[str, ProductoDetalleItem]

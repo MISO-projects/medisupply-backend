@@ -77,7 +77,11 @@ class InventarioService:
     #         logger.warning(f"Error invalidating caches: {e}")
 
     async def _get_detalles_productos(self, producto_ids: List[str]) -> Dict[str, Any]:
-        """Obtiene detalles (nombre, SKU) para una lista de IDs de productos."""
+        """
+        Obtiene detalles de productos para una lista de IDs.
+        Retorna un diccionario con campos como: nombre, sku, categoria, unidad_medida,
+        tipo_almacenamiento, precio_unitario, descripcion, imagen_url.
+        """
         if not producto_ids:
             return {}
         
@@ -225,7 +229,10 @@ class InventarioService:
                 filters_list.append(Inventario.ubicacion.ilike(f"%{text_search}%"))
                 
                 # Aplicar OR entre producto_id y ubicacion
-                if filters_list:
+                # Si solo hay un filtro, aplicarlo directamente; si hay múltiples, usar or_()
+                if len(filters_list) == 1:
+                    query = query.filter(filters_list[0])
+                elif len(filters_list) > 1:
                     query = query.filter(or_(*filters_list))
             elif categoria:
                 # Solo filtro por categoria (sin text_search)
@@ -258,6 +265,13 @@ class InventarioService:
                 detalles = detalles_map.get(str(registro.producto_id), {})
                 registro_dict["producto_nombre"] = detalles.get("nombre", "Producto no encontrado")
                 registro_dict["producto_sku"] = detalles.get("sku", "N/A")
+                registro_dict["producto_categoria"] = detalles.get("categoria")
+                registro_dict["producto_unidad_medida"] = detalles.get("unidad_medida")
+                registro_dict["producto_tipo_almacenamiento"] = detalles.get("tipo_almacenamiento")
+                registro_dict["producto_precio_unitario"] = detalles.get("precio_unitario")
+                registro_dict["producto_descripcion"] = detalles.get("descripcion")
+                registro_dict["producto_imagen_url"] = detalles.get("imagen_url")
+                
                 items_enriquecidos.append(registro_dict)
             return items_enriquecidos, total
 

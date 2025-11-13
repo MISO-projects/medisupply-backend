@@ -410,26 +410,41 @@ class ProductosService:
             logger.error(f"Error al eliminar producto {producto_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Error al eliminar producto")
 
-    def get_detalles_por_ids(self, producto_ids: List[str]) -> Dict[str, Dict[str, str]]:
+    def get_detalles_por_ids(self, producto_ids: List[str]) -> Dict[str, Dict[str, Any]]:
         """
-        Obtiene detalles clave (nombre y SKU) para una lista de IDs de productos.
+        Obtiene detalles de productos para una lista de IDs.
+        Retorna un diccionario con los campos más comunes que pueden ser útiles
+        para enriquecer registros de inventario.
         """
         try:
             unique_ids = list(set(producto_ids))
             productos_db = self.db.query(
                 Producto.id, 
                 Producto.nombre, 
-                Producto.sku
+                Producto.sku,
+                Producto.categoria,
+                Producto.unidad_medida,
+                Producto.tipo_almacenamiento,
+                Producto.precio_unitario,
+                Producto.descripcion,
+                Producto.imagen_url
             ).filter(
                 Producto.id.in_(unique_ids)
             ).all()
 
             # Convertimos la lista en un diccionario para búsqueda rápida
-            # Ej: {"uuid-1": {"nombre": "Guantes", "sku": "SKU-123"}, ...}
-            detalles_map = {
-                str(p.id): {"nombre": p.nombre, "sku": p.sku}
-                for p in productos_db
-            }
+            detalles_map = {}
+            for p in productos_db:
+                detalles_map[str(p.id)] = {
+                    "nombre": p.nombre,
+                    "sku": p.sku,
+                    "categoria": p.categoria,
+                    "unidad_medida": p.unidad_medida,
+                    "tipo_almacenamiento": p.tipo_almacenamiento,
+                    "precio_unitario": str(p.precio_unitario) if p.precio_unitario else None,
+                    "descripcion": p.descripcion,
+                    "imagen_url": p.imagen_url,
+                }
             
             logger.info(f"Se obtuvieron detalles para {len(detalles_map)} productos.")
             return detalles_map
