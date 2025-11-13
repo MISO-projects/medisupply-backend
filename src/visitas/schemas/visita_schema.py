@@ -8,7 +8,7 @@ from enum import Enum
 class EstadoVisitaEnum(str, Enum):
     """Define los estados permitidos para una visita."""
     PENDIENTE = "PENDIENTE"
-    TOMADA = "TOMADA"
+    REALIZADA = "REALIZADA"
     CANCELADA = "CANCELADA"
 
 class CrearRutaVisitaSchema(BaseModel):
@@ -47,7 +47,7 @@ class RutaVisitaItemSchema(BaseModel):
     nombre: str = Field(..., description="Nombre del cliente institucional")
     direccion: Optional[str] = Field(None, description="Dirección del cliente")
     hora_de_la_cita: str = Field(..., description="Hora de la visita en formato HH:MM (ej: '08:50')")
-    estado: Optional[EstadoVisitaEnum] = Field(None, description="Nuevo estado de la visita (PENDIENTE, TOMADA, CANCELADA)")
+    estado: Optional[EstadoVisitaEnum] = Field(None, description="Nuevo estado de la visita (PENDIENTE, RELIZADA, CANCELADA)")
 
     class Config:
         from_attributes = True
@@ -71,7 +71,7 @@ class ActualizarVisitaSchema(BaseModel):
     cliente_contacto: Optional[str] = Field(None, max_length=100, description="Nombre del contacto en el cliente")
     detalle: Optional[str] = Field(None, max_length=100, description="Detalles o notas de la visita")
     evidencia: Optional[str] = Field(None, max_length=100, description="URL de la foto o video de evidencia")
-    estado: Optional[EstadoVisitaEnum] = Field(None, description="Nuevo estado de la visita (PENDIENTE, TOMADA, CANCELADA)")
+    estado: Optional[EstadoVisitaEnum] = Field(None, description="Nuevo estado de la visita (PENDIENTE, REALIZADA, CANCELADA)")
 
     class Config:
         from_attributes = True

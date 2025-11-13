@@ -32,11 +32,11 @@ class TestRequestSchemas:
     def test_actualizar_visita_schema_valid(self):
         """Test: Creación válida de schema de actualizar visita"""
         data = {
-            "estado": "TOMADA",
+            "estado": "REALIZADA",
             "detalle": "Visita completada exitosamente."
         }
         schema = ActualizarVisitaSchema(**data)
-        assert schema.estado == EstadoVisitaEnum.TOMADA
+        assert schema.estado == EstadoVisitaEnum.REALIZADA
         assert schema.detalle == "Visita completada exitosamente."
 
     def test_actualizar_visita_schema_estado_invalido(self):
@@ -110,7 +110,7 @@ class TestResponseSchemas:
             "nombre": "Cliente Sin Dirección",
             "direccion": None, 
             "hora_de_la_cita": "10:00",
-            "estado": "TOMADA"
+            "estado": "REALIZADA"
         }
         schema = RutaVisitaItemSchema(**data)
         assert schema.nombre == "Cliente Sin Dirección"

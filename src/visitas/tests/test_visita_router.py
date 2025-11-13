@@ -95,14 +95,14 @@ class TestVisitaRouter:
     async def test_actualizar_visita_endpoint(self, client: TestClient, mock_visita_service: Mock):
         """Test: Endpoint PUT /api/visitas/{visita_id} (async) - Éxito"""
         visita_id = uuid4()
-        payload = {"estado": "TOMADA", "detalle": "Visita completada"}
+        payload = {"estado": "REALIZADA", "detalle": "Visita completada"}
         
         mock_response_data = {
             "id": str(visita_id),
             "cliente_id": str(uuid4()),
             "vendedor_id": str(uuid4()),
             "fecha_visita_programada": datetime.now().isoformat(),
-            "estado": "TOMADA",
+            "estado": "REALIZADA",
             "detalle": "Visita completada",
             "created_at": datetime.now().isoformat(),
             "nombre_institucion": "Institución",
@@ -113,7 +113,7 @@ class TestVisitaRouter:
         response = client.put(f"/api/visitas/{visita_id}", json=payload)
         
         assert response.status_code == HTTPStatus.OK
-        assert response.json()["estado"] == "TOMADA"
+        assert response.json()["estado"] == "REALIZADA"
         mock_visita_service.actualizar_visita.assert_called_once_with(
             visita_id,
             ActualizarVisitaSchema(**payload)
@@ -178,5 +178,5 @@ class TestVisitaRouter:
         response = client.put(f"/api/visitas/{visita_id}", json=payload)
         
         assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
-        assert "Input should be 'PENDIENTE', 'TOMADA' or 'CANCELADA'" in response.text
+        assert "Input should be 'PENDIENTE', 'REALIZADA' or 'CANCELADA'" in response.text
         mock_visita_service.actualizar_visita.assert_not_called()

@@ -144,7 +144,7 @@ class TestVisitaService:
     async def test_actualizar_visita_not_found(self, service: VisitaService, mock_db: Mock):
         """Test: Actualizar visita falla si no se encuentra"""
         visita_id = uuid4()
-        data = ActualizarVisitaSchema(estado="TOMADA")
+        data = ActualizarVisitaSchema(estado="REALIZADA")
         
         mock_db.query.return_value.filter.return_value.first.return_value = None
 
@@ -153,7 +153,7 @@ class TestVisitaService:
         assert e.value.status_code == HTTPStatus.NOT_FOUND
 
     async def test_actualizar_visita_transicion_invalida(self, service: VisitaService, mock_db: Mock):
-        """Test: Falla al intentar cambiar estado de visita 'TOMADA'"""
+        """Test: Falla al intentar cambiar estado de visita 'REALIZADA'"""
         visita_id = uuid4()
         data = ActualizarVisitaSchema(estado="PENDIENTE") # Intentar regresar a PENDIENTE
 
@@ -167,7 +167,7 @@ class TestVisitaService:
             fecha_visita_programada=dummy_fecha
         )
         mock_visita_db.id = visita_id
-        mock_visita_db.estado = "TOMADA" # Asigna el estado actual
+        mock_visita_db.estado = "REALIZADA" # Asigna el estado actual
         
         mock_db.query.return_value.filter.return_value.first.return_value = mock_visita_db
         

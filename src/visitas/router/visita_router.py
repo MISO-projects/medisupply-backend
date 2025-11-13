@@ -121,7 +121,7 @@ async def get_detalle_visita(
     summary="Actualizar una visita existente",
     description="""
     Actualiza uno o más campos de una visita.
-    Ideal para marcar una visita como 'TOMADA' y registrar
+    Ideal para marcar una visita como 'REALIZADA' y registrar
     el detalle, la evidencia (URL), y las horas de inicio/fin.
     """
 )

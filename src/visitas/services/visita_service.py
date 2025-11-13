@@ -291,7 +291,7 @@ class VisitaService:
             if nuevo_estado:
                 estado_actual = visita_db.estado
                 
-                if estado_actual in ("TOMADA", "CANCELADA"):
+                if estado_actual in ("REALIZADA", "CANCELADA"):
                     
                     if nuevo_estado != estado_actual:
                         logger.warning(
