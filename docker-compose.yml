@@ -410,7 +410,7 @@ services:
       - medisupply-network
     
   bff-movil:
-    profiles: [ "bff-movil", "ordenes", "autenticacion", "clientes", "productos", "dev" ]
+    profiles: [ "bff-movil", "ordenes", "autenticacion", "clientes", "productos", "inventario", "dev" ]
     build:
       context: ./src/bff-movil
       dockerfile: Dockerfile
@@ -431,6 +431,7 @@ services:
       - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
       - VISITAS_SERVICE_URL=http://visitas-service:3000
       - LOGISTICA_SERVICE_URL=http://logistica-service:3000
+      - INVENTARIO_SERVICE_URL=http://inventario-service:3000
     volumes:
       - ./src/bff-movil:/app
     networks:

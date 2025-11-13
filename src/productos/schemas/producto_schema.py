@@ -75,6 +75,17 @@ class GetProductosByIdsRequest(BaseModel):
     ids: list[str] = Field(..., description="Lista de IDs de productos a consultar")
 
 
+class FilterProductosRequest(BaseModel):
+    nombre: Optional[str] = Field(None, description="Búsqueda parcial por nombre (case-insensitive)")
+    sku: Optional[str] = Field(None, description="Búsqueda exacta por SKU")
+    categoria: Optional[str] = Field(None, description="Búsqueda exacta por categoría")
+    text_search: Optional[str] = Field(None, description="Búsqueda parcial en nombre o SKU (case-insensitive)")
+
+
+class FilterProductosResponse(BaseModel):
+    producto_ids: List[str] = Field(..., description="Lista de IDs de productos que coinciden con los filtros")
+
+
 class BulkUploadError(BaseModel):
     row: int
     error: str

@@ -1,7 +1,7 @@
 # src/productos/services/productos_service.py
 
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from sqlalchemy.dialects.postgresql import insert
 from typing import List, Optional, Union
 import uuid as uuid_module
@@ -437,6 +437,61 @@ class ProductosService:
         except Exception as e:
             logger.error(f"Error al obtener detalles de productos por IDs: {str(e)}")
             return {}
+
+    def get_producto_ids_by_filters(
+        self, 
+        nombre: Optional[str] = None, 
+        sku: Optional[str] = None, 
+        categoria: Optional[str] = None,
+        text_search: Optional[str] = None
+    ) -> List[str]:
+        """
+        Obtiene IDs de productos que coinciden con los filtros proporcionados.
+        
+        Args:
+            nombre: Búsqueda parcial por nombre (case-insensitive)
+            sku: Búsqueda exacta por SKU
+            categoria: Búsqueda exacta por categoría
+            text_search: Búsqueda parcial en nombre o SKU (case-insensitive, OR condition)
+            
+        Returns:
+            Lista de IDs de productos (como strings) que coinciden con los filtros
+        """
+        try:
+            query = self.db.query(Producto.id)
+            filters = []
+
+            if text_search:
+                # Buscar en nombre o SKU usando OR
+                filters.append(
+                    or_(
+                        Producto.nombre.ilike(f"%{text_search}%"),
+                        Producto.sku.ilike(f"%{text_search}%")
+                    )
+                )
+            else:
+                # Mantener compatibilidad con filtros individuales
+                if nombre:
+                    filters.append(Producto.nombre.ilike(f"%{nombre}%"))
+                
+                if sku:
+                    filters.append(Producto.sku == sku)
+            
+            if categoria:
+                filters.append(Producto.categoria == categoria)
+
+            if filters:
+                query = query.filter(and_(*filters))
+
+            productos_db = query.all()
+            producto_ids = [str(p.id) for p in productos_db]
+            
+            logger.info(f"Se encontraron {len(producto_ids)} productos que coinciden con los filtros.")
+            return producto_ids
+
+        except Exception as e:
+            logger.error(f"Error al obtener IDs de productos por filtros: {str(e)}")
+            return []
 
     def get_productos_by_ids(self, ids: List[str]) -> List[ProductoResponse]:
         """Obtiene productos por una lista de IDs."""

@@ -9,6 +9,7 @@ import httpx
 import os
 from sqlalchemy import func, and_, or_, nullslast
 import json
+from uuid import UUID
 
 from db.database import get_db
 from db.inventario_model import Inventario
@@ -101,6 +102,42 @@ class InventarioService:
             logger.error(f"Error de conexión al servicio de productos: {e}")
             return {}
 
+    async def _get_producto_ids_by_filters(
+        self, 
+        text_search: Optional[str] = None,
+        categoria: Optional[str] = None
+    ) -> List[str]:
+        """
+        Obtiene IDs de productos que coinciden con los filtros proporcionados
+        llamando al servicio de productos.
+        """
+        # Si no hay filtros de producto, retornar lista vacía (significa que no se filtra por producto)
+        if not text_search and not categoria:
+            return []
+        
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    f"{self.productos_service_url}/api/productos/filter-ids",
+                    json={
+                        "text_search": text_search,
+                        "categoria": categoria
+                    }
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    producto_ids = data.get("producto_ids", [])
+                    logger.info(f"Se obtuvieron {len(producto_ids)} IDs de productos que coinciden con los filtros")
+                    return producto_ids
+                else:
+                    logger.error(f"Error al obtener IDs de productos por filtros: {response.status_code} - {response.text}")
+                    return []
+                    
+        except httpx.RequestError as e:
+            logger.error(f"Error de conexión al servicio de productos para filtros: {e}")
+            return []
+
 
     async def crear_registro_inventario(self, inventario_data: CrearRegistroInventarioSchema) -> Dict[str, Any]:
         """
@@ -147,15 +184,66 @@ class InventarioService:
                 detail="Error interno al crear el registro de inventario."
             )
 
-    async def listar_registros_paginados(self, skip: int, limit: int) -> tuple[List[Dict[str, Any]], int]:
+    async def listar_registros_paginados(
+        self, 
+        skip: int, 
+        limit: int,
+        text_search: Optional[str] = None,
+        categoria: Optional[str] = None,
+        estado: Optional[str] = None
+    ) -> tuple[List[Dict[str, Any]], int]:
         """
-        Obtiene una lista paginada de todos los registros de inventario,
-        enriquecida con nombre y SKU del servicio de productos.
+        Obtiene una lista paginada de registros de inventario con filtros opcionales.
+        Siempre enriquece los registros con nombre y SKU del producto.
+        
+        Args:
+            text_search: Busca en producto nombre, producto sku, o inventario ubicacion
+            categoria: Filtra productos por categoría
+            estado: Filtra inventario por estado
         """
         try:
             query = self.db.query(Inventario)
+            
+            # Aplicar filtros de producto: obtener IDs de productos que coinciden
+            producto_ids_filtrados = []
+            if text_search or categoria:
+                producto_ids_filtrados = await self._get_producto_ids_by_filters(
+                    text_search=text_search,
+                    categoria=categoria
+                )
+            
+            # Aplicar filtros combinados: producto_id OR ubicacion (si text_search)
+            if text_search:
+                filters_list = []
+                
+                # Si hay productos que coinciden, agregar filtro por producto_id
+                if producto_ids_filtrados:
+                    producto_uuids = [UUID(pid) for pid in producto_ids_filtrados]
+                    filters_list.append(Inventario.producto_id.in_(producto_uuids))
+                
+                # Agregar filtro por ubicacion
+                filters_list.append(Inventario.ubicacion.ilike(f"%{text_search}%"))
+                
+                # Aplicar OR entre producto_id y ubicacion
+                if filters_list:
+                    query = query.filter(or_(*filters_list))
+            elif categoria:
+                # Solo filtro por categoria (sin text_search)
+                if producto_ids_filtrados:
+                    producto_uuids = [UUID(pid) for pid in producto_ids_filtrados]
+                    query = query.filter(Inventario.producto_id.in_(producto_uuids))
+                else:
+                    # Si categoria no encontró productos, retornar vacío
+                    return [], 0
+            
+            # Aplicar filtros de inventario
+            if estado:
+                query = query.filter(Inventario.estado == estado)
+            
+            # Contar total después de aplicar filtros
             total = query.count()
             
+            # Aplicar ordenamiento y paginación
             registros_db = query.order_by(Inventario.fecha_recepcion.desc()) \
                                 .offset(skip).limit(limit).all()
 
