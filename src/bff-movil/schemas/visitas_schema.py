@@ -1,18 +1,22 @@
-# src/bff-movil/schemas/visita_schema.py
-
 from datetime import datetime, date
-from typing import Optional, Dict, List
+from typing import Optional, Dict
 from pydantic import BaseModel, UUID4, Field
+from typing import List
 import uuid
 from enum import Enum
-
-# --- Copia exacta de los schemas del microservicio ---
 
 class EstadoVisitaEnum(str, Enum):
     """Define los estados permitidos para una visita."""
     PENDIENTE = "PENDIENTE"
     REALIZADA = "REALIZADA"
     CANCELADA = "CANCELADA"
+
+class NotaVisitaAnteriorSchema(BaseModel):
+    fecha_visita_programada: datetime
+    detalle: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 class CrearRutaVisitaSchema(BaseModel):
     """Esquema de datos requeridos para crear una nueva ruta de visita."""
@@ -50,7 +54,7 @@ class RutaVisitaItemSchema(BaseModel):
     nombre: str = Field(..., description="Nombre del cliente institucional")
     direccion: Optional[str] = Field(None, description="Dirección del cliente")
     hora_de_la_cita: str = Field(..., description="Hora de la visita en formato HH:MM (ej: '08:50')")
-    estado: Optional[EstadoVisitaEnum] = Field(None, description="Nuevo estado de la visita (PENDIENTE, REALIZADA, CANCELADA)")
+    estado: Optional[EstadoVisitaEnum] = Field(None, description="Nuevo estado de la visita (PENDIENTE, RELIZADA, CANCELADA)")
 
     class Config:
         from_attributes = True
@@ -59,9 +63,14 @@ class VisitaDetalleResponseSchema(VisitaResponseSchema):
     """
     Schema de respuesta con toda la información de una visita,
     enriquecida con detalles del cliente.
+    Hereda todos los campos de VisitaBaseResponseSchema.
     """
     nombre_institucion: str = Field(..., description="Nombre del cliente institucional")
     direccion: Optional[str] = Field(None, description="Dirección del cliente")
+    notas_visitas_anteriores: List[NotaVisitaAnteriorSchema] = Field(
+        default_factory=list, 
+        description="Lista de notas de visitas pasadas del mismo cliente."
+    )
 
     class Config:
         from_attributes = True

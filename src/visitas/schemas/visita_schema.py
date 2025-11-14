@@ -11,6 +11,13 @@ class EstadoVisitaEnum(str, Enum):
     REALIZADA = "REALIZADA"
     CANCELADA = "CANCELADA"
 
+class NotaVisitaAnteriorSchema(BaseModel):
+    fecha_visita_programada: datetime
+    detalle: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
 class CrearRutaVisitaSchema(BaseModel):
     """Esquema de datos requeridos para crear una nueva ruta de visita."""
     cliente_id: UUID4 = Field(..., description="UUID del cliente a visitar.")
@@ -60,6 +67,10 @@ class VisitaDetalleResponseSchema(VisitaResponseSchema):
     """
     nombre_institucion: str = Field(..., description="Nombre del cliente institucional")
     direccion: Optional[str] = Field(None, description="Dirección del cliente")
+    notas_visitas_anteriores: List[NotaVisitaAnteriorSchema] = Field(
+        default_factory=list, 
+        description="Lista de notas de visitas pasadas del mismo cliente."
+    )
 
     class Config:
         from_attributes = True
