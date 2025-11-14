@@ -32,49 +32,49 @@ class InventarioService:
         )
 
     
-    # def _get_cache(self, key: str) -> Optional[Any]:
-    #     """Get data from cache"""
-    #     try:
-    #         if self.redis_client is None:
-    #             return None
-    #         cached_data = self.redis_client.get(key)
-    #         if cached_data:
-    #             return json.loads(cached_data)
-    #         return None
-    #     except Exception as e:
-    #         logger.warning(f"Error getting cache for key {key}: {e}")
-    #         return None
+    def _get_cache(self, key: str) -> Optional[Any]:
+        """Get data from cache"""
+        try:
+            if self.redis_client is None:
+                return None
+            cached_data = self.redis_client.get(key)
+            if cached_data:
+                return json.loads(cached_data)
+            return None
+        except Exception as e:
+            logger.warning(f"Error getting cache for key {key}: {e}")
+            return None
 
-    # def _set_cache(self, key: str, value: Any, ttl: int) -> None:
-    #     """Set data in cache"""
-    #     try:
-    #         if self.redis_client is None:
-    #             return
-    #         self.redis_client.setex(key, ttl, json.dumps(value))
-    #     except Exception as e:
-    #         logger.warning(f"Error setting cache for key {key}: {e}")
+    def _set_cache(self, key: str, value: Any, ttl: int) -> None:
+        """Set data in cache"""
+        try:
+            if self.redis_client is None:
+                return
+            self.redis_client.setex(key, ttl, json.dumps(value, default=str))
+        except Exception as e:
+            logger.warning(f"Error setting cache for key {key}: {e}")
 
-    # def _delete_cache(self, pattern: str) -> None:
-    #     """Delete cache keys matching pattern"""
-    #     try:
-    #         if self.redis_client is None:
-    #             return
-    #         keys = self.redis_client.keys(pattern)
-    #         if keys:
-    #             self.redis_client.delete(*keys)
-    #     except Exception as e:
-    #         logger.warning(f"Error deleting cache for pattern {pattern}: {e}")
+    def _delete_cache(self, pattern: str) -> None:
+        """Delete cache keys matching pattern"""
+        try:
+            if self.redis_client is None:
+                return
+            keys = self.redis_client.keys(pattern)
+            if keys:
+                self.redis_client.delete(*keys)
+        except Exception as e:
+            logger.warning(f"Error deleting cache for pattern {pattern}: {e}")
 
-    # def _invalidate_inventario_caches(self, inventario_id: Optional[str] = None) -> None:
-    #     """Invalidate all inventario-related caches"""
-    #     try:
-    #         if inventario_id:
-    #             self._delete_cache(f"inventario:{inventario_id}")
-    #         # Invalidate list and count caches
-    #         self._delete_cache("inventarioes:list:*")
-    #         self._delete_cache("inventarioes:count:*")
-    #     except Exception as e:
-    #         logger.warning(f"Error invalidating caches: {e}")
+    def _invalidate_inventario_caches(self, inventario_id: Optional[str] = None) -> None:
+        """Invalidate all inventario-related caches"""
+        try:
+            if inventario_id:
+                self._delete_cache(f"inventario:{inventario_id}")
+            # Invalidate list and count caches
+            self._delete_cache("inventario:list:*")
+            self._delete_cache("inventario:count:*")
+        except Exception as e:
+            logger.warning(f"Error invalidating caches: {e}")
 
     async def _get_detalles_productos(self, producto_ids: List[str]) -> Dict[str, Any]:
         """
@@ -171,6 +171,7 @@ class InventarioService:
             self.db.add(nuevo_inventario)
             self.db.commit()
             self.db.refresh(nuevo_inventario)
+            self._invalidate_inventario_caches()
             await self._notificar_actualizacion_a_productos()
             return nuevo_inventario.to_dict()
         except IntegrityError as ie:
@@ -206,6 +207,16 @@ class InventarioService:
             estado: Filtra inventario por estado
         """
         try:
+            # Generar clave de caché basada en los filtros
+            cache_key = f"inventario:list:{text_search or 'all'}:{categoria or 'all'}:{estado or 'all'}:{skip}:{limit}"
+            cached_data = self._get_cache(cache_key)
+            
+            if cached_data is not None:
+                logger.debug(f"Cache hit for inventario list")
+                return cached_data.get('items', []), cached_data.get('total', 0)
+            
+            logger.debug(f"Cache miss for inventario list")
+            
             query = self.db.query(Inventario)
             
             # Aplicar filtros de producto: obtener IDs de productos que coinciden
@@ -273,6 +284,14 @@ class InventarioService:
                 registro_dict["producto_imagen_url"] = detalles.get("imagen_url")
                 
                 items_enriquecidos.append(registro_dict)
+            
+            # Guardar en caché
+            cache_data = {
+                'items': items_enriquecidos,
+                'total': total
+            }
+            self._set_cache(cache_key, cache_data, self.CACHE_TTL_LIST)
+            
             return items_enriquecidos, total
 
         except Exception as e:
@@ -436,6 +455,7 @@ class InventarioService:
                 })
             
             self.db.commit()
+            self._invalidate_inventario_caches()
             await self._notificar_actualizacion_a_productos()
 
             logger.info(f"Stock disminuido exitosamente para {producto_id}. Cantidad: {cantidad_a_disminuir}")
