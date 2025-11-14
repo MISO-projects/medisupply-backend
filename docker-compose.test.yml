@@ -45,6 +45,8 @@ services:
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=test-project
+      - PUBSUB_TOPIC_NAME=inventory-events
+      - PUBSUB_EMULATOR_HOST=pubsub-test:8085
       - AUTENTICACION_SERVICE_URL=http://autenticacion-mock:3000
       - PRODUCTOS_SERVICE_URL=http://productos-mock:3000
       - POSTGRES_HOST=postgres-test
@@ -63,6 +65,8 @@ services:
       postgres-test:
         condition: service_healthy
       redis-test:
+        condition: service_healthy
+      pubsub-test:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]

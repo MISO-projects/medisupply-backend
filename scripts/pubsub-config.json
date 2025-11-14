@@ -5,7 +5,8 @@
   "topics": [
     "create-order-command",
     "order-created",
-    "order-projection-created"
+    "order-projection-created",
+    "inventory-events"
   ],
   "subscriptions": [
     {
@@ -24,6 +25,12 @@
       "name": "order-projection-created-sub",
       "topic": "order-projection-created",
       "pushEndpoint": "order-query-api:3000/orders/cache-invalidation",
+      "ackDeadlineSeconds": 60
+    },
+    {
+      "name": "inventory-events-audit-sub",
+      "topic": "inventory-events",
+      "pushEndpoint": "auditoria-service:3000/api/auditoria/eventos/inventario",
       "ackDeadlineSeconds": 60
     }
   ],

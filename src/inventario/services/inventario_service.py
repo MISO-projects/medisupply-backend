@@ -14,6 +14,7 @@ from db.database import get_db
 from db.inventario_model import Inventario
 from schemas.inventario_schema import CrearRegistroInventarioSchema, CrearRegistroPedidoSchema
 from db.redis_client import get_redis_client
+from services.pubsub_service import get_pubsub_service
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ class InventarioService:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
         self.redis_client = get_redis_client()
+        self.pubsub_service = get_pubsub_service()
         self.productos_service_url = os.getenv(
             "PRODUCTOS_SERVICE_URL", "http://productos-service:3000"
         )
@@ -130,6 +132,21 @@ class InventarioService:
             self.db.add(nuevo_inventario)
             self.db.commit()
             self.db.refresh(nuevo_inventario)
+            
+            # Publicar evento a auditoría
+            await self._publicar_evento_inventario(
+                operation="CREAR",
+                inventario_id=str(nuevo_inventario.id),
+                producto_id=str(nuevo_inventario.producto_id),
+                datos={
+                    "lote": nuevo_inventario.lote,
+                    "cantidad": nuevo_inventario.cantidad,
+                    "ubicacion": nuevo_inventario.ubicacion,
+                    "estado": nuevo_inventario.estado,
+                    "fecha_vencimiento": nuevo_inventario.fecha_vencimiento.isoformat() if nuevo_inventario.fecha_vencimiento else None
+                }
+            )
+            
             await self._notificar_actualizacion_a_productos()
             return nuevo_inventario.to_dict()
         except IntegrityError as ie:
@@ -334,6 +351,23 @@ class InventarioService:
                 })
             
             self.db.commit()
+            
+            # Publicar evento a auditoría
+            await self._publicar_evento_inventario(
+                operation="DISMINUIR",
+                inventario_id=str(lotes_disponibles[0].id) if lotes_disponibles else None,
+                producto_id=str(producto_id),
+                datos={
+                    "cantidad_disminuida": cantidad_a_disminuir,
+                    "stock_restante": total_stock_disponible - cantidad_a_disminuir,
+                    "lotes_afectados": len(lotes_afectados_info)
+                },
+                cambios={
+                    "cantidad_anterior": total_stock_disponible,
+                    "cantidad_nueva": total_stock_disponible - cantidad_a_disminuir
+                }
+            )
+            
             await self._notificar_actualizacion_a_productos()
 
             logger.info(f"Stock disminuido exitosamente para {producto_id}. Cantidad: {cantidad_a_disminuir}")
@@ -362,6 +396,53 @@ class InventarioService:
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 detail="Error interno al editar el registro de inventario."
             )
+
+    async def _publicar_evento_inventario(
+        self,
+        operation: str,
+        inventario_id: Optional[str] = None,
+        producto_id: Optional[str] = None,
+        usuario_id: Optional[str] = None,
+        ip_origen: Optional[str] = None,
+        datos: Optional[Dict[str, Any]] = None,
+        cambios: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Publica un evento de inventario a Pub/Sub para ser procesado por auditoría.
+        
+        Args:
+            operation: Tipo de operación (CREAR, MODIFICAR, ELIMINAR, DISMINUIR)
+            inventario_id: UUID del registro de inventario
+            producto_id: UUID del producto
+            usuario_id: UUID del usuario que realizó la operación
+            ip_origen: IP desde donde se realizó la operación
+            datos: Datos relevantes de la operación
+            cambios: Cambios realizados (antes/después)
+        """
+        try:
+            evento = {
+                "event_type": "inventory_operation",
+                "operation": operation,
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "inventario_id": inventario_id,
+                "producto_id": producto_id,
+                "usuario_id": usuario_id,
+                "ip_origen": ip_origen,
+                "datos": datos or {},
+                "cambios": cambios
+            }
+            
+            success = self.pubsub_service.publish_event(evento)
+            
+            if success:
+                logger.info(f"Evento de inventario publicado: {operation} - {inventario_id}")
+            else:
+                logger.warning(f"No se pudo publicar evento de inventario: {operation}")
+                
+        except Exception as e:
+            # No lanzar excepción para que no afecte la operación principal
+            logger.error(f"Error publicando evento de inventario: {e}", exc_info=True)
+
 
 def get_inventario_service(db: Session = Depends(get_db)) -> InventarioService:
     """

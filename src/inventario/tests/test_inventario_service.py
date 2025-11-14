@@ -24,12 +24,21 @@ class TestInventarioService:
     def service(self, mock_db: Mock):
         """
         Fixture del servicio. Solo necesita la BBDD mockeada.
-        Parcheamos 'get_redis_client' que es llamado DENTRO del __init__.
+        Parcheamos 'get_redis_client' y 'get_pubsub_service' que son llamados DENTRO del __init__.
         """
-        with patch('services.inventario_service.get_redis_client') as mock_get_redis:
+        with patch('services.inventario_service.get_redis_client') as mock_get_redis, \
+             patch('services.inventario_service.get_pubsub_service') as mock_get_pubsub:
+            
+            # Mock Redis
             mock_redis = Mock()
             mock_redis.client = Mock()
             mock_get_redis.return_value = mock_redis
+            
+            # Mock PubSub
+            mock_pubsub = Mock()
+            mock_pubsub.publish_event = Mock(return_value=True)
+            mock_get_pubsub.return_value = mock_pubsub
+            
             service_instance = InventarioService(db=mock_db)
             yield service_instance 
 

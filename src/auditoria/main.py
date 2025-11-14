@@ -1,7 +1,15 @@
 from fastapi import FastAPI, Depends, HTTPException
 from services.health_service import HealthService, get_health_service
+from router.auditoria_router import auditoria_router
 
-app = FastAPI()
+app = FastAPI(
+    title="Auditoría Service API",
+    description="Servicio de auditoría y detección de patrones sospechosos en inventario",
+    version="1.0.0"
+)
+
+# Incluir routers
+app.include_router(auditoria_router, prefix="/api/auditoria", tags=["Auditoría"])
 
 
 @app.get("/health")
