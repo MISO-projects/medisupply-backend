@@ -67,16 +67,15 @@ class VisitaService:
         Llama al servicio de Órdenes para obtener el Top 5 de productos.
         Usa el endpoint público (pasando client_id como query param).
         """
-        # Este es el endpoint que acabas de crear en el router de órdenes
         endpoint_url = f"{self.ordenes_service_url}/orders/client-top-products"
-        params = {"client_id": cliente_id, "limit": 5} # Traemos el Top 5
+        params = {"client_id": cliente_id, "limit": 5} 
 
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(endpoint_url, params=params)
             
             if response.status_code == HTTPStatus.OK:
-                return response.json().get("data", []) # Devuelve la lista "data"
+                return response.json().get("data", []) 
             else:
                 logger.error(f"Error del servicio de órdenes ({endpoint_url}): {response.status_code} - {response.text}")
                 return []
