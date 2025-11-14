@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi import Depends, HTTPException
 from http import HTTPStatus
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta 
 import logging
 import httpx 
 import os
@@ -98,10 +98,17 @@ class VisitaService:
 
         try:
             hoy = datetime.now(timezone.utc)
-            hora_aleatoria = random.randint(8, 17)
+            dia_semana = hoy.weekday()
+            dias_a_sumar = 0
+            if dia_semana == 6:
+                dias_a_sumar = 1
+            
+            fecha_base = hoy + timedelta(days=dias_a_sumar)
+
+            hora_aleatoria = random.randint(8, 18)
             minuto_aleatorio = random.choice([0, 15, 30, 45])
             
-            fecha_programada = hoy.replace(
+            fecha_programada = fecha_base.replace(
                 hour=hora_aleatoria, 
                 minute=minuto_aleatorio, 
                 second=0, 
@@ -307,10 +314,46 @@ class VisitaService:
                 setattr(visita_db, key, value)
             
             self.db.add(visita_db)
+
+            if nuevo_estado == "CANCELADA" and estado_actual != "CANCELADA":
+                fecha_origen = visita_db.fecha_visita_programada
+                
+                if fecha_origen.tzinfo is None:
+                    fecha_origen = fecha_origen.replace(tzinfo=timezone.utc)
+
+                dia_semana = fecha_origen.weekday()
+                dias_a_sumar = 1
+
+                if dia_semana == 5:
+                    dias_a_sumar = 2
+                elif dia_semana == 6:
+                    dias_a_sumar = 1
+
+                fecha_nueva_base = fecha_origen + timedelta(days=dias_a_sumar)
+
+                hora_aleatoria = random.randint(8, 18)
+                minuto_aleatorio = random.choice([0, 15, 30, 45])
+                
+                fecha_reprogramada = fecha_nueva_base.replace(
+                    hour=hora_aleatoria, 
+                    minute=minuto_aleatorio, 
+                    second=0, 
+                    microsecond=0
+                )
+
+                nueva_visita_reprogramada = Visita(
+                    cliente_id=visita_db.cliente_id,
+                    vendedor_id=visita_db.vendedor_id,
+                    fecha_visita_programada=fecha_reprogramada,
+                    estado="PENDIENTE"
+                )
+                
+                self.db.add(nueva_visita_reprogramada)
+                logger.info(f"Visita {visita_id} cancelada. Reprogramada para: {fecha_reprogramada}")
+
             self.db.commit()
             self.db.refresh(visita_db)
 
-            logger.info(f"Visita {visita_id} actualizada. Campos: {list(update_data.keys())}")
             return await self.get_visita_detalle_por_id(visita_id)
 
         except HTTPException as he:
