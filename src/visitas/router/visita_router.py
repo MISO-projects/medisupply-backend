@@ -32,6 +32,7 @@ visita_router = APIRouter()
     Crea un registro de visita programada.
     Solo requiere el `cliente_id`.
     El `vendedor_id` se obtiene automáticamente del microservicio de Clientes.
+    La fecha se asigna a las 00:00 UTC del día hábil.
     """ 
 )
 async def crear_nueva_ruta_visita(
@@ -59,23 +60,32 @@ async def crear_nueva_ruta_visita(
 @visita_router.get(
     "/rutas-del-dia",
     response_model=List[RutaVisitaItemSchema],
-    summary="Obtener las rutas de visita para una fecha y vendedor", 
+    summary="Obtener la ruta de visitas optimizada del día", 
     description="""
-    Obtiene todas las visitas programadas para una FECHA específica (YYYY-MM-DD)
-    y un VENDEDOR específico (UUID), ordenadas por hora. 
-    La respuesta incluye detalles del cliente (nombre, dirección).
+    Obtiene todas las visitas PENDIENTES para una fecha y vendedor.
+    Si se proveen 'lat_actual' y 'lon_actual', la lista vendrá
+    optimizada por ruta (Google Maps) y el campo 'hora_de_la_cita'
+    contendrá el tiempo de viaje (ej: "15 min").
+    Si no se proveen, listará las visitas pendientes del día (sin optimizar).
     """ 
 )
 async def get_rutas_por_fecha_y_vendedor( 
     fecha: date = Query(..., description="Fecha a consultar en formato YYYY-MM-DD"),
-    vendedor_id: UUID4 = Query(..., description="ID del vendedor a consultar"), 
+    vendedor_id: UUID4 = Query(..., description="ID del vendedor a consultar"),
+    lat_actual: Optional[float] = Query(None, description="Latitud actual del vendedor para optimizar ruta"),
+    lon_actual: Optional[float] = Query(None, description="Longitud actual del vendedor para optimizar ruta"),
     service: VisitaService = Depends(get_visita_service)
 ):
     """
-    Obtiene la lista de rutas de visita para una fecha y vendedor dados.
+    Obtiene la lista de rutas de visita, optimizada si se provee ubicación.
     """
     try:
-        rutas = await service.get_rutas_por_fecha_y_vendedor(fecha, vendedor_id)
+        rutas = await service.get_rutas_por_fecha_y_vendedor(
+            fecha=fecha, 
+            vendedor_id=vendedor_id,
+            lat_actual=lat_actual,
+            lon_actual=lon_actual 
+        )
         return rutas
     except HTTPException as he:
         raise he
@@ -93,7 +103,7 @@ async def get_rutas_por_fecha_y_vendedor(
     description="""
     Obtiene toda la información almacenada de una visita,
     dado su ID. Además, enriquece la respuesta con
-    el nombre, la dirección y el contacto del cliente.
+    el nombre, dirección, notas anteriores y productos preferidos.
     """
 )
 async def get_detalle_visita(

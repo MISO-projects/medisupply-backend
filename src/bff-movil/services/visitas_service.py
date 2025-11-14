@@ -59,12 +59,14 @@ class VisitasService:
             raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 
-    async def get_rutas_del_dia(self, fecha: date, vendedor_id: UUID4) -> List[Dict[str, Any]]:
+    async def get_rutas_del_dia(self, fecha: date, vendedor_id: UUID4, lat_actual, lon_actual) -> List[Dict[str, Any]]:
         """Llama al GET /api/visitas/rutas-del-dia del microservicio."""
         try:
             params = {
                 "fecha": str(fecha),
-                "vendedor_id": str(vendedor_id)
+                "vendedor_id": str(vendedor_id),
+                "lat_actual": lat_actual,
+                "lon_actual": lon_actual
             }
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(

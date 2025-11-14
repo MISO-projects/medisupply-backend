@@ -7,7 +7,7 @@ from datetime import datetime, timezone, date, timedelta
 import logging
 import httpx 
 import os
-from sqlalchemy import func, Date, cast, desc # <-- AÑADIR 'desc'
+from sqlalchemy import func, Date, cast, desc
 import json
 import random
 import uuid 
@@ -19,7 +19,8 @@ from schemas.visita_schema import (
     RutaVisitaItemSchema, 
     VisitaDetalleResponseSchema, 
     ActualizarVisitaSchema,
-    VisitaResponseSchema
+    VisitaResponseSchema,
+    ProductoPreferidoSchema
 )
 from db.redis_client import get_redis_client
 
@@ -37,6 +38,10 @@ class VisitaService:
         self.ordenes_service_url = os.getenv(
             "ORDENES_QUERIES_SERVICE_URL","http://order-query-api:3000"
         )
+        # API Key de Google
+        self.google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY") 
+        if not self.google_maps_api_key:
+            logger.warning("GOOGLE_MAPS_API_KEY no está configurada en las variables de entorno. La optimización de ruta fallará.")
 
     async def _get_cliente_data(self, cliente_id: str) -> Dict[str, Any]:
         """
@@ -47,11 +52,7 @@ class VisitaService:
 
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.post(
-                    f"{self.clientes_service_url}/api/clientes/by-ids",
-                    json=request_body
-                )
-            
+                response = await client.post(f"{self.clientes_service_url}/api/clientes/by-ids", json=request_body)
             if response.status_code == HTTPStatus.OK:
                 data_list = response.json()
                 if not data_list:
@@ -105,9 +106,7 @@ class VisitaService:
             dias_a_sumar = 0
             if dia_semana == 6: dias_a_sumar = 1
             fecha_base = hoy + timedelta(days=dias_a_sumar)
-            hora_aleatoria = random.randint(8, 18)
-            minuto_aleatorio = random.choice([0, 15, 30, 45])
-            fecha_programada = fecha_base.replace(hour=hora_aleatoria, minute=minuto_aleatorio, second=0, microsecond=0)
+            fecha_programada = fecha_base.replace(hour=0, minute=0, second=0, microsecond=0)
             nueva_visita = Visita(cliente_id=data.cliente_id, vendedor_id=vendedor_id_uuid, fecha_visita_programada=fecha_programada)
             self.db.add(nueva_visita)
             self.db.commit()
@@ -139,43 +138,162 @@ class VisitaService:
             return []
         
         
+    # --- FUNCIÓN TOTALMENTE REEMPLAZADA ---
     async def get_rutas_por_fecha_y_vendedor(
         self, 
         fecha: date, 
-        vendedor_id: uuid.UUID  
+        vendedor_id: uuid.UUID,
+        lat_actual: Optional[float] = None,
+        lon_actual: Optional[float] = None
     ) -> List[RutaVisitaItemSchema]:
         """
-        Obtiene la lista de visitas programadas para un VENDEDOR 
-        en una FECHA específica, enriquecidas con datos del cliente 
-        y ordenadas por hora.
+        Obtiene la lista de todas las visitas del día (Pendientes, Realizadas, Canceladas).
+        Si se provee lat/lon, optimiza la ruta de las PENDIENTES y
+        devuelve el tiempo de viaje. Las otras se añaden al final.
         """
         try:
-            visitas_db = self.db.query(Visita).filter(
+            # 1. Obtener visitas PENDIENTES (para optimizar)
+            visitas_pendientes_db = self.db.query(Visita).filter(
                 func.cast(Visita.fecha_visita_programada, Date) == fecha,
-                Visita.vendedor_id == vendedor_id 
+                Visita.vendedor_id == vendedor_id,
+                Visita.estado == "PENDIENTE"
+            ).all()
+
+            # 2. Obtener visitas REALIZADAS y CANCELADAS (para el final de la lista)
+            visitas_otras_db = self.db.query(Visita).filter(
+                func.cast(Visita.fecha_visita_programada, Date) == fecha,
+                Visita.vendedor_id == vendedor_id,
+                Visita.estado.in_(['REALIZADA', 'CANCELADA'])
             ).order_by(Visita.fecha_visita_programada.asc()).all()
-            if not visitas_db: return [] 
-            cliente_ids = list(set(str(v.cliente_id) for v in visitas_db))
+
+            # 3. Obtener datos de clientes (para todas las visitas)
+            all_visitas_db = visitas_pendientes_db + visitas_otras_db
+            if not all_visitas_db:
+                return [] 
+
+            cliente_ids = list(set(str(v.cliente_id) for v in all_visitas_db))
             clientes_data_list = await self._get_clientes_batch_data(cliente_ids)
             clientes_map = {c["id"]: c for c in clientes_data_list}
+
+            # 4. Preparar datos para la lista de PENDIENTES
+            visitas_para_procesar = []
+            for v in visitas_pendientes_db:
+                cliente_info = clientes_map.get(str(v.cliente_id), {})
+                visitas_para_procesar.append({
+                    "visita_obj": v,
+                    "cliente_info": cliente_info
+                })
+
+            # 5. Lógica de Optimización (solo para PENDIENTES)
+            lista_optimizada_items = []
+            
+            if lat_actual is not None and lon_actual is not None and self.google_maps_api_key:
+                
+                origen = f"{lat_actual},{lon_actual}"
+                waypoints_coords = []
+                visitas_map = {} 
+                
+                for item in visitas_para_procesar:
+                    direccion = item["cliente_info"].get("address", "")
+                    coords = direccion.split(",")
+                    if len(coords) >= 3 and coords[0] != "NA" and coords[1] != "NA":
+                        try:
+                            float(coords[0])
+                            float(coords[1])
+                            coord_str = f"{coords[0]},{coords[1]}"
+                            waypoints_coords.append(coord_str)
+                            visitas_map[coord_str] = item
+                        except ValueError:
+                             logger.warning(f"Coordenadas inválidas para visita {item['visita_obj'].id}: {direccion}")
+                    
+                
+                if not waypoints_coords:
+                    logger.warning("Ruta del día: Hay visitas pendientes pero ninguna tiene coordenadas válidas.")
+                    lista_optimizada_items = visitas_para_procesar 
+                
+                else:
+                    async with httpx.AsyncClient(timeout=10.0) as client:
+                        params = {
+                            "origin": origen,
+                            "destination": origen,
+                            "waypoints": f"optimize:true|{'|'.join(waypoints_coords)}",
+                            "key": self.google_maps_api_key,
+                            "units": "metric"
+                        }
+                        response = await client.get("https://maps.googleapis.com/maps/api/directions/json", params=params)
+                    
+                    if response.status_code == HTTPStatus.OK:
+                        route_data = response.json()
+                        if route_data.get("routes") and route_data.get("status") == "OK":
+                            route = route_data["routes"][0]
+                            waypoint_order = route.get("waypoint_order", []) 
+                            legs = route.get("legs", []) 
+                            
+                            visitas_ordenadas = [visitas_map[waypoints_coords[i]] for i in waypoint_order]
+                            
+                            if legs:
+                                item = visitas_ordenadas[0]
+                                item["travel_time"] = legs[0].get("duration", {}).get("text", "N/A")
+                                lista_optimizada_items.append(item)
+                            
+                            for i, leg in enumerate(legs[1:], start=1):
+                                if i < len(visitas_ordenadas):
+                                    item = visitas_ordenadas[i]
+                                    item["travel_time"] = leg.get("duration", {}).get("text", "N/A")
+                                    lista_optimizada_items.append(item)
+                        else:
+                            logger.warning(f"Google Maps no pudo calcular la ruta: {route_data.get('status')}")
+                            lista_optimizada_items = visitas_para_procesar
+                    else:
+                        logger.error(f"Error de Google Maps API: {response.text}")
+                        lista_optimizada_items = visitas_para_procesar
+            else:
+                if not self.google_maps_api_key:
+                    logger.warning("No se optimizó la ruta: GOOGLE_MAPS_API_KEY no está configurada.")
+                else:
+                    logger.info("No se optimizó la ruta: Faltan lat_actual o lon_actual.")
+                lista_optimizada_items = visitas_para_procesar
+
+            # 6. Construir la respuesta final
             resultados = []
-            for visita in visitas_db:
-                cliente_id_str = str(visita.cliente_id)
-                cliente_info = clientes_map.get(cliente_id_str, {})
-                hora_formateada = visita.fecha_visita_programada.strftime("%H:%M")
-                item = RutaVisitaItemSchema(
+            
+            # 6.1. Añadir las visitas PENDIENTES (optimizadas o no)
+            for item in lista_optimizada_items:
+                visita = item["visita_obj"]
+                cliente_info = item["cliente_info"]
+                hora_o_tiempo = item.get("travel_time", "Sin calcular") 
+                
+                schema_item = RutaVisitaItemSchema(
                     id=visita.id,
                     cliente_id=visita.cliente_id,
                     nombre=cliente_info.get("nombre", "Cliente no encontrado"),
                     direccion=cliente_info.get("address", "Dirección no disponible"),
-                    hora_de_la_cita=hora_formateada,
+                    hora_de_la_cita=hora_o_tiempo,
                     estado=visita.estado
                 )
-                resultados.append(item)
+                resultados.append(schema_item)
+
+            # 6.2. Añadir las visitas REALIZADAS y CANCELADAS al final
+            for visita in visitas_otras_db:
+                cliente_info = clientes_map.get(str(visita.cliente_id), {})
+                
+                schema_item = RutaVisitaItemSchema(
+                    id=visita.id,
+                    cliente_id=visita.cliente_id,
+                    nombre=cliente_info.get("nombre", "Cliente no encontrado"),
+                    direccion=cliente_info.get("address", "Dirección no disponible"),
+                    hora_de_la_cita="N/A",
+                    estado=visita.estado
+                )
+                resultados.append(schema_item)
             return resultados
         except Exception as e:
             self.db.rollback()
-            raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Error interno al obtener las rutas de visita.")
+            logger.error(f"Error al obtener rutas por fecha y vendedor: {e}")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="Error interno al obtener las rutas de visita."
+            )
         
     async def get_visita_detalle_por_id(self, visita_id: uuid.UUID) -> VisitaDetalleResponseSchema:
         """
@@ -184,15 +302,9 @@ class VisitaService:
         las notas de visitas anteriores.
         """
         try:
-            visita_db = self.db.query(Visita).filter(
-                Visita.id == visita_id
-            ).first()
-
+            visita_db = self.db.query(Visita).filter(Visita.id == visita_id).first()
             if not visita_db:
-                raise HTTPException(
-                    status_code=HTTPStatus.NOT_FOUND,
-                    detail=f"Visita con ID {visita_id} no encontrada."
-                )
+                raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Visita con ID {visita_id} no encontrada.")
 
             cliente_id_str = str(visita_db.cliente_id)
             try:
@@ -204,16 +316,13 @@ class VisitaService:
                 direccion_cliente = "Dirección no disponible"
 
             visitas_anteriores_db = self.db.query(
-                Visita.fecha_visita_programada,
-                Visita.detalle
+                Visita.fecha_visita_programada, Visita.detalle
             ).filter(
                 Visita.cliente_id == visita_db.cliente_id, 
                 Visita.id != visita_id,                     
                 Visita.detalle.isnot(None),             
                 Visita.estado.in_(['REALIZADA', 'CANCELADA']) 
-            ).order_by(
-                desc(Visita.fecha_visita_programada)      
-            ).limit(5).all() 
+            ).order_by(desc(Visita.fecha_visita_programada)).limit(5).all() 
             
             notas_anteriores_list = [
                 {"fecha_visita_programada": v.fecha_visita_programada, "detalle": v.detalle}
@@ -221,9 +330,7 @@ class VisitaService:
             ]
 
             top_products_list = await self._get_top_products_data(cliente_id_str)
-            # -----------------------------------------------
 
-            # 4. Combinar todo
             visita_dict = visita_db.to_dict()
             visita_dict["nombre_institucion"] = nombre_cliente
             visita_dict["direccion"] = direccion_cliente
