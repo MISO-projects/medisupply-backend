@@ -34,7 +34,9 @@ class VisitaService:
         self.clientes_service_url = os.getenv(
             "CLIENTES_SERVICE_URL", "http://clientes-service:3000"
         )
-        # ---------------
+        self.ordenes_service_url = os.getenv(
+            "ORDENES_QUERIES_SERVICE_URL","http://order-query-api:3000"
+        )
 
     async def _get_cliente_data(self, cliente_id: str) -> Dict[str, Any]:
         """
@@ -60,7 +62,28 @@ class VisitaService:
         except httpx.RequestError as e:
             raise HTTPException(status_code=HTTPStatus.SERVICE_UNAVAILABLE, detail="No se pudo conectar con el servicio de clientes.")
 
+    async def _get_top_products_data(self, cliente_id: str) -> List[Dict[str, Any]]:
+        """
+        Llama al servicio de Órdenes para obtener el Top 5 de productos.
+        Usa el endpoint público (pasando client_id como query param).
+        """
+        # Este es el endpoint que acabas de crear en el router de órdenes
+        endpoint_url = f"{self.ordenes_service_url}/orders/client-top-products"
+        params = {"client_id": cliente_id, "limit": 5} # Traemos el Top 5
 
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(endpoint_url, params=params)
+            
+            if response.status_code == HTTPStatus.OK:
+                return response.json().get("data", []) # Devuelve la lista "data"
+            else:
+                logger.error(f"Error del servicio de órdenes ({endpoint_url}): {response.status_code} - {response.text}")
+                return []
+        except httpx.RequestError as e:
+            logger.error(f"Error de conexión al servicio de órdenes ({endpoint_url}): {e}")
+            return []
+        
     async def crear_ruta_visita(self, data: CrearRutaVisitaSchema) -> Dict[str, Any]:
         """
         Crea un nuevo registro de visita (ruta).
@@ -197,6 +220,8 @@ class VisitaService:
                 {"fecha_visita_programada": v.fecha_visita_programada, "detalle": v.detalle}
                 for v in visitas_anteriores_db
             ]
+
+            top_products_list = await self._get_top_products_data(cliente_id_str)
             # -----------------------------------------------
 
             # 4. Combinar todo
@@ -204,6 +229,7 @@ class VisitaService:
             visita_dict["nombre_institucion"] = nombre_cliente
             visita_dict["direccion"] = direccion_cliente
             visita_dict["notas_visitas_anteriores"] = notas_anteriores_list 
+            visita_dict["productos_preferidos"] = top_products_list
 
             return VisitaDetalleResponseSchema(**visita_dict)
 

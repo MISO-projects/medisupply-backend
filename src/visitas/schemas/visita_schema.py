@@ -25,6 +25,11 @@ class CrearRutaVisitaSchema(BaseModel):
     class Config:
         from_attributes = True
 
+class ProductoPreferidoSchema(BaseModel):
+    id_producto: str
+    nombre: str
+    cantidad_total: int
+
 
 class VisitaResponseSchema(BaseModel):
     """Esquema de respuesta para una visita creada o consultada."""
@@ -70,6 +75,10 @@ class VisitaDetalleResponseSchema(VisitaResponseSchema):
     notas_visitas_anteriores: List[NotaVisitaAnteriorSchema] = Field(
         default_factory=list, 
         description="Lista de notas de visitas pasadas del mismo cliente."
+    )
+    productos_preferidos: List[ProductoPreferidoSchema] = Field(
+        default_factory=list,
+        description="Ranking de productos más pedidos por este cliente."
     )
 
     class Config:
