@@ -41,7 +41,13 @@ class TestInventarioRouter:
         data = response.json()
         assert data["total"] == 1
         assert data["items"][0]["producto_nombre"] == "Test"
-        mock_inventory_service.listar_registros_paginados.assert_called_once_with(skip=0, limit=10)
+        mock_inventory_service.listar_registros_paginados.assert_called_once_with(
+            skip=0, 
+            limit=10,
+            text_search=None,
+            categoria=None,
+            estado=None
+        )
 
     def test_crear_registro(self, client: TestClient, mock_inventory_service: Mock):
         """Test: Endpoint POST /api/inventario/ (sync)"""

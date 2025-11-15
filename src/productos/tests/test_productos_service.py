@@ -295,3 +295,222 @@ class TestProductosService:
         assert len(resultados) >= 1
         assert any(p.id == producto.id for p in resultados)
 
+    def test_get_producto_ids_by_filters_text_search_nombre(self, test_db):
+        """Test: Buscar productos por text_search en nombre"""
+        proveedor_id = uuid4()
+        producto1 = Producto(
+            nombre="Paracetamol 500mg",
+            descripcion="Test",
+            categoria="MEDICAMENTOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=10.00,
+            disponible=True,
+            unidad_medida="UNIDAD",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test",
+            sku="SKU-001"
+        )
+        producto2 = Producto(
+            nombre="Ibuprofeno 400mg",
+            descripcion="Test",
+            categoria="MEDICAMENTOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=15.00,
+            disponible=True,
+            unidad_medida="UNIDAD",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test",
+            sku="SKU-002"
+        )
+        test_db.add(producto1)
+        test_db.add(producto2)
+        test_db.commit()
+        test_db.refresh(producto1)
+        test_db.refresh(producto2)
+        
+        service = ProductosService(test_db)
+        resultado = service.get_producto_ids_by_filters(text_search="Paracetamol")
+        
+        assert len(resultado) == 1
+        assert str(producto1.id) in resultado
+        assert str(producto2.id) not in resultado
+
+    def test_get_producto_ids_by_filters_text_search_sku(self, test_db):
+        """Test: Buscar productos por text_search en SKU"""
+        proveedor_id = uuid4()
+        producto1 = Producto(
+            nombre="Producto Test",
+            descripcion="Test",
+            categoria="MEDICAMENTOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=10.00,
+            disponible=True,
+            unidad_medida="UNIDAD",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test",
+            sku="PRD-20250101-ABC12"
+        )
+        producto2 = Producto(
+            nombre="Otro Producto",
+            descripcion="Test",
+            categoria="MEDICAMENTOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=15.00,
+            disponible=True,
+            unidad_medida="UNIDAD",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test",
+            sku="PRD-20250101-XYZ99"
+        )
+        test_db.add(producto1)
+        test_db.add(producto2)
+        test_db.commit()
+        test_db.refresh(producto1)
+        test_db.refresh(producto2)
+        
+        service = ProductosService(test_db)
+        resultado = service.get_producto_ids_by_filters(text_search="ABC12")
+        
+        assert len(resultado) == 1
+        assert str(producto1.id) in resultado
+        assert str(producto2.id) not in resultado
+
+    def test_get_producto_ids_by_filters_text_search_nombre_or_sku(self, test_db):
+        """Test: Buscar productos por text_search que coincida con nombre o SKU"""
+        proveedor_id = uuid4()
+        producto1 = Producto(
+            nombre="Paracetamol",
+            descripcion="Test",
+            categoria="MEDICAMENTOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=10.00,
+            disponible=True,
+            unidad_medida="UNIDAD",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test",
+            sku="SKU-001"
+        )
+        producto2 = Producto(
+            nombre="Ibuprofeno",
+            descripcion="Test",
+            categoria="MEDICAMENTOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=15.00,
+            disponible=True,
+            unidad_medida="UNIDAD",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test",
+            sku="PARA-001"  # SKU contiene "PARA" que también está en "Paracetamol"
+        )
+        test_db.add(producto1)
+        test_db.add(producto2)
+        test_db.commit()
+        test_db.refresh(producto1)
+        test_db.refresh(producto2)
+        
+        service = ProductosService(test_db)
+        resultado = service.get_producto_ids_by_filters(text_search="PARA")
+        
+        # Debe encontrar ambos: uno por nombre (Paracetamol) y otro por SKU (PARA-001)
+        assert len(resultado) == 2
+        assert str(producto1.id) in resultado
+        assert str(producto2.id) in resultado
+
+    def test_get_producto_ids_by_filters_text_search_with_categoria(self, test_db):
+        """Test: Buscar productos por text_search y categoria"""
+        proveedor_id = uuid4()
+        producto1 = Producto(
+            nombre="Paracetamol",
+            descripcion="Test",
+            categoria="MEDICAMENTOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=10.00,
+            disponible=True,
+            unidad_medida="UNIDAD",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test",
+            sku="SKU-001"
+        )
+        producto2 = Producto(
+            nombre="Paracetamol",
+            descripcion="Test",
+            categoria="INSUMOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=15.00,
+            disponible=True,
+            unidad_medida="UNIDAD",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test",
+            sku="SKU-002"
+        )
+        test_db.add(producto1)
+        test_db.add(producto2)
+        test_db.commit()
+        test_db.refresh(producto1)
+        test_db.refresh(producto2)
+        
+        service = ProductosService(test_db)
+        resultado = service.get_producto_ids_by_filters(text_search="Paracetamol", categoria="MEDICAMENTOS")
+        
+        assert len(resultado) == 1
+        assert str(producto1.id) in resultado
+        assert str(producto2.id) not in resultado
+
+    def test_get_producto_ids_by_filters_text_search_no_results(self, test_db):
+        """Test: Buscar productos por text_search sin resultados"""
+        proveedor_id = uuid4()
+        producto = Producto(
+            nombre="Paracetamol",
+            descripcion="Test",
+            categoria="MEDICAMENTOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=10.00,
+            disponible=True,
+            unidad_medida="UNIDAD",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test",
+            sku="SKU-001"
+        )
+        test_db.add(producto)
+        test_db.commit()
+        
+        service = ProductosService(test_db)
+        resultado = service.get_producto_ids_by_filters(text_search="Inexistente")
+        
+        assert len(resultado) == 0
+
+    def test_get_producto_ids_by_filters_text_search_case_insensitive(self, test_db):
+        """Test: text_search es case-insensitive"""
+        proveedor_id = uuid4()
+        producto = Producto(
+            nombre="Paracetamol",
+            descripcion="Test",
+            categoria="MEDICAMENTOS",
+            imagen_url="http://test.com/img.jpg",
+            precio_unitario=10.00,
+            disponible=True,
+            unidad_medida="UNIDAD",
+            tipo_almacenamiento="AMBIENTE",
+            proveedor_id=proveedor_id,
+            proveedor_nombre="Proveedor Test",
+            sku="SKU-001"
+        )
+        test_db.add(producto)
+        test_db.commit()
+        test_db.refresh(producto)
+        
+        service = ProductosService(test_db)
+        resultado = service.get_producto_ids_by_filters(text_search="paracetamol")
+        
+        assert len(resultado) == 1
+        assert str(producto.id) in resultado
+

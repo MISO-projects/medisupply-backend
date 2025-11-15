@@ -9,6 +9,7 @@ import httpx
 import os
 from sqlalchemy import func, and_, or_, nullslast
 import json
+from uuid import UUID
 
 from db.database import get_db
 from db.inventario_model import Inventario
@@ -31,52 +32,56 @@ class InventarioService:
         )
 
     
-    # def _get_cache(self, key: str) -> Optional[Any]:
-    #     """Get data from cache"""
-    #     try:
-    #         if self.redis_client is None:
-    #             return None
-    #         cached_data = self.redis_client.get(key)
-    #         if cached_data:
-    #             return json.loads(cached_data)
-    #         return None
-    #     except Exception as e:
-    #         logger.warning(f"Error getting cache for key {key}: {e}")
-    #         return None
+    def _get_cache(self, key: str) -> Optional[Any]:
+        """Get data from cache"""
+        try:
+            if self.redis_client is None:
+                return None
+            cached_data = self.redis_client.get(key)
+            if cached_data:
+                return json.loads(cached_data)
+            return None
+        except Exception as e:
+            logger.warning(f"Error getting cache for key {key}: {e}")
+            return None
 
-    # def _set_cache(self, key: str, value: Any, ttl: int) -> None:
-    #     """Set data in cache"""
-    #     try:
-    #         if self.redis_client is None:
-    #             return
-    #         self.redis_client.setex(key, ttl, json.dumps(value))
-    #     except Exception as e:
-    #         logger.warning(f"Error setting cache for key {key}: {e}")
+    def _set_cache(self, key: str, value: Any, ttl: int) -> None:
+        """Set data in cache"""
+        try:
+            if self.redis_client is None:
+                return
+            self.redis_client.setex(key, ttl, json.dumps(value, default=str))
+        except Exception as e:
+            logger.warning(f"Error setting cache for key {key}: {e}")
 
-    # def _delete_cache(self, pattern: str) -> None:
-    #     """Delete cache keys matching pattern"""
-    #     try:
-    #         if self.redis_client is None:
-    #             return
-    #         keys = self.redis_client.keys(pattern)
-    #         if keys:
-    #             self.redis_client.delete(*keys)
-    #     except Exception as e:
-    #         logger.warning(f"Error deleting cache for pattern {pattern}: {e}")
+    def _delete_cache(self, pattern: str) -> None:
+        """Delete cache keys matching pattern"""
+        try:
+            if self.redis_client is None:
+                return
+            keys = self.redis_client.keys(pattern)
+            if keys:
+                self.redis_client.delete(*keys)
+        except Exception as e:
+            logger.warning(f"Error deleting cache for pattern {pattern}: {e}")
 
-    # def _invalidate_inventario_caches(self, inventario_id: Optional[str] = None) -> None:
-    #     """Invalidate all inventario-related caches"""
-    #     try:
-    #         if inventario_id:
-    #             self._delete_cache(f"inventario:{inventario_id}")
-    #         # Invalidate list and count caches
-    #         self._delete_cache("inventarioes:list:*")
-    #         self._delete_cache("inventarioes:count:*")
-    #     except Exception as e:
-    #         logger.warning(f"Error invalidating caches: {e}")
+    def _invalidate_inventario_caches(self, inventario_id: Optional[str] = None) -> None:
+        """Invalidate all inventario-related caches"""
+        try:
+            if inventario_id:
+                self._delete_cache(f"inventario:{inventario_id}")
+            # Invalidate list and count caches
+            self._delete_cache("inventario:list:*")
+            self._delete_cache("inventario:count:*")
+        except Exception as e:
+            logger.warning(f"Error invalidating caches: {e}")
 
     async def _get_detalles_productos(self, producto_ids: List[str]) -> Dict[str, Any]:
-        """Obtiene detalles (nombre, SKU) para una lista de IDs de productos."""
+        """
+        Obtiene detalles de productos para una lista de IDs.
+        Retorna un diccionario con campos como: nombre, sku, categoria, unidad_medida,
+        tipo_almacenamiento, precio_unitario, descripcion, imagen_url.
+        """
         if not producto_ids:
             return {}
         
@@ -100,6 +105,42 @@ class InventarioService:
         except httpx.RequestError as e:
             logger.error(f"Error de conexión al servicio de productos: {e}")
             return {}
+
+    async def _get_producto_ids_by_filters(
+        self, 
+        text_search: Optional[str] = None,
+        categoria: Optional[str] = None
+    ) -> List[str]:
+        """
+        Obtiene IDs de productos que coinciden con los filtros proporcionados
+        llamando al servicio de productos.
+        """
+        # Si no hay filtros de producto, retornar lista vacía (significa que no se filtra por producto)
+        if not text_search and not categoria:
+            return []
+        
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    f"{self.productos_service_url}/api/productos/filter-ids",
+                    json={
+                        "text_search": text_search,
+                        "categoria": categoria
+                    }
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    producto_ids = data.get("producto_ids", [])
+                    logger.info(f"Se obtuvieron {len(producto_ids)} IDs de productos que coinciden con los filtros")
+                    return producto_ids
+                else:
+                    logger.error(f"Error al obtener IDs de productos por filtros: {response.status_code} - {response.text}")
+                    return []
+                    
+        except httpx.RequestError as e:
+            logger.error(f"Error de conexión al servicio de productos para filtros: {e}")
+            return []
 
 
     async def crear_registro_inventario(self, inventario_data: CrearRegistroInventarioSchema) -> Dict[str, Any]:
@@ -130,6 +171,7 @@ class InventarioService:
             self.db.add(nuevo_inventario)
             self.db.commit()
             self.db.refresh(nuevo_inventario)
+            self._invalidate_inventario_caches()
             await self._notificar_actualizacion_a_productos()
             return nuevo_inventario.to_dict()
         except IntegrityError as ie:
@@ -147,15 +189,79 @@ class InventarioService:
                 detail="Error interno al crear el registro de inventario."
             )
 
-    async def listar_registros_paginados(self, skip: int, limit: int) -> tuple[List[Dict[str, Any]], int]:
+    async def listar_registros_paginados(
+        self, 
+        skip: int, 
+        limit: int,
+        text_search: Optional[str] = None,
+        categoria: Optional[str] = None,
+        estado: Optional[str] = None
+    ) -> tuple[List[Dict[str, Any]], int]:
         """
-        Obtiene una lista paginada de todos los registros de inventario,
-        enriquecida con nombre y SKU del servicio de productos.
+        Obtiene una lista paginada de registros de inventario con filtros opcionales.
+        Siempre enriquece los registros con nombre y SKU del producto.
+        
+        Args:
+            text_search: Busca en producto nombre, producto sku, o inventario ubicacion
+            categoria: Filtra productos por categoría
+            estado: Filtra inventario por estado
         """
         try:
+            # Generar clave de caché basada en los filtros
+            cache_key = f"inventario:list:{text_search or 'all'}:{categoria or 'all'}:{estado or 'all'}:{skip}:{limit}"
+            cached_data = self._get_cache(cache_key)
+            
+            if cached_data is not None:
+                logger.debug(f"Cache hit for inventario list")
+                return cached_data.get('items', []), cached_data.get('total', 0)
+            
+            logger.debug(f"Cache miss for inventario list")
+            
             query = self.db.query(Inventario)
+            
+            # Aplicar filtros de producto: obtener IDs de productos que coinciden
+            producto_ids_filtrados = []
+            if text_search or categoria:
+                producto_ids_filtrados = await self._get_producto_ids_by_filters(
+                    text_search=text_search,
+                    categoria=categoria
+                )
+            
+            # Aplicar filtros combinados: producto_id OR ubicacion (si text_search)
+            if text_search:
+                filters_list = []
+                
+                # Si hay productos que coinciden, agregar filtro por producto_id
+                if producto_ids_filtrados:
+                    producto_uuids = [UUID(pid) for pid in producto_ids_filtrados]
+                    filters_list.append(Inventario.producto_id.in_(producto_uuids))
+                
+                # Agregar filtro por ubicacion
+                filters_list.append(Inventario.ubicacion.ilike(f"%{text_search}%"))
+                
+                # Aplicar OR entre producto_id y ubicacion
+                # Si solo hay un filtro, aplicarlo directamente; si hay múltiples, usar or_()
+                if len(filters_list) == 1:
+                    query = query.filter(filters_list[0])
+                elif len(filters_list) > 1:
+                    query = query.filter(or_(*filters_list))
+            elif categoria:
+                # Solo filtro por categoria (sin text_search)
+                if producto_ids_filtrados:
+                    producto_uuids = [UUID(pid) for pid in producto_ids_filtrados]
+                    query = query.filter(Inventario.producto_id.in_(producto_uuids))
+                else:
+                    # Si categoria no encontró productos, retornar vacío
+                    return [], 0
+            
+            # Aplicar filtros de inventario
+            if estado:
+                query = query.filter(Inventario.estado == estado)
+            
+            # Contar total después de aplicar filtros
             total = query.count()
             
+            # Aplicar ordenamiento y paginación
             registros_db = query.order_by(Inventario.fecha_recepcion.desc()) \
                                 .offset(skip).limit(limit).all()
 
@@ -170,7 +276,22 @@ class InventarioService:
                 detalles = detalles_map.get(str(registro.producto_id), {})
                 registro_dict["producto_nombre"] = detalles.get("nombre", "Producto no encontrado")
                 registro_dict["producto_sku"] = detalles.get("sku", "N/A")
+                registro_dict["producto_categoria"] = detalles.get("categoria")
+                registro_dict["producto_unidad_medida"] = detalles.get("unidad_medida")
+                registro_dict["producto_tipo_almacenamiento"] = detalles.get("tipo_almacenamiento")
+                registro_dict["producto_precio_unitario"] = detalles.get("precio_unitario")
+                registro_dict["producto_descripcion"] = detalles.get("descripcion")
+                registro_dict["producto_imagen_url"] = detalles.get("imagen_url")
+                
                 items_enriquecidos.append(registro_dict)
+            
+            # Guardar en caché
+            cache_data = {
+                'items': items_enriquecidos,
+                'total': total
+            }
+            self._set_cache(cache_key, cache_data, self.CACHE_TTL_LIST)
+            
             return items_enriquecidos, total
 
         except Exception as e:
@@ -334,6 +455,7 @@ class InventarioService:
                 })
             
             self.db.commit()
+            self._invalidate_inventario_caches()
             await self._notificar_actualizacion_a_productos()
 
             logger.info(f"Stock disminuido exitosamente para {producto_id}. Cantidad: {cantidad_a_disminuir}")
