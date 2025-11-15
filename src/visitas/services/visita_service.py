@@ -153,33 +153,83 @@ class VisitaService:
         
 
     async def crear_ruta_visita(self, data: CrearRutaVisitaSchema) -> Dict[str, Any]:
+        """
+        Crea un nuevo registro de visita (ruta).
+        1. Valida el cliente_id.
+        2. Extrae el vendedor_id.
+        3. Asigna la fecha: usa la fecha provista o calcula la de hoy/próximo día hábil.
+        """
+        
         cliente_data = await self._get_cliente_data(str(data.cliente_id))
+        
         vendedor_id_str = cliente_data.get("id_vendedor")
+        
         if not vendedor_id_str:
-            raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"El cliente {data.cliente_id} no tiene un vendedor asignado.")
+            raise HTTPException(
+                status_code=HTTPStatus.BAD_REQUEST,
+                detail=f"El cliente {data.cliente_id} no tiene un vendedor asignado."
+            )
+        
         try:
             vendedor_id_uuid = uuid.UUID(vendedor_id_str)
         except ValueError:
-            raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="El ID del vendedor recibido del servicio de clientes no es válido.")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="El ID del vendedor recibido del servicio de clientes no es válido."
+            )
+
         try:
-            hoy = datetime.now(timezone.utc)
-            dia_semana = hoy.weekday()
-            dias_a_sumar = 0
-            if dia_semana == 6: dias_a_sumar = 1
-            fecha_base = hoy + timedelta(days=dias_a_sumar)
-            fecha_programada = fecha_base.replace(hour=0, minute=0, second=0, microsecond=0)
-            nueva_visita = Visita(cliente_id=data.cliente_id, vendedor_id=vendedor_id_uuid, fecha_visita_programada=fecha_programada)
+            if data.fecha_visita_programada:
+                fecha_programada = datetime.combine(
+                    data.fecha_visita_programada, 
+                    datetime.min.time()
+                ).replace(tzinfo=timezone.utc)
+                
+                logger.info(f"Creando visita con fecha proporcionada: {fecha_programada}")
+
+            else:
+                hoy = datetime.now(timezone.utc)
+                dia_semana = hoy.weekday() 
+                dias_a_sumar = 0
+                if dia_semana == 6:
+                    dias_a_sumar = 1 
+                
+                fecha_base = hoy + timedelta(days=dias_a_sumar)
+
+                fecha_programada = fecha_base.replace(
+                    hour=0, 
+                    minute=0, 
+                    second=0, 
+                    microsecond=0
+                )
+                logger.info(f"Creando visita con fecha calculada (hoy/próx. día hábil): {fecha_programada}")
+
+            nueva_visita = Visita(
+                cliente_id=data.cliente_id,
+                vendedor_id=vendedor_id_uuid, 
+                fecha_visita_programada=fecha_programada
+            )
+            
             self.db.add(nueva_visita)
             self.db.commit()
             self.db.refresh(nueva_visita)
+            
             logger.info(f"Nueva ruta de visita creada con ID: {nueva_visita.id}")
             return nueva_visita.to_dict()
+            
         except IntegrityError as ie:
             self.db.rollback()
-            raise HTTPException(status_code=HTTPStatus.CONFLICT, detail="Error de integridad. Verifique los IDs.")
+            raise HTTPException(
+                status_code=HTTPStatus.CONFLICT,
+                detail="Error de integridad. Verifique los IDs."
+            )
         except Exception as e:
             self.db.rollback()
-            raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Error interno al crear la ruta de visita.")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="Error interno al crear la ruta de visita."
+            )
+        
         
     async def _get_clientes_batch_data(self, cliente_ids: List[str]) -> List[Dict[str, Any]]:
         """

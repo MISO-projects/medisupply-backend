@@ -44,7 +44,7 @@ class VisitasService:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
                     f"{self.base_url}/api/visitas/",
-                    json=data.model_dump(mode='json') # Pydantic v2
+                    json=data.model_dump(mode='json')
                 )
                 response.raise_for_status()
                 return response.json()

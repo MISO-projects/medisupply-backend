@@ -21,6 +21,10 @@ class NotaVisitaAnteriorSchema(BaseModel):
 class CrearRutaVisitaSchema(BaseModel):
     """Esquema de datos requeridos para crear una nueva ruta de visita."""
     cliente_id: UUID4 = Field(..., description="UUID del cliente a visitar.")
+    fecha_visita_programada: Optional[date] = Field(
+        None, 
+        description="Fecha opcional para la visita (YYYY-MM-DD). Si es None, se usa la lógica de hoy/próximo día hábil."
+    )
 
     class Config:
         from_attributes = True
