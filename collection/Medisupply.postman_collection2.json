@@ -396,6 +396,75 @@
 								}
 							},
 							"response": []
+						},
+						{
+							"name": "reporte vendedores",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// Genera fechas para el reporte",
+											"var today = new Date();",
+											"var startDate = new Date(today);",
+											"startDate.setMonth(today.getMonth() - 1);",
+											"",
+											"// Formatear las fechas como ISO 8601",
+											"var fechaInicio = startDate.toISOString();",
+											"var fechaFin = today.toISOString();",
+											"",
+											"pm.environment.set(\"fecha_inicio_reporte\", fechaInicio);",
+											"pm.environment.set(\"fecha_fin_reporte\", fechaFin);"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"followRedirects": true,
+								"disableUrlEncoding": false,
+								"disableCookies": false
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "User-Agent",
+										"value": "insomnia/11.6.1"
+									}
+								],
+								"url": {
+									"raw": "{{ _.bff_web_url }}/reportes/vendedores?fecha_inicio={{fecha_inicio_reporte}}&fecha_fin={{fecha_fin_reporte}}",
+									"host": [
+										"{{ _.bff_web_url }}"
+									],
+									"path": [
+										"reportes",
+										"vendedores"
+									],
+									"query": [
+										{
+											"key": "fecha_inicio",
+											"value": "{{fecha_inicio_reporte}}",
+											"description": "Fecha de inicio del periodo del reporte"
+										},
+										{
+											"key": "fecha_fin",
+											"value": "{{fecha_fin_reporte}}",
+											"description": "Fecha de fin del periodo del reporte"
+										},
+										{
+											"key": "zona_asignada",
+											"value": "",
+											"description": "Filtrar por zona asignada (opcional)",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
 						}
 					]
 				},
