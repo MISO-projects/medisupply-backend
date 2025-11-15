@@ -38,10 +38,13 @@ class VisitaService:
         self.ordenes_service_url = os.getenv(
             "ORDENES_QUERIES_SERVICE_URL","http://order-query-api:3000"
         )
-        # API Key de Google
-        self.google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY") 
+        self.google_maps_api_key = 'AIzaSyDb6LS5PiW2HmwoCmwDN2BTjoaxGiB9EGU'
         if not self.google_maps_api_key:
             logger.warning("GOOGLE_MAPS_API_KEY no está configurada en las variables de entorno. La optimización de ruta fallará.")
+
+        self.auth_service_url = os.getenv(
+            "AUTH_SERVICE_URL", "http://autenticacion-service:3000" 
+        )
 
     async def _get_cliente_data(self, cliente_id: str) -> Dict[str, Any]:
         """
@@ -83,15 +86,73 @@ class VisitaService:
         except httpx.RequestError as e:
             logger.error(f"Error de conexión al servicio de órdenes ({endpoint_url}): {e}")
             return []
-        
-    async def crear_ruta_visita(self, data: CrearRutaVisitaSchema) -> Dict[str, Any]:
-        """
-        Crea un nuevo registro de visita (ruta).
-        1. Valida el cliente_id llamando al servicio de Clientes.
-        2. Extrae el vendedor_id de la respuesta del cliente.
-        3. Genera una fecha de visita programada aleatoria para hoy.
-        """
 
+
+    async def _get_single_route_travel_time(
+        self, 
+        origin_coords: str, 
+        destination_coords: str
+    ) -> Optional[str]:
+        """
+        Llama a Google Maps Directions API para obtener el tiempo de viaje
+        de un solo tramo (Punto A a Punto B).
+        """
+        if not self.google_maps_api_key:
+            logger.warning("No se puede calcular tiempo de viaje: GOOGLE_MAPS_API_KEY no está configurada.")
+            return None
+            
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                params = {
+                    "origin": origin_coords,
+                    "destination": destination_coords,
+                    "key": self.google_maps_api_key,
+                    "units": "metric"
+                }
+                response = await client.get("https://maps.googleapis.com/maps/api/directions/json", params=params)
+            
+            if response.status_code == HTTPStatus.OK:
+                route_data = response.json()
+                if route_data.get("routes") and route_data.get("status") == "OK":
+                    leg = route_data["routes"][0].get("legs", [{}])[0]
+                    travel_time = leg.get("duration", {}).get("text", None)
+                    return travel_time
+                else:
+                    logger.warning(f"Google Maps no pudo calcular la ruta A->B: {route_data.get('status')}")
+                    return None
+            else:
+                logger.error(f"Error de Google Maps API (ruta A->B): {response.text}")
+                return None
+        except Exception as e:
+            logger.error(f"Error de httpx al llamar a Google Maps (ruta A->B): {e}")
+            return None
+        
+    async def _get_user_contact_for_client(self, cliente_id: str) -> Optional[str]:
+        """
+        Llama al servicio de Usuarios para obtener el 'username'
+        asociado a un 'id_client'.
+        """
+        endpoint_url = f"{self.auth_service_url}/auth/user-by-client/{cliente_id}"
+        
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(endpoint_url)
+            
+            if response.status_code == HTTPStatus.OK:
+                user_data = response.json()
+                return user_data.get("username") 
+            elif response.status_code == HTTPStatus.NOT_FOUND:
+                logger.warning(f"No se encontró usuario para el cliente {cliente_id} en {endpoint_url}")
+                return None
+            else:
+                logger.error(f"Error del servicio de usuarios ({endpoint_url}): {response.status_code} - {response.text}")
+                return None
+        except httpx.RequestError as e:
+            logger.error(f"Error de conexión al servicio de usuarios ({endpoint_url}): {e}")
+            return None
+        
+
+    async def crear_ruta_visita(self, data: CrearRutaVisitaSchema) -> Dict[str, Any]:
         cliente_data = await self._get_cliente_data(str(data.cliente_id))
         vendedor_id_str = cliente_data.get("id_vendedor")
         if not vendedor_id_str:
@@ -138,7 +199,6 @@ class VisitaService:
             return []
         
         
-    # --- FUNCIÓN TOTALMENTE REEMPLAZADA ---
     async def get_rutas_por_fecha_y_vendedor(
         self, 
         fecha: date, 
@@ -295,11 +355,16 @@ class VisitaService:
                 detail="Error interno al obtener las rutas de visita."
             )
         
-    async def get_visita_detalle_por_id(self, visita_id: uuid.UUID) -> VisitaDetalleResponseSchema:
+    async def get_visita_detalle_por_id(
+        self, 
+        visita_id: uuid.UUID,
+        lat_actual: Optional[float] = None, 
+        lon_actual: Optional[float] = None  
+    ) -> VisitaDetalleResponseSchema:
         """
         Obtiene todos los detalles de una visita específica,
-        enriquecidos con datos del cliente (nombre, dirección) Y
-        las notas de visitas anteriores.
+        enriquecidos con datos del cliente Y notas Y productos preferidos
+        Y el tiempo de viaje si se provee ubicación.
         """
         try:
             visita_db = self.db.query(Visita).filter(Visita.id == visita_id).first()
@@ -330,12 +395,29 @@ class VisitaService:
             ]
 
             top_products_list = await self._get_top_products_data(cliente_id_str)
+            nombre_contacto = await self._get_user_contact_for_client(cliente_id_str)
 
+            tiempo_desplazamiento = None
+            if lat_actual is not None and lon_actual is not None and direccion_cliente:
+                coords = direccion_cliente.split(",")
+                if len(coords) >= 3 and coords[0] != "NA" and coords[1] != "NA":
+                    try:
+                        float(coords[0])
+                        float(coords[1])
+                        origen = f"{lat_actual},{lon_actual}"
+                        destino = f"{coords[0]},{coords[1]}"
+                        
+                        tiempo_desplazamiento = await self._get_single_route_travel_time(origen, destino)
+                        
+                    except (ValueError, TypeError):
+                            logger.warning(f"No se pudo calcular tiempo de viaje para visita {visita_id}: coordenadas inválidas.")
             visita_dict = visita_db.to_dict()
             visita_dict["nombre_institucion"] = nombre_cliente
             visita_dict["direccion"] = direccion_cliente
             visita_dict["notas_visitas_anteriores"] = notas_anteriores_list 
             visita_dict["productos_preferidos"] = top_products_list
+            visita_dict["tiempo_desplazamiento"] = tiempo_desplazamiento 
+            visita_dict["cliente_contacto"] = nombre_contacto
 
             return VisitaDetalleResponseSchema(**visita_dict)
 

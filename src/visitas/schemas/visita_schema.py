@@ -72,6 +72,7 @@ class VisitaDetalleResponseSchema(VisitaResponseSchema):
     """
     nombre_institucion: str = Field(..., description="Nombre del cliente institucional")
     direccion: Optional[str] = Field(None, description="Dirección del cliente")
+    cliente_contacto: Optional[str] = Field(None, description="Nombre del contacto en el cliente")
     notas_visitas_anteriores: List[NotaVisitaAnteriorSchema] = Field(
         default_factory=list, 
         description="Lista de notas de visitas pasadas del mismo cliente."
@@ -79,6 +80,10 @@ class VisitaDetalleResponseSchema(VisitaResponseSchema):
     productos_preferidos: List[ProductoPreferidoSchema] = Field(
         default_factory=list,
         description="Ranking de productos más pedidos por este cliente."
+    )
+    tiempo_desplazamiento: Optional[str] = Field(
+        None, 
+        description="Tiempo de viaje estimado desde la ubicación actual del vendedor (ej: '15 min')."
     )
 
     class Config:

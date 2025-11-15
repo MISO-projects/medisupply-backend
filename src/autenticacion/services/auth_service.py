@@ -274,6 +274,27 @@ class AuthService:
         """
         sellers = db.query(User.id).filter(User.role == "seller", User.is_active == True).all()
         return [s.id for s in sellers]
+    
+    def get_user_by_client_id(self, db: Session, client_id: str) -> UserResponse:
+        """
+        Busca un usuario por su 'id_client' asociado.
+        """
+        user = db.query(User).filter(User.id_client == client_id).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No se encontró un usuario asociado al id_client {client_id}"
+            )
+        
+        if not user.is_active:
+             raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="El usuario asociado a este cliente está inactivo"
+            )
+
+        user_dict = user.to_dict()
+        return UserResponse(**user_dict)
 
 
 

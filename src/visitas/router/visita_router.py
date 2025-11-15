@@ -108,13 +108,15 @@ async def get_rutas_por_fecha_y_vendedor(
 )
 async def get_detalle_visita(
     visita_id: UUID4 = Path(..., description="ID de la visita a consultar"), 
+    lat_actual: Optional[float] = Query(None, description="Latitud actual del vendedor"),
+    lon_actual: Optional[float] = Query(None, description="Longitud actual del vendedor"),
     service: VisitaService = Depends(get_visita_service)
 ):
     """
     Obtiene los detalles completos de una visita por su ID.
     """
     try:
-        visita_detalle = await service.get_visita_detalle_por_id(visita_id)
+        visita_detalle = await service.get_visita_detalle_por_id(visita_id,lat_actual=lat_actual,lon_actual=lon_actual)
         return visita_detalle
     except HTTPException as he:
         raise he
