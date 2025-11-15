@@ -1,5 +1,3 @@
-# src/visitas/tests/test_visita_service.py
-
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
 from sqlalchemy.orm import Session
@@ -11,7 +9,7 @@ from http import HTTPStatus
 
 from services.visita_service import VisitaService
 from db.visita import Visita
-from schemas.visita_schema import CrearRutaVisitaSchema, ActualizarVisitaSchema
+from schemas.visita_schema import CrearRutaVisitaSchema, ActualizarVisitaSchema, VisitaDetalleResponseSchema
 from fastapi import HTTPException
 
 pytestmark = pytest.mark.asyncio
@@ -33,6 +31,7 @@ class TestVisitaService:
             mock_redis = Mock()
             mock_get_redis.return_value = mock_redis
             service_instance = VisitaService(db=mock_db)
+            service_instance.google_maps_api_key = "fake-key-para-tests"
             yield service_instance
 
     @patch("services.visita_service.httpx.AsyncClient")
@@ -123,23 +122,46 @@ class TestVisitaService:
         mock_visita_db.id = uuid4()
         mock_visita_db.estado = "PENDIENTE"
         
-        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = [mock_visita_db]
+        mock_query_pendiente = Mock()
+        mock_query_pendiente.all.return_value = [mock_visita_db]
+        
+        mock_query_otras = Mock()
+        mock_query_otras.order_by.return_value.all.return_value = [] 
+        
+        def query_side_effect(*args):
+            mock_filter = Mock()
+            mock_filter.all.return_value = mock_query_pendiente.all.return_value
+            mock_filter.order_by.return_value.all.return_value = mock_query_otras.order_by.return_value.all.return_value
+            return mock_filter
+
+        mock_db.query.return_value.filter.side_effect = query_side_effect
 
         mock_cliente_data = [{
             "id": str(cliente_id_1), 
             "nombre": "Cliente Test",
-            "address": "Calle Falsa 123"
+            "address": "7.1,-73.1,Calle Falsa 123"
         }]
         mock_async_client = mock_http_client.return_value.__aenter__.return_value
-        mock_response = Mock(status_code=HTTPStatus.OK)
-        mock_response.json.return_value = mock_cliente_data
-        mock_async_client.post.return_value = mock_response
+        
+        mock_response_clientes = Mock(status_code=HTTPStatus.OK)
+        mock_response_clientes.json.return_value = mock_cliente_data
+        mock_async_client.post.return_value = mock_response_clientes
 
-        resultados = await service.get_rutas_por_fecha_y_vendedor(test_fecha, test_vendedor_id)
+        mock_gmaps_response = Mock(status_code=HTTPStatus.OK)
+        mock_gmaps_response.json.return_value = {
+            "status": "OK",
+            "routes": [{
+                "waypoint_order": [0],
+                "legs": [{"duration": {"text": "15 min"}}]
+            }]
+        }
+        mock_async_client.get.return_value = mock_gmaps_response
+
+        resultados = await service.get_rutas_por_fecha_y_vendedor(test_fecha, test_vendedor_id, 7.0, -73.0)
 
         assert len(resultados) == 1
         assert resultados[0].nombre == "Cliente Test"
-        assert resultados[0].hora_de_la_cita == "09:30"
+        assert resultados[0].hora_de_la_cita == "15 min"
 
     async def test_actualizar_visita_not_found(self, service: VisitaService, mock_db: Mock):
         """Test: Actualizar visita falla si no se encuentra"""
@@ -152,7 +174,13 @@ class TestVisitaService:
             await service.actualizar_visita(visita_id, data)
         assert e.value.status_code == HTTPStatus.NOT_FOUND
 
-    async def test_actualizar_visita_transicion_invalida(self, service: VisitaService, mock_db: Mock):
+    @patch("services.visita_service.VisitaService._get_cliente_data", new_callable=AsyncMock)
+    @patch("services.visita_service.VisitaService._get_top_products_data", new_callable=AsyncMock)
+    @patch("services.visita_service.VisitaService._get_user_contact_for_client", new_callable=AsyncMock)
+    async def test_actualizar_visita_transicion_invalida(
+        self, mock_get_contact: Mock, mock_get_products: Mock, mock_get_cliente: Mock, 
+        service: VisitaService, mock_db: Mock
+    ):
         """Test: Falla al intentar cambiar estado de visita 'REALIZADA'"""
         visita_id = uuid4()
         data = ActualizarVisitaSchema(estado="PENDIENTE") # Intentar regresar a PENDIENTE
@@ -235,7 +263,18 @@ class TestVisitaService:
         test_fecha = date(2025, 1, 1)
         test_vendedor_id = uuid4()
         
-        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
+        mock_query_pendiente = Mock()
+        mock_query_pendiente.all.return_value = []
+        mock_query_otras = Mock()
+        mock_query_otras.order_by.return_value.all.return_value = []
+        
+        def query_side_effect(*args):
+            mock_filter = Mock()
+            mock_filter.all.return_value = mock_query_pendiente.all.return_value
+            mock_filter.order_by.return_value.all.return_value = mock_query_otras.order_by.return_value.all.return_value
+            return mock_filter
+            
+        mock_db.query.return_value.filter.side_effect = query_side_effect
 
         resultados = await service.get_rutas_por_fecha_y_vendedor(test_fecha, test_vendedor_id)
 
@@ -257,32 +296,40 @@ class TestVisitaService:
         visita_id = uuid4()
         cliente_id = uuid4()
 
-        # 1. Mockear BBDD (la visita SÍ existe)
         dummy_vendedor_id = uuid4()
         dummy_fecha = datetime.now()
-        mock_visita_db = Visita(
-            cliente_id=cliente_id,
-            vendedor_id=dummy_vendedor_id,
-            fecha_visita_programada=dummy_fecha
-        )
+        mock_visita_db = Visita(cliente_id=cliente_id, vendedor_id=dummy_vendedor_id, fecha_visita_programada=dummy_fecha)
         mock_visita_db.id = visita_id
         mock_visita_db.estado = "PENDIENTE"
         mock_visita_db.to_dict = lambda: {
             "id": visita_id, "cliente_id": cliente_id, "vendedor_id": dummy_vendedor_id,
-            "fecha_visita_programada": dummy_fecha, "estado": "PENDIENTE",
-            "created_at": dummy_fecha, "updated_at": None, "cliente_contacto": None,
-            "detalle": None, "evidencia": None, "inicio": None, "fin": None
+            "fecha_visita_programada": dummy_fecha, "estado": "PENDIENTE", "created_at": dummy_fecha, 
+            "updated_at": None, "cliente_contacto": None, "detalle": None, "evidencia": None, "inicio": None, "fin": None
         }
         mock_db.query.return_value.filter.return_value.first.return_value = mock_visita_db
+        
+        mock_db.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = []
 
         mock_async_client = mock_http_client.return_value.__aenter__.return_value
         mock_async_client.post.side_effect = httpx.RequestError("Error de red simulado")
         
+        mock_response_ok = Mock(status_code=HTTPStatus.OK)
+        mock_response_ok.json.return_value = {"data": []} 
+        mock_response_notfound = Mock(status_code=HTTPStatus.NOT_FOUND) 
+        
+        mock_async_client.get.side_effect = [
+            mock_response_ok,       
+            mock_response_notfound, 
+        ]
+    
         resultado = await service.get_visita_detalle_por_id(visita_id)
         
         assert resultado.id == visita_id
         assert resultado.nombre_institucion == "Cliente no disponible"
         assert resultado.direccion == "Dirección no disponible"
+        assert resultado.productos_preferidos == []
+        assert resultado.notas_visitas_anteriores == []
+        assert resultado.cliente_contacto is None
 
     async def test_actualizar_visita_payload_vacio(self, service: VisitaService, mock_db: Mock):
         """Test: Falla 400 si se intenta actualizar sin datos"""

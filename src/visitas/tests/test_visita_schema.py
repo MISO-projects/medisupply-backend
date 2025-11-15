@@ -1,5 +1,3 @@
-# src/visitas/tests/test_visita_schemas.py
-
 import pytest
 from pydantic import ValidationError
 from uuid import uuid4
@@ -10,7 +8,9 @@ from schemas.visita_schema import (
     ActualizarVisitaSchema,
     RutaVisitaItemSchema,
     VisitaDetalleResponseSchema,
-    EstadoVisitaEnum
+    EstadoVisitaEnum,
+    NotaVisitaAnteriorSchema, 
+    ProductoPreferidoSchema  
 )
 
 class TestRequestSchemas:
@@ -42,7 +42,7 @@ class TestRequestSchemas:
     def test_actualizar_visita_schema_estado_invalido(self):
         """Test: Falla si el estado no está en el Enum"""
         with pytest.raises(ValidationError):
-            ActualizarVisitaSchema(estado="REALIZADA")
+            ActualizarVisitaSchema(estado="ESTADO_INVALIDO")
 
     def test_actualizar_visita_schema_campos_opcionales(self):
         """Test: Todos los campos son opcionales"""
@@ -95,11 +95,15 @@ class TestResponseSchemas:
             "estado": "PENDIENTE",
             "created_at": datetime.now(),
             "nombre_institucion": "Institución Test",
-            "direccion": "Av. Siempre Viva 742"
+            "direccion": "Av. Siempre Viva 742",
+            "notas_visitas_anteriores": [],
+            "productos_preferidos": [],
+            "tiempo_desplazamiento": "15 min"
         }
         schema = VisitaDetalleResponseSchema(**data)
         assert schema.nombre_institucion == "Institución Test"
         assert schema.estado == "PENDIENTE"
+        assert schema.tiempo_desplazamiento == "15 min"
 
     
     def test_ruta_visita_item_schema_campos_nulos(self):
