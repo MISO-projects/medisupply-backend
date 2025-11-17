@@ -58,6 +58,8 @@ async def crear_nueva_ruta_visita(
 async def get_rutas_por_fecha_y_vendedor( 
     fecha: date = Query(..., description="Fecha a consultar en formato YYYY-MM-DD"),
     vendedor_id: UUID4 = Query(..., description="ID del vendedor a consultar"), 
+    lat_actual: Optional[float] = Query(None, description="Latitud actual del vendedor para optimizar ruta"),
+    lon_actual: Optional[float] = Query(None, description="Longitud actual del vendedor para optimizar ruta"),
     service: VisitasService = Depends(get_visitas_service)
 ):
     """
@@ -65,7 +67,7 @@ async def get_rutas_por_fecha_y_vendedor(
     """
     try:
         logger.info(f"BFF Móvil: Solicitud de rutas para vendedor {vendedor_id} en fecha {fecha}")
-        result = await service.get_rutas_del_dia(fecha, vendedor_id)
+        result = await service.get_rutas_del_dia(fecha, vendedor_id, lat_actual, lon_actual)
         logger.info(f"BFF Móvil: Retornando {len(result)} rutas")
         return result
     except HTTPException:
@@ -84,6 +86,8 @@ async def get_rutas_por_fecha_y_vendedor(
 )
 async def get_detalle_visita(
     visita_id: UUID4 = Path(..., description="ID de la visita a consultar"), 
+    lat_actual: Optional[float] = Query(None, description="Latitud actual del vendedor para optimizar ruta"),
+    lon_actual: Optional[float] = Query(None, description="Longitud actual del vendedor para optimizar ruta"),
     service: VisitasService = Depends(get_visitas_service)
 ):
     """
@@ -91,7 +95,7 @@ async def get_detalle_visita(
     """
     try:
         logger.info(f"BFF Móvil: Solicitud de detalle para visita {visita_id}")
-        result = await service.get_visita_detalle(visita_id)
+        result = await service.get_visita_detalle(visita_id, lon_actual=lon_actual, lat_actual=lat_actual)
         logger.info(f"BFF Móvil: Retornando detalle de visita {visita_id}")
         return result
     except HTTPException:

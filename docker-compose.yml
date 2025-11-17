@@ -129,6 +129,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=0
+      - PRODUCTOS_SERVICE_URL=http://productos-service:3000
     volumes:
       - ./src/ordenes/queries/api:/app
     networks:
@@ -454,6 +455,7 @@ services:
       - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
       - PRODUCTOS_SERVICE_URL=http://productos-service:3000
+      - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
     volumes:
       - ./src/visitas:/app
     networks:

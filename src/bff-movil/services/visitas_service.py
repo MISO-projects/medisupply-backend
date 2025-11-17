@@ -44,7 +44,7 @@ class VisitasService:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
                     f"{self.base_url}/api/visitas/",
-                    json=data.model_dump(mode='json') # Pydantic v2
+                    json=data.model_dump(mode='json')
                 )
                 response.raise_for_status()
                 return response.json()
@@ -59,12 +59,14 @@ class VisitasService:
             raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 
-    async def get_rutas_del_dia(self, fecha: date, vendedor_id: UUID4) -> List[Dict[str, Any]]:
+    async def get_rutas_del_dia(self, fecha: date, vendedor_id: UUID4, lat_actual, lon_actual) -> List[Dict[str, Any]]:
         """Llama al GET /api/visitas/rutas-del-dia del microservicio."""
         try:
             params = {
                 "fecha": str(fecha),
-                "vendedor_id": str(vendedor_id)
+                "vendedor_id": str(vendedor_id),
+                "lat_actual": lat_actual,
+                "lon_actual": lon_actual
             }
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(
@@ -84,12 +86,17 @@ class VisitasService:
             raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 
-    async def get_visita_detalle(self, visita_id: UUID4) -> Dict[str, Any]:
+    async def get_visita_detalle(self, visita_id: UUID4, lat_actual, lon_actual) -> Dict[str, Any]:
         """Llama al GET /api/visitas/{visita_id} del microservicio."""
         try:
+            params = {
+                "lat_actual": lat_actual,
+                "lon_actual": lon_actual
+            }
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(
-                    f"{self.base_url}/api/visitas/{visita_id}"
+                    f"{self.base_url}/api/visitas/{visita_id}",
+                    params=params
                 )
                 response.raise_for_status()
                 return response.json()

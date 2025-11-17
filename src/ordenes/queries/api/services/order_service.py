@@ -10,7 +10,16 @@ from http import HTTPStatus
 from services.cache_service import CacheService
 from datetime import datetime
 import logging
-
+import httpx  
+import os     
+from sqlalchemy import func, desc
+logger = logging.getLogger(__name__)
+try:
+    from db.order_model import Orden, DetalleOrden
+except ImportError:
+    logger.error("Error importando Orden y DetalleOrden. Asegúrate de copiar 'order_model.py' a la carpeta 'db' de 'queries'.")
+    class Orden: pass
+    class DetalleOrden: pass
 logger = logging.getLogger(__name__)
 
 
@@ -18,6 +27,34 @@ class OrderService:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
         self.cache_service = CacheService()
+        self.productos_service_url = os.getenv(
+            "PRODUCTOS_SERVICE_URL", "http://productos-service:3000" 
+        )
+
+    async def _get_products_batch_data(self, product_ids: List[str]) -> List[Dict[str, Any]]:
+        """
+        Llama al servicio de Productos (usando /by-ids) para obtener los
+        nombres y detalles de una lista de IDs.
+        """
+        if not product_ids:
+            return []
+        
+        request_body = {"ids": product_ids}
+        endpoint_url = f"{self.productos_service_url}/api/productos/by-ids" 
+        
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.post(endpoint_url, json=request_body)
+            
+            if response.status_code == HTTPStatus.OK:
+                return response.json()
+            else:
+                logger.error(f"Error del servicio de productos ({endpoint_url}): {response.status_code} - {response.text}")
+                return []
+        
+        except httpx.RequestError as e:
+            logger.error(f"Error de conexión al servicio de productos ({endpoint_url}): {e}")
+            return []
 
     def _enrich_order_with_names(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -275,6 +312,58 @@ class OrderService:
             raise HTTPException(
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 detail="Error interno al contar órdenes del cliente."
+            )
+        
+    async def get_top_products_by_client(
+        self,
+        id_cliente: str,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Calcula los productos más solicitados por un cliente usando agregación SQL
+        directamente en las tablas 'ordenes' y 'detalles_ordenes'.
+        """
+        try:
+            top_products_query = (
+                self.db.query(
+                    DetalleOrden.id_producto,
+                    func.sum(DetalleOrden.cantidad).label("cantidad_total")
+                )
+                .join(Orden, Orden.id == DetalleOrden.id_orden)
+                .filter(Orden.id_cliente == id_cliente)
+                .group_by(DetalleOrden.id_producto)
+                .order_by(desc("cantidad_total")) 
+                .limit(limit)
+            )
+            
+            top_products_db = top_products_query.all()
+
+            if not top_products_db:
+                return []
+
+            product_ids = [str(p.id_producto) for p in top_products_db]
+            
+            products_data_list = await self._get_products_batch_data(product_ids)
+            products_map = {p.get("id"): p for p in products_data_list}
+
+            result = []
+            for product_stat in top_products_db:
+                pid = str(product_stat.id_producto)
+                product_info = products_map.get(pid, {})
+                
+                result.append({
+                    "id_producto": pid,
+                    "nombre": product_info.get("nombre", "Nombre no encontrado"),
+                    "cantidad_total": int(product_stat.cantidad_total)
+                })
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error calculando top products para cliente {id_cliente}: {e}")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="Error interno al calcular productos más solicitados."
             )
 
 
