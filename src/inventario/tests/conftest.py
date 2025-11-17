@@ -15,6 +15,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 # --- Imports de la App (se importan DESPUÉS de arreglar el path) ---
 from services.inventario_service import InventarioService, get_inventario_service
 from services.health_service import HealthService, get_health_service
+from services.auth_dependency import get_current_user
 from db.database import get_db
 
 
@@ -68,7 +69,16 @@ def mock_health_service() -> Mock:
     return Mock(spec=HealthService)
 
 @pytest.fixture(scope="function")
-def client(mock_inventory_service: Mock, mock_health_service: Mock) -> Generator[TestClient, None, None]:
+def mock_current_user() -> dict:
+    """Mock del usuario autenticado para pruebas"""
+    return {
+        "sub": str(uuid4()),  # user_id
+        "email": "test@example.com",
+        "role": "admin"
+    }
+
+@pytest.fixture(scope="function")
+def client(mock_inventory_service: Mock, mock_health_service: Mock, mock_current_user: dict) -> Generator[TestClient, None, None]:
     """
     Fixture principal de TestClient.
     Importa la app y sobrescribe TODAS sus dependencias.
@@ -78,7 +88,9 @@ def client(mock_inventory_service: Mock, mock_health_service: Mock) -> Generator
     
     app.dependency_overrides[get_inventario_service] = lambda: mock_inventory_service
     app.dependency_overrides[get_health_service] = lambda: mock_health_service
-    app.dependency_overrides[get_db] = lambda: Mock(spec=Session) 
+    app.dependency_overrides[get_db] = lambda: Mock(spec=Session)
+    # Sobrescribir autenticación para tests
+    app.dependency_overrides[get_current_user] = lambda: mock_current_user
     
     with TestClient(app) as c:
         yield c
@@ -87,6 +99,8 @@ def client(mock_inventory_service: Mock, mock_health_service: Mock) -> Generator
     del app.dependency_overrides[get_inventario_service]
     del app.dependency_overrides[get_health_service]
     del app.dependency_overrides[get_db]
+    if get_current_user in app.dependency_overrides:
+        del app.dependency_overrides[get_current_user]
 
 
 @pytest.fixture(scope="function")
