@@ -7,3 +7,5 @@ debugpy==1.8.16
 SQLAlchemy==2.0.43
 psycopg2-binary==2.9.10
 redis==5.0.1
+httpx==0.27.0
+pydantic[email]>=2.0.0

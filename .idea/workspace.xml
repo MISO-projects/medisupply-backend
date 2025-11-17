@@ -4,8 +4,22 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8998943f-9567-4dcf-8009-681626a1807f" name="Changes" comment="Feature | MEDSUP-112 | Oredenes en rutas">
+    <list default="true" id="8998943f-9567-4dcf-8009-681626a1807f" name="Changes" comment="Feature | MEDSUP-118 | Alerta sospechosa">
       <change beforePath="$PROJECT_DIR$/.idea/copilot/chatSessions/00000000000.xd" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/copilot/chatSessions/00000000000.xd" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/copilot/chatSessions/xd.lck" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/copilot/chatSessions/xd.lck" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/auditoria/db/migrations.sql" beforeDir="false" afterPath="$PROJECT_DIR$/src/auditoria/db/migrations.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/auditoria/db/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/auditoria/db/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/auditoria/router/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/auditoria/router/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/auditoria/router/auditoria_router.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/auditoria/router/auditoria_router.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/auditoria/schemas/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/auditoria/schemas/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/auditoria/schemas/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/auditoria/schemas/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/auditoria/services/auditoria_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/auditoria/services/auditoria_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/auditoria/services/detector_patrones.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/auditoria/services/detector_patrones.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/auditoria/services/servicio_alertas.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/auditoria/services/servicio_alertas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/bff-web/router/alertas_router.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/bff-web/router/alertas_router.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/bff-web/schemas/alertas_schema.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/bff-web/schemas/alertas_schema.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/bff-web/services/alertas_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/bff-web/services/alertas_service.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,7 +45,7 @@
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feature/MEDSUP-112__ordenes__programadas&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feature/MEDSUP-118-alerta-sospechosa&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
@@ -63,6 +77,11 @@
       <workItem from="1761917083926" duration="1140000" />
       <workItem from="1762603899496" duration="1403000" />
       <workItem from="1762693650948" duration="2751000" />
+      <workItem from="1762824089532" duration="1871000" />
+      <workItem from="1762857365176" duration="584000" />
+      <workItem from="1762992253489" duration="608000" />
+      <workItem from="1763151863640" duration="8238000" />
+      <workItem from="1763309359570" duration="13000" />
     </task>
     <task id="LOCAL-00001" summary="Feature | MEDSUP-135 | Productos disponibles">
       <option name="closed" value="true" />
@@ -160,7 +179,47 @@
       <option name="project" value="LOCAL" />
       <updated>1762715119106</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="Feature | MEDSUP-118 | Alerta sospechosa">
+      <option name="closed" value="true" />
+      <created>1763151977986</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1763151977986</updated>
+    </task>
+    <task id="LOCAL-00014" summary="Feature | MEDSUP-118 | Alerta sospechosa">
+      <option name="closed" value="true" />
+      <created>1763153814148</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1763153814149</updated>
+    </task>
+    <task id="LOCAL-00015" summary="Feature | MEDSUP-118 | Alerta sospechosa">
+      <option name="closed" value="true" />
+      <created>1763155847924</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1763155847924</updated>
+    </task>
+    <task id="LOCAL-00016" summary="Feature | MEDSUP-118 | Alerta sospechosa">
+      <option name="closed" value="true" />
+      <created>1763156093002</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1763156093002</updated>
+    </task>
+    <task id="LOCAL-00017" summary="Feature | MEDSUP-118 | Alerta sospechosa">
+      <option name="closed" value="true" />
+      <created>1763156505119</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1763156505119</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -183,10 +242,21 @@
     <MESSAGE value="Feature | MEDSUP-182 | Nuevas rutas" />
     <MESSAGE value="Feature | MEDSUP-112 | Ordenes programadas" />
     <MESSAGE value="Feature | MEDSUP-112 | Oredenes en rutas" />
-    <option name="LAST_COMMIT_MESSAGE" value="Feature | MEDSUP-112 | Oredenes en rutas" />
+    <MESSAGE value="Feature | MEDSUP-118 | Alerta sospechosa" />
+    <option name="LAST_COMMIT_MESSAGE" value="Feature | MEDSUP-118 | Alerta sospechosa" />
   </component>
   <component name="WfRunsListSearchHistory"><![CDATA[{
   "history": [
+    {
+    },
+    {
+    },
+    {
+    },
+    {
+    },
+    {
+    },
     {
     },
     {

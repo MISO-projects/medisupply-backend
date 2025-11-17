@@ -15,6 +15,7 @@ from db.database import get_db
 from db.inventario_model import Inventario
 from schemas.inventario_schema import CrearRegistroInventarioSchema, CrearRegistroPedidoSchema
 from db.redis_client import get_redis_client
+from services.pubsub_service import get_pubsub_service
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class InventarioService:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
         self.redis_client = get_redis_client()
+        self.pubsub_service = get_pubsub_service()
         self.productos_service_url = os.getenv(
             "PRODUCTOS_SERVICE_URL", "http://productos-service:3000"
         )
@@ -107,7 +109,7 @@ class InventarioService:
             return {}
 
     async def _get_producto_ids_by_filters(
-        self, 
+        self,
         text_search: Optional[str] = None,
         categoria: Optional[str] = None
     ) -> List[str]:
@@ -118,7 +120,7 @@ class InventarioService:
         # Si no hay filtros de producto, retornar lista vacía (significa que no se filtra por producto)
         if not text_search and not categoria:
             return []
-        
+
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(
@@ -128,7 +130,7 @@ class InventarioService:
                         "categoria": categoria
                     }
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
                     producto_ids = data.get("producto_ids", [])
@@ -137,7 +139,7 @@ class InventarioService:
                 else:
                     logger.error(f"Error al obtener IDs de productos por filtros: {response.status_code} - {response.text}")
                     return []
-                    
+
         except httpx.RequestError as e:
             logger.error(f"Error de conexión al servicio de productos para filtros: {e}")
             return []
@@ -172,6 +174,21 @@ class InventarioService:
             self.db.commit()
             self.db.refresh(nuevo_inventario)
             self._invalidate_inventario_caches()
+
+            # Publicar evento a auditoría
+            await self._publicar_evento_inventario(
+                operation="CREAR",
+                inventario_id=str(nuevo_inventario.id),
+                producto_id=str(nuevo_inventario.producto_id),
+                datos={
+                    "lote": nuevo_inventario.lote,
+                    "cantidad": nuevo_inventario.cantidad,
+                    "ubicacion": nuevo_inventario.ubicacion,
+                    "estado": nuevo_inventario.estado,
+                    "fecha_vencimiento": nuevo_inventario.fecha_vencimiento.isoformat() if nuevo_inventario.fecha_vencimiento else None
+                }
+            )
+
             await self._notificar_actualizacion_a_productos()
             return nuevo_inventario.to_dict()
         except IntegrityError as ie:
@@ -190,8 +207,8 @@ class InventarioService:
             )
 
     async def listar_registros_paginados(
-        self, 
-        skip: int, 
+        self,
+        skip: int,
         limit: int,
         text_search: Optional[str] = None,
         categoria: Optional[str] = None,
@@ -200,7 +217,7 @@ class InventarioService:
         """
         Obtiene una lista paginada de registros de inventario con filtros opcionales.
         Siempre enriquece los registros con nombre y SKU del producto.
-        
+
         Args:
             text_search: Busca en producto nombre, producto sku, o inventario ubicacion
             categoria: Filtra productos por categoría
@@ -210,15 +227,15 @@ class InventarioService:
             # Generar clave de caché basada en los filtros
             cache_key = f"inventario:list:{text_search or 'all'}:{categoria or 'all'}:{estado or 'all'}:{skip}:{limit}"
             cached_data = self._get_cache(cache_key)
-            
+
             if cached_data is not None:
                 logger.debug(f"Cache hit for inventario list")
                 return cached_data.get('items', []), cached_data.get('total', 0)
-            
+
             logger.debug(f"Cache miss for inventario list")
-            
+
             query = self.db.query(Inventario)
-            
+
             # Aplicar filtros de producto: obtener IDs de productos que coinciden
             producto_ids_filtrados = []
             if text_search or categoria:
@@ -226,19 +243,19 @@ class InventarioService:
                     text_search=text_search,
                     categoria=categoria
                 )
-            
+
             # Aplicar filtros combinados: producto_id OR ubicacion (si text_search)
             if text_search:
                 filters_list = []
-                
+
                 # Si hay productos que coinciden, agregar filtro por producto_id
                 if producto_ids_filtrados:
                     producto_uuids = [UUID(pid) for pid in producto_ids_filtrados]
                     filters_list.append(Inventario.producto_id.in_(producto_uuids))
-                
+
                 # Agregar filtro por ubicacion
                 filters_list.append(Inventario.ubicacion.ilike(f"%{text_search}%"))
-                
+
                 # Aplicar OR entre producto_id y ubicacion
                 # Si solo hay un filtro, aplicarlo directamente; si hay múltiples, usar or_()
                 if len(filters_list) == 1:
@@ -253,11 +270,11 @@ class InventarioService:
                 else:
                     # Si categoria no encontró productos, retornar vacío
                     return [], 0
-            
+
             # Aplicar filtros de inventario
             if estado:
                 query = query.filter(Inventario.estado == estado)
-            
+
             # Contar total después de aplicar filtros
             total = query.count()
             
@@ -282,16 +299,16 @@ class InventarioService:
                 registro_dict["producto_precio_unitario"] = detalles.get("precio_unitario")
                 registro_dict["producto_descripcion"] = detalles.get("descripcion")
                 registro_dict["producto_imagen_url"] = detalles.get("imagen_url")
-                
+
                 items_enriquecidos.append(registro_dict)
-            
+
             # Guardar en caché
             cache_data = {
                 'items': items_enriquecidos,
                 'total': total
             }
             self._set_cache(cache_key, cache_data, self.CACHE_TTL_LIST)
-            
+
             return items_enriquecidos, total
 
         except Exception as e:
@@ -456,6 +473,23 @@ class InventarioService:
             
             self.db.commit()
             self._invalidate_inventario_caches()
+
+            # Publicar evento a auditoría
+            await self._publicar_evento_inventario(
+                operation="DISMINUIR",
+                inventario_id=str(lotes_disponibles[0].id) if lotes_disponibles else None,
+                producto_id=str(producto_id),
+                datos={
+                    "cantidad_disminuida": cantidad_a_disminuir,
+                    "stock_restante": total_stock_disponible - cantidad_a_disminuir,
+                    "lotes_afectados": len(lotes_afectados_info)
+                },
+                cambios={
+                    "cantidad_anterior": total_stock_disponible,
+                    "cantidad_nueva": total_stock_disponible - cantidad_a_disminuir
+                }
+            )
+
             await self._notificar_actualizacion_a_productos()
 
             logger.info(f"Stock disminuido exitosamente para {producto_id}. Cantidad: {cantidad_a_disminuir}")
@@ -484,6 +518,53 @@ class InventarioService:
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 detail="Error interno al editar el registro de inventario."
             )
+
+    async def _publicar_evento_inventario(
+        self,
+        operation: str,
+        inventario_id: Optional[str] = None,
+        producto_id: Optional[str] = None,
+        usuario_id: Optional[str] = None,
+        ip_origen: Optional[str] = None,
+        datos: Optional[Dict[str, Any]] = None,
+        cambios: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Publica un evento de inventario a Pub/Sub para ser procesado por auditoría.
+
+        Args:
+            operation: Tipo de operación (CREAR, MODIFICAR, ELIMINAR, DISMINUIR)
+            inventario_id: UUID del registro de inventario
+            producto_id: UUID del producto
+            usuario_id: UUID del usuario que realizó la operación
+            ip_origen: IP desde donde se realizó la operación
+            datos: Datos relevantes de la operación
+            cambios: Cambios realizados (antes/después)
+        """
+        try:
+            evento = {
+                "event_type": "inventory_operation",
+                "operation": operation,
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "inventario_id": inventario_id,
+                "producto_id": producto_id,
+                "usuario_id": usuario_id,
+                "ip_origen": ip_origen,
+                "datos": datos or {},
+                "cambios": cambios
+            }
+
+            success = self.pubsub_service.publish_event(evento)
+
+            if success:
+                logger.info(f"Evento de inventario publicado: {operation} - {inventario_id}")
+            else:
+                logger.warning(f"No se pudo publicar evento de inventario: {operation}")
+
+        except Exception as e:
+            # No lanzar excepción para que no afecte la operación principal
+            logger.error(f"Error publicando evento de inventario: {e}", exc_info=True)
+
 
 def get_inventario_service(db: Session = Depends(get_db)) -> InventarioService:
     """

@@ -90,11 +90,13 @@ class TestPubSubService:
         mock_exists.return_value = False
         mock_default.side_effect = Exception("Error de autenticación")
         
-        # Act & Assert
-        with pytest.raises(Exception) as exc_info:
-            PubSubService()
+        # Act - El servicio debe inicializarse sin lanzar excepción (degradación elegante)
+        service = PubSubService()
         
-        assert "Failed to initialize PubSub client" in str(exc_info.value)
+        # Assert - El publisher debe ser None debido al fallo de credenciales
+        assert service._publisher is None
+        # El servicio está inicializado aunque no pueda publicar eventos
+        assert isinstance(service, PubSubService)
     
     @patch('services.pubsub_service.Credentials')
     @patch('services.pubsub_service.pubsub_v1.PublisherClient')

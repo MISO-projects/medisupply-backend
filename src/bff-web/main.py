@@ -4,6 +4,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from services.health_service import HealthService, get_health_service
+from router.alertas_router import alertas_router
 from router.auditoria import auditoria_router
 from router.autenticacion import autenticacion_router
 from router.clientes import clientes_router
@@ -61,6 +62,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(alertas_router, tags=["alertas-seguridad"])
 app.include_router(auditoria_router, prefix="/auditoria", tags=["auditoria"])
 app.include_router(autenticacion_router, prefix="/autenticacion", tags=["autenticacion"])
 app.include_router(clientes_router, prefix="/clientes", tags=["clientes"])
