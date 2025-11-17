@@ -31,25 +31,38 @@ inventario_router = APIRouter()
     response_model=InventarioListResponse, 
     summary="Obtener registros de inventario (paginado)",
     description="""
-    Retorna una lista paginada de todos los registros de inventario,
-    enriquecida con el Nombre y SKU del producto.
+    Retorna una lista paginada de registros de inventario con filtros opcionales.
+    Filtros: text_search (busca en nombre, sku, ubicacion), categoria, estado
+    Siempre enriquece con nombre y SKU del producto.
     """
 )
 async def get_registros_inventario_paginado( # ¡async!
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(20, ge=1, le=100, description="Tamaño de página (máximo 100)"),
+    text_search: Optional[str] = Query(None, description="Buscar en nombre de producto, SKU, o ubicación de inventario"),
+    categoria: Optional[str] = Query(None, description="Filtrar por categoría de producto"),
+    estado: Optional[str] = Query(None, description="Filtrar por estado de inventario"),
     service: InventarioService = Depends(get_inventario_service)
 ):
     """
-    Endpoint para la tabla de administración web.
-    Retorna todos los registros de inventario, con paginación.
+    Endpoint para obtener registros de inventario con filtros opcionales.
+    Siempre enriquece con datos de productos.
     """
     try:
-        logger.info(f"Consultando registros de inventario paginados: page={page}, page_size={page_size}")
+        logger.info(
+            f"Consultando registros de inventario paginados: page={page}, page_size={page_size}, "
+            f"text_search={text_search}, categoria={categoria}, estado={estado}"
+        )
 
         skip = (page - 1) * page_size
         
-        registros, total = await service.listar_registros_paginados(skip=skip, limit=page_size)
+        registros, total = await service.listar_registros_paginados(
+            skip=skip,
+            limit=page_size,
+            text_search=text_search,
+            categoria=categoria,
+            estado=estado
+        )
         total_pages = (total + page_size - 1) // page_size if total > 0 else 0
         logger.info(f"Retornando {len(registros)} registros de un total de {total}")
         

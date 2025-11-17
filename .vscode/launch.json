@@ -92,6 +92,21 @@
       ]
     },
     {
+      "name": "Attach to inventario-service",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5694
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/src/inventario",
+          "remoteRoot": "/app"
+        }
+      ]
+    },
+    {
       "name": "Attach to bff-movil",
       "type": "debugpy",
       "request": "attach",

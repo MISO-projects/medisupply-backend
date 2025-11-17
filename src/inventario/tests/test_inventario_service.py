@@ -103,3 +103,255 @@ class TestInventarioService:
         
         assert resultado[prod_id_1] == 150
         assert resultado[prod_id_2] == 25
+
+    @patch("services.inventario_service.httpx.AsyncClient")
+    async def test_get_producto_ids_by_filters_text_search(self, mock_http_client: Mock, service: InventarioService):
+        """Test: Obtener IDs de productos por text_search"""
+        mock_async_client = mock_http_client.return_value.__aenter__.return_value
+        mock_response = Mock(status_code=200)
+        mock_response.json.return_value = {
+            "producto_ids": ["prod-1", "prod-2"]
+        }
+        mock_async_client.post.return_value = mock_response
+        
+        resultado = await service._get_producto_ids_by_filters(text_search="Paracetamol")
+        
+        assert len(resultado) == 2
+        assert "prod-1" in resultado
+        assert "prod-2" in resultado
+        mock_async_client.post.assert_called_once()
+        call_args = mock_async_client.post.call_args
+        assert call_args[1]["json"]["text_search"] == "Paracetamol"
+
+    @patch("services.inventario_service.httpx.AsyncClient")
+    async def test_get_producto_ids_by_filters_text_search_and_categoria(self, mock_http_client: Mock, service: InventarioService):
+        """Test: Obtener IDs de productos por text_search y categoria"""
+        mock_async_client = mock_http_client.return_value.__aenter__.return_value
+        mock_response = Mock(status_code=200)
+        mock_response.json.return_value = {
+            "producto_ids": ["prod-1"]
+        }
+        mock_async_client.post.return_value = mock_response
+        
+        resultado = await service._get_producto_ids_by_filters(text_search="Paracetamol", categoria="MEDICAMENTOS")
+        
+        assert len(resultado) == 1
+        assert "prod-1" in resultado
+        call_args = mock_async_client.post.call_args
+        assert call_args[1]["json"]["text_search"] == "Paracetamol"
+        assert call_args[1]["json"]["categoria"] == "MEDICAMENTOS"
+
+    @patch("services.inventario_service.httpx.AsyncClient")
+    async def test_get_producto_ids_by_filters_no_filters(self, mock_http_client: Mock, service: InventarioService):
+        """Test: Retornar lista vacía cuando no hay filtros"""
+        resultado = await service._get_producto_ids_by_filters()
+        
+        assert resultado == []
+        mock_http_client.assert_not_called()
+
+    @patch("services.inventario_service.httpx.AsyncClient")
+    async def test_listar_registros_paginados_text_search_producto(self, mock_http_client: Mock, service: InventarioService, mock_db: Mock):
+        """Test: Listar registros filtrados por text_search en productos"""
+        prod_id_1 = uuid4()
+        prod_id_2 = uuid4()
+        
+        # Mock productos service response
+        mock_async_client = mock_http_client.return_value.__aenter__.return_value
+        mock_response = Mock(status_code=200)
+        mock_response.json.return_value = {
+            "producto_ids": [str(prod_id_1)]
+        }
+        mock_async_client.post.return_value = mock_response
+        
+        # Mock inventario records
+        mock_registro = Mock(spec=Inventario)
+        mock_registro.producto_id = prod_id_1
+        mock_registro.to_dict.return_value = {
+            "producto_id": str(prod_id_1),
+            "lote": "L1",
+            "ubicacion": "BODEGA-A"
+        }
+        
+        # Mock DB query chain
+        mock_query = Mock()
+        mock_db.query.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.count.return_value = 1
+        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [mock_registro]
+        
+        # Mock detalles productos
+        mock_detalles_response = Mock(status_code=200)
+        mock_detalles_response.json.return_value = {
+            "detalles": {
+                str(prod_id_1): {"nombre": "Paracetamol", "sku": "SKU-001"}
+            }
+        }
+        mock_async_client.post.side_effect = [mock_response, mock_detalles_response]
+        
+        registros, total = await service.listar_registros_paginados(
+            skip=0, limit=10, text_search="Paracetamol"
+        )
+        
+        assert total == 1
+        assert len(registros) == 1
+        assert registros[0]["producto_nombre"] == "Paracetamol"
+        assert registros[0]["producto_sku"] == "SKU-001"
+
+    @patch("services.inventario_service.httpx.AsyncClient")
+    async def test_listar_registros_paginados_text_search_ubicacion(self, mock_http_client: Mock, service: InventarioService, mock_db: Mock):
+        """Test: Listar registros filtrados por text_search en ubicacion"""
+        prod_id_1 = uuid4()
+        
+        # Mock productos service response (no matches)
+        mock_async_client = mock_http_client.return_value.__aenter__.return_value
+        mock_response = Mock(status_code=200)
+        mock_response.json.return_value = {
+            "producto_ids": []
+        }
+        mock_async_client.post.return_value = mock_response
+        
+        # Mock inventario record with matching ubicacion
+        mock_registro = Mock(spec=Inventario)
+        mock_registro.producto_id = prod_id_1
+        mock_registro.to_dict.return_value = {
+            "producto_id": str(prod_id_1),
+            "lote": "L1",
+            "ubicacion": "BODEGA-PRINCIPAL"
+        }
+        
+        # Mock DB query chain
+        mock_query = Mock()
+        mock_db.query.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.count.return_value = 1
+        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [mock_registro]
+        
+        # Mock detalles productos
+        mock_detalles_response = Mock(status_code=200)
+        mock_detalles_response.json.return_value = {
+            "detalles": {
+                str(prod_id_1): {"nombre": "Producto Test", "sku": "SKU-001"}
+            }
+        }
+        mock_async_client.post.side_effect = [mock_response, mock_detalles_response]
+        
+        registros, total = await service.listar_registros_paginados(
+            skip=0, limit=10, text_search="PRINCIPAL"
+        )
+        
+        assert total == 1
+        assert len(registros) == 1
+        assert registros[0]["producto_nombre"] == "Producto Test"
+
+    @patch("services.inventario_service.httpx.AsyncClient")
+    async def test_listar_registros_paginados_categoria_only(self, mock_http_client: Mock, service: InventarioService, mock_db: Mock):
+        """Test: Listar registros filtrados solo por categoria"""
+        prod_id_1 = uuid4()
+        
+        # Mock productos service response
+        mock_async_client = mock_http_client.return_value.__aenter__.return_value
+        mock_response = Mock(status_code=200)
+        mock_response.json.return_value = {
+            "producto_ids": [str(prod_id_1)]
+        }
+        mock_async_client.post.return_value = mock_response
+        
+        # Mock inventario record
+        mock_registro = Mock(spec=Inventario)
+        mock_registro.producto_id = prod_id_1
+        mock_registro.to_dict.return_value = {
+            "producto_id": str(prod_id_1),
+            "lote": "L1"
+        }
+        
+        # Mock DB query chain
+        mock_query = Mock()
+        mock_db.query.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.count.return_value = 1
+        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [mock_registro]
+        
+        # Mock detalles productos
+        mock_detalles_response = Mock(status_code=200)
+        mock_detalles_response.json.return_value = {
+            "detalles": {
+                str(prod_id_1): {"nombre": "Producto Test", "sku": "SKU-001"}
+            }
+        }
+        mock_async_client.post.side_effect = [mock_response, mock_detalles_response]
+        
+        registros, total = await service.listar_registros_paginados(
+            skip=0, limit=10, categoria="MEDICAMENTOS"
+        )
+        
+        assert total == 1
+        assert len(registros) == 1
+
+    @patch("services.inventario_service.httpx.AsyncClient")
+    async def test_listar_registros_paginados_estado_filter(self, mock_http_client: Mock, service: InventarioService, mock_db: Mock):
+        """Test: Listar registros filtrados por estado"""
+        prod_id_1 = uuid4()
+        
+        # Mock inventario record
+        mock_registro = Mock(spec=Inventario)
+        mock_registro.producto_id = prod_id_1
+        mock_registro.to_dict.return_value = {
+            "producto_id": str(prod_id_1),
+            "lote": "L1",
+            "estado": "DISPONIBLE"
+        }
+        
+        # Mock DB query chain
+        mock_query = Mock()
+        mock_db.query.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.count.return_value = 1
+        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [mock_registro]
+        
+        # Mock detalles productos
+        mock_async_client = mock_http_client.return_value.__aenter__.return_value
+        mock_detalles_response = Mock(status_code=200)
+        mock_detalles_response.json.return_value = {
+            "detalles": {
+                str(prod_id_1): {"nombre": "Producto Test", "sku": "SKU-001"}
+            }
+        }
+        mock_async_client.post.return_value = mock_detalles_response
+        
+        registros, total = await service.listar_registros_paginados(
+            skip=0, limit=10, estado="DISPONIBLE"
+        )
+        
+        assert total == 1
+        assert len(registros) == 1
+        # Verify estado filter was applied
+        mock_query.filter.assert_called()
+
+    @patch("services.inventario_service.httpx.AsyncClient")
+    async def test_listar_registros_paginados_text_search_no_productos_found(self, mock_http_client: Mock, service: InventarioService, mock_db: Mock):
+        """Test: Retornar vacío cuando text_search no encuentra productos y no hay ubicacion match"""
+        # Mock productos service response (no matches) - this is for filter-ids endpoint
+        mock_async_client = mock_http_client.return_value.__aenter__.return_value
+        mock_filter_response = Mock(status_code=200)
+        mock_filter_response.json.return_value = {
+            "producto_ids": []
+        }
+        # When text_search is provided but no productos found, it still filters by ubicacion
+        # So we need to mock the filter-ids call, but the query will still run with ubicacion filter
+        mock_async_client.post.return_value = mock_filter_response
+        
+        # Mock DB query chain - no ubicacion matches either
+        mock_query = Mock()
+        mock_db.query.return_value = mock_query
+        # filter() is called with or_() when text_search is provided
+        mock_query.filter.return_value = mock_query
+        mock_query.count.return_value = 0
+        # Mock the full query chain for order_by, offset, limit, all
+        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = []
+        
+        registros, total = await service.listar_registros_paginados(
+            skip=0, limit=10, text_search="Inexistente"
+        )
+        
+        assert total == 0
+        assert len(registros) == 0

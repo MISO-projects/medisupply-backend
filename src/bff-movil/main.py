@@ -6,6 +6,7 @@ from router.clientes import clientes_router
 from router.productos import productos_router
 from router.ordenes import ordenes_router
 from router.visitas import visitas_router
+from router.inventario import inventario_router
 import logging
 
 logging.basicConfig(level=logging.DEBUG, force=True)
@@ -39,6 +40,7 @@ app.include_router(clientes_router, prefix="/clientes", tags=["clientes"])
 app.include_router(productos_router, prefix="/productos", tags=["productos"])
 app.include_router(ordenes_router, prefix="/ordenes", tags=["ordenes"])
 app.include_router(visitas_router, prefix="/visitas", tags=["Visitas"])
+app.include_router(inventario_router, prefix="/inventario", tags=["inventario"])
 
 @app.get("/health")
 def health_check(
