@@ -16,7 +16,9 @@ from schemas.producto_schema import (
     ProductosListResponse,
     MobileProductoResponse,
     GetProductosByIdsRequest,
-    BulkUploadResponse
+    BulkUploadResponse,
+    FilterProductosRequest,
+    FilterProductosResponse
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -342,6 +344,12 @@ class BatchDetailsRequest(BaseModel):
 class ProductoDetalleItem(BaseModel):
     nombre: str
     sku: Optional[str]
+    categoria: Optional[str] = None
+    unidad_medida: Optional[str] = None
+    tipo_almacenamiento: Optional[str] = None
+    precio_unitario: Optional[str] = None
+    descripcion: Optional[str] = None
+    imagen_url: Optional[str] = None
 
 class BatchDetailsResponse(BaseModel):
     detalles: Dict[str, ProductoDetalleItem]
@@ -391,6 +399,37 @@ def get_productos_por_ids(
     except Exception as e:
         logger.error(f"Error al obtener productos por IDs: {str(e)}")
         raise
+
+
+@productos_router.post(
+    "/filter-ids",
+    response_model=FilterProductosResponse,
+    summary="Obtener IDs de productos por filtros",
+    description="Endpoint interno para obtener IDs de productos que coinciden con filtros (nombre, sku, categoria)"
+)
+def get_producto_ids_by_filters(
+    request: FilterProductosRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint interno para que otros servicios (ej. inventario) obtengan IDs de productos
+    que coinciden con los filtros proporcionados.
+    """
+    try:
+        service = ProductosService(db)
+        producto_ids = service.get_producto_ids_by_filters(
+            nombre=request.nombre,
+            sku=request.sku,
+            categoria=request.categoria,
+            text_search=request.text_search
+        )
+        return FilterProductosResponse(producto_ids=producto_ids)
+    except Exception as e:
+        logger.error(f"Error en endpoint de filter-ids: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error al obtener IDs de productos por filtros"
+        )
 
 
 @productos_router.post(

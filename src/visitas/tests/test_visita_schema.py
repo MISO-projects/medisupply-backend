@@ -1,5 +1,3 @@
-# src/visitas/tests/test_visita_schemas.py
-
 import pytest
 from pydantic import ValidationError
 from uuid import uuid4
@@ -10,7 +8,9 @@ from schemas.visita_schema import (
     ActualizarVisitaSchema,
     RutaVisitaItemSchema,
     VisitaDetalleResponseSchema,
-    EstadoVisitaEnum
+    EstadoVisitaEnum,
+    NotaVisitaAnteriorSchema, 
+    ProductoPreferidoSchema  
 )
 
 class TestRequestSchemas:
@@ -32,17 +32,17 @@ class TestRequestSchemas:
     def test_actualizar_visita_schema_valid(self):
         """Test: Creación válida de schema de actualizar visita"""
         data = {
-            "estado": "TOMADA",
+            "estado": "REALIZADA",
             "detalle": "Visita completada exitosamente."
         }
         schema = ActualizarVisitaSchema(**data)
-        assert schema.estado == EstadoVisitaEnum.TOMADA
+        assert schema.estado == EstadoVisitaEnum.REALIZADA
         assert schema.detalle == "Visita completada exitosamente."
 
     def test_actualizar_visita_schema_estado_invalido(self):
         """Test: Falla si el estado no está en el Enum"""
         with pytest.raises(ValidationError):
-            ActualizarVisitaSchema(estado="REALIZADA")
+            ActualizarVisitaSchema(estado="ESTADO_INVALIDO")
 
     def test_actualizar_visita_schema_campos_opcionales(self):
         """Test: Todos los campos son opcionales"""
@@ -95,11 +95,15 @@ class TestResponseSchemas:
             "estado": "PENDIENTE",
             "created_at": datetime.now(),
             "nombre_institucion": "Institución Test",
-            "direccion": "Av. Siempre Viva 742"
+            "direccion": "Av. Siempre Viva 742",
+            "notas_visitas_anteriores": [],
+            "productos_preferidos": [],
+            "tiempo_desplazamiento": "15 min"
         }
         schema = VisitaDetalleResponseSchema(**data)
         assert schema.nombre_institucion == "Institución Test"
         assert schema.estado == "PENDIENTE"
+        assert schema.tiempo_desplazamiento == "15 min"
 
     
     def test_ruta_visita_item_schema_campos_nulos(self):
@@ -110,7 +114,7 @@ class TestResponseSchemas:
             "nombre": "Cliente Sin Dirección",
             "direccion": None, 
             "hora_de_la_cita": "10:00",
-            "estado": "TOMADA"
+            "estado": "REALIZADA"
         }
         schema = RutaVisitaItemSchema(**data)
         assert schema.nombre == "Cliente Sin Dirección"

@@ -129,6 +129,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=0
+      - PRODUCTOS_SERVICE_URL=http://productos-service:3000
     volumes:
       - ./src/ordenes/queries/api:/app
     networks:
@@ -411,7 +412,7 @@ services:
       - medisupply-network
     
   bff-movil:
-    profiles: [ "bff-movil", "ordenes", "autenticacion", "clientes", "productos", "dev" ]
+    profiles: [ "bff-movil", "ordenes", "autenticacion", "clientes", "productos", "inventario", "dev" ]
     build:
       context: ./src/bff-movil
       dockerfile: Dockerfile
@@ -432,6 +433,7 @@ services:
       - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
       - VISITAS_SERVICE_URL=http://visitas-service:3000
       - LOGISTICA_SERVICE_URL=http://logistica-service:3000
+      - INVENTARIO_SERVICE_URL=http://inventario-service:3000
     volumes:
       - ./src/bff-movil:/app
     networks:
@@ -454,6 +456,7 @@ services:
       - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
       - PRODUCTOS_SERVICE_URL=http://productos-service:3000
+      - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
     volumes:
       - ./src/visitas:/app
     networks:

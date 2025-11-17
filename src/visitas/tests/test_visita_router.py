@@ -1,5 +1,3 @@
-# src/visitas/tests/test_visita_router.py
-
 import pytest
 from unittest.mock import Mock, AsyncMock
 from fastapi.testclient import TestClient
@@ -9,7 +7,15 @@ from datetime import datetime, date
 
 from fastapi import HTTPException 
 
-from schemas.visita_schema import CrearRutaVisitaSchema, ActualizarVisitaSchema
+from schemas.visita_schema import (
+    CrearRutaVisitaSchema, 
+    ActualizarVisitaSchema,
+    VisitaDetalleResponseSchema, 
+    RutaVisitaItemSchema,
+    NotaVisitaAnteriorSchema,
+    ProductoPreferidoSchema
+)
+from typing import List 
 
 pytestmark = pytest.mark.asyncio
 
@@ -46,14 +52,14 @@ class TestVisitaRouter:
         fecha = "2025-10-30"
         
         mock_response_data = [
-            {
-                "id": str(uuid4()),
-                "cliente_id": str(uuid4()),
-                "nombre": "Cliente Test",
-                "direccion": "Calle Falsa 123",
-                "hora_de_la_cita": "10:00",
-                "estado": "PENDIENTE"
-            }
+            RutaVisitaItemSchema(
+                id=uuid4(),
+                cliente_id=uuid4(),
+                nombre="Cliente Test",
+                direccion="Calle Falsa 123",
+                hora_de_la_cita="10:00",
+                estado="PENDIENTE"
+            )
         ]
         mock_visita_service.get_rutas_por_fecha_y_vendedor.return_value = mock_response_data
         
@@ -63,9 +69,12 @@ class TestVisitaRouter:
         data = response.json()
         assert len(data) == 1
         assert data[0]["nombre"] == "Cliente Test"
+        
         mock_visita_service.get_rutas_por_fecha_y_vendedor.assert_called_once_with(
-            date(2025, 10, 30), 
-            vendedor_id
+            fecha=date(2025, 10, 30),
+            vendedor_id=vendedor_id,
+            lat_actual=None,
+            lon_actual=None
         )
 
     @pytest.mark.asyncio
@@ -73,47 +82,57 @@ class TestVisitaRouter:
         """Test: Endpoint GET /api/visitas/{visita_id} (async) - Éxito"""
         visita_id = uuid4()
         
-        mock_response_data = {
-            "id": str(visita_id),
-            "cliente_id": str(uuid4()),
-            "vendedor_id": str(uuid4()),
-            "fecha_visita_programada": datetime.now().isoformat(),
-            "estado": "PENDIENTE",
-            "created_at": datetime.now().isoformat(),
-            "nombre_institucion": "Institución Detalle",
-            "direccion": "Av. Siempre Viva 742"
-        }
+        mock_response_data = VisitaDetalleResponseSchema(
+            id=visita_id,
+            cliente_id=uuid4(),
+            vendedor_id=uuid4(),
+            fecha_visita_programada=datetime.now(),
+            estado="PENDIENTE",
+            created_at=datetime.now(),
+            nombre_institucion="Institución Detalle",
+            direccion="Av. Siempre Viva 742",
+            notas_visitas_anteriores=[],
+            productos_preferidos=[]
+        )
         mock_visita_service.get_visita_detalle_por_id.return_value = mock_response_data
         
         response = client.get(f"/api/visitas/{visita_id}")
         
         assert response.status_code == HTTPStatus.OK
         assert response.json()["nombre_institucion"] == "Institución Detalle"
-        mock_visita_service.get_visita_detalle_por_id.assert_called_once_with(visita_id)
+        
+        mock_visita_service.get_visita_detalle_por_id.assert_called_once_with(
+            visita_id,         
+            lat_actual=None,
+            lon_actual=None
+        )
 
     @pytest.mark.asyncio
     async def test_actualizar_visita_endpoint(self, client: TestClient, mock_visita_service: Mock):
         """Test: Endpoint PUT /api/visitas/{visita_id} (async) - Éxito"""
         visita_id = uuid4()
-        payload = {"estado": "TOMADA", "detalle": "Visita completada"}
+        payload = {"estado": "REALIZADA", "detalle": "Visita completada"}
         
-        mock_response_data = {
-            "id": str(visita_id),
-            "cliente_id": str(uuid4()),
-            "vendedor_id": str(uuid4()),
-            "fecha_visita_programada": datetime.now().isoformat(),
-            "estado": "TOMADA",
-            "detalle": "Visita completada",
-            "created_at": datetime.now().isoformat(),
-            "nombre_institucion": "Institución",
-            "direccion": "Dirección"
-        }
+        mock_response_data = VisitaDetalleResponseSchema(
+            id=visita_id,
+            cliente_id=uuid4(),
+            vendedor_id=uuid4(),
+            fecha_visita_programada=datetime.now(),
+            estado="REALIZADA",
+            detalle="Visita completada",
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+            nombre_institucion="Institución",
+            direccion="Dirección",
+            notas_visitas_anteriores=[],
+            productos_preferidos=[]
+        )
         mock_visita_service.actualizar_visita.return_value = mock_response_data
         
         response = client.put(f"/api/visitas/{visita_id}", json=payload)
         
         assert response.status_code == HTTPStatus.OK
-        assert response.json()["estado"] == "TOMADA"
+        assert response.json()["estado"] == "REALIZADA"
         mock_visita_service.actualizar_visita.assert_called_once_with(
             visita_id,
             ActualizarVisitaSchema(**payload)
@@ -174,9 +193,9 @@ class TestVisitaRouter:
         """Test: Endpoint PUT /{visita_id} - Falla 422 si el estado en el body es inválido"""
         visita_id = uuid4()
         
-        payload = {"estado": "REALIZADA"}
+        payload = {"estado": "ESTADO_INVALIDO"}
         response = client.put(f"/api/visitas/{visita_id}", json=payload)
         
         assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
-        assert "Input should be 'PENDIENTE', 'TOMADA' or 'CANCELADA'" in response.text
+        assert "Input should be 'PENDIENTE', 'REALIZADA' or 'CANCELADA'" in response.text
         mock_visita_service.actualizar_visita.assert_not_called()

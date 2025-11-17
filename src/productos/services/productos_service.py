@@ -1,7 +1,7 @@
 # src/productos/services/productos_service.py
 
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from sqlalchemy.dialects.postgresql import insert
 from typing import List, Optional, Union
 import uuid as uuid_module
@@ -410,26 +410,41 @@ class ProductosService:
             logger.error(f"Error al eliminar producto {producto_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Error al eliminar producto")
 
-    def get_detalles_por_ids(self, producto_ids: List[str]) -> Dict[str, Dict[str, str]]:
+    def get_detalles_por_ids(self, producto_ids: List[str]) -> Dict[str, Dict[str, Any]]:
         """
-        Obtiene detalles clave (nombre y SKU) para una lista de IDs de productos.
+        Obtiene detalles de productos para una lista de IDs.
+        Retorna un diccionario con los campos más comunes que pueden ser útiles
+        para enriquecer registros de inventario.
         """
         try:
             unique_ids = list(set(producto_ids))
             productos_db = self.db.query(
                 Producto.id, 
                 Producto.nombre, 
-                Producto.sku
+                Producto.sku,
+                Producto.categoria,
+                Producto.unidad_medida,
+                Producto.tipo_almacenamiento,
+                Producto.precio_unitario,
+                Producto.descripcion,
+                Producto.imagen_url
             ).filter(
                 Producto.id.in_(unique_ids)
             ).all()
 
             # Convertimos la lista en un diccionario para búsqueda rápida
-            # Ej: {"uuid-1": {"nombre": "Guantes", "sku": "SKU-123"}, ...}
-            detalles_map = {
-                str(p.id): {"nombre": p.nombre, "sku": p.sku}
-                for p in productos_db
-            }
+            detalles_map = {}
+            for p in productos_db:
+                detalles_map[str(p.id)] = {
+                    "nombre": p.nombre,
+                    "sku": p.sku,
+                    "categoria": p.categoria,
+                    "unidad_medida": p.unidad_medida,
+                    "tipo_almacenamiento": p.tipo_almacenamiento,
+                    "precio_unitario": str(p.precio_unitario) if p.precio_unitario else None,
+                    "descripcion": p.descripcion,
+                    "imagen_url": p.imagen_url,
+                }
             
             logger.info(f"Se obtuvieron detalles para {len(detalles_map)} productos.")
             return detalles_map
@@ -437,6 +452,61 @@ class ProductosService:
         except Exception as e:
             logger.error(f"Error al obtener detalles de productos por IDs: {str(e)}")
             return {}
+
+    def get_producto_ids_by_filters(
+        self, 
+        nombre: Optional[str] = None, 
+        sku: Optional[str] = None, 
+        categoria: Optional[str] = None,
+        text_search: Optional[str] = None
+    ) -> List[str]:
+        """
+        Obtiene IDs de productos que coinciden con los filtros proporcionados.
+        
+        Args:
+            nombre: Búsqueda parcial por nombre (case-insensitive)
+            sku: Búsqueda exacta por SKU
+            categoria: Búsqueda exacta por categoría
+            text_search: Búsqueda parcial en nombre o SKU (case-insensitive, OR condition)
+            
+        Returns:
+            Lista de IDs de productos (como strings) que coinciden con los filtros
+        """
+        try:
+            query = self.db.query(Producto.id)
+            filters = []
+
+            if text_search:
+                # Buscar en nombre o SKU usando OR
+                filters.append(
+                    or_(
+                        Producto.nombre.ilike(f"%{text_search}%"),
+                        Producto.sku.ilike(f"%{text_search}%")
+                    )
+                )
+            else:
+                # Mantener compatibilidad con filtros individuales
+                if nombre:
+                    filters.append(Producto.nombre.ilike(f"%{nombre}%"))
+                
+                if sku:
+                    filters.append(Producto.sku == sku)
+            
+            if categoria:
+                filters.append(Producto.categoria == categoria)
+
+            if filters:
+                query = query.filter(and_(*filters))
+
+            productos_db = query.all()
+            producto_ids = [str(p.id) for p in productos_db]
+            
+            logger.info(f"Se encontraron {len(producto_ids)} productos que coinciden con los filtros.")
+            return producto_ids
+
+        except Exception as e:
+            logger.error(f"Error al obtener IDs de productos por filtros: {str(e)}")
+            return []
 
     def get_productos_by_ids(self, ids: List[str]) -> List[ProductoResponse]:
         """Obtiene productos por una lista de IDs."""
