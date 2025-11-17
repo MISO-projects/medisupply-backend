@@ -225,6 +225,7 @@ services:
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
     volumes:
       - ./src/reportes:/app
     networks:

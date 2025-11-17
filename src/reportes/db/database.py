@@ -5,6 +5,11 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 TEST_DATABASE_URL = "sqlite:///./test.db"
 
 def get_database_uri():
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        return database_url
+
+    # Fallback a variables individuales para compatibilidad
     user = os.getenv("POSTGRES_USER", 'root')
     password = os.getenv("POSTGRES_PASSWORD", 'medisupply-pass')
     host = os.getenv("POSTGRES_HOST", "pg_db")
