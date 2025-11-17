@@ -76,3 +76,17 @@ class DisminuirStockResponseSchema(BaseModel):
     cantidad_disminuida: int
     stock_restante_total: int
     lotes_afectados: List[LoteAfectadoResponse]
+
+class ActualizarInventarioSchema(BaseModel):
+    """Esquema para actualizar un registro de inventario existente."""
+    lote: Optional[str] = Field(None, min_length=1, max_length=100, description="Código de lote del proveedor.")
+    fecha_vencimiento: Optional[date] = Field(None, description="Fecha de vencimiento de este lote (YYYY-MM-DD).")
+    cantidad: Optional[int] = Field(None, ge=0, description="Cantidad de unidades en este registro.")
+    ubicacion: Optional[str] = Field(None, max_length=100, description="Ubicación física del stock.")
+    temperatura_requerida: Optional[str] = Field(None, max_length=50, description="Condición de temperatura del stock.")
+    estado: Optional[str] = Field(None, max_length=50, description="Estado del stock (DISPONIBLE, BLOQUEADO, AGOTADO, etc.).")
+    condiciones_especiales: Optional[str] = Field(None, description="Cualquier condición especial de manejo.")
+    observaciones: Optional[str] = Field(None, description="Observaciones adicionales sobre el lote.")
+
+    class Config:
+        from_attributes = True
