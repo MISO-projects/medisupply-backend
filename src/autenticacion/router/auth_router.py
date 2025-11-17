@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Path
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from db.database import get_db
@@ -122,3 +122,21 @@ def get_sellers(
     Endpoint público para obtener lista de IDs de vendedores activos.
     """
     return auth_service.get_active_seller_ids(db)
+
+
+@router.get(
+    "/user-by-client/{client_id}",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Obtener usuario por ID de Cliente",
+    description="Busca y devuelve un usuario basado en el UUID del cliente (id_client) al que está asociado."
+)
+def get_user_by_client_id(
+    client_id: str = Path(..., description="ID del cliente (id_client) a buscar"),
+    db: Session = Depends(get_db),
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """
+    Endpoint (público) para encontrar un usuario por su id_client.
+    """
+    return auth_service.get_user_by_client_id(db, client_id)

@@ -12,6 +12,7 @@ from schemas.order_schema import (
     IdsResponse,
     CacheHealthResponse,
     CacheInvalidationResponse,
+    TopProductsResponse,
 )
 import jwt
 
@@ -150,6 +151,21 @@ async def get_orders_by_client(
         "total_pages": (total + page_size - 1) // page_size if total > 0 else 0,
     }
 
+@order_router.get("/client-top-products", response_model=TopProductsResponse)
+async def get_client_top_products(
+    client_id: str = Query(..., description="ID del cliente a consultar"),
+    limit: int = Query(5, ge=1, le=50, description="Cantidad de productos a mostrar (Top N)"),
+    order_service: OrderService = Depends(get_order_service),
+):
+    """
+    Obtiene el ranking de productos más solicitados (Top N) por un cliente específico para recomendarlos
+    """
+    data = await order_service.get_top_products_by_client(
+        id_cliente=client_id,
+        limit=limit
+    )
+    
+    return {"data": data}
 
 @order_router.get("/{order_id}", response_model=SingleOrderResponse)
 async def get_order(order_id: str, order_service: OrderService = Depends(get_order_service)):

@@ -84,4 +84,10 @@ class CacheInvalidationResponse(BaseModel):
     client_id: Optional[str] = None
     reason: Optional[str] = None
 
+class TopProductSchema(BaseModel):
+    id_producto: str
+    nombre: str
+    cantidad_total: int
 
+class TopProductsResponse(BaseModel):
+    data: List[TopProductSchema]

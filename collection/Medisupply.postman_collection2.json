@@ -1894,7 +1894,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"detalle\": \"Visita exitosa. Cliente interesado en producto X.\",\n    \"evidencia\": \"https://mi-storage.com/fotos/visita-123.jpg\",\n    \"cliente_contacto\": \"Ana Pérez - Jefe de Compras\",\n    \"inicio\": \"2025-11-01T10:05:00Z\",\n    \"fin\": \"2025-11-01T10:45:00Z\",\n    \"estado\": \"TOMADA\"\n}",
+									"raw": "{\n    \"detalle\": \"Visita exitosa. Cliente interesado en producto X.\",\n    \"evidencia\": \"https://mi-storage.com/fotos/visita-123.jpg\",\n    \"cliente_contacto\": \"Ana Pérez - Jefe de Compras\",\n    \"inicio\": \"2025-11-01T10:05:00Z\",\n    \"fin\": \"2025-11-01T10:45:00Z\",\n    \"estado\": \"REALIZADA\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -3095,7 +3095,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"detalle\": \"Visita exitosa. Cliente interesado en producto X.\",\n    \"evidencia\": \"https://mi-storage.com/fotos/visita-123.jpg\",\n    \"cliente_contacto\": \"Ana Pérez - Jefe de Compras\",\n    \"inicio\": \"2025-11-01T10:05:00Z\",\n    \"fin\": \"2025-11-01T10:45:00Z\",\n    \"estado\": \"TOMADA\"\n}",
+							"raw": "{\n    \"detalle\": \"Visita exitosa. Cliente interesado en producto X.\",\n    \"evidencia\": \"https://mi-storage.com/fotos/visita-123.jpg\",\n    \"cliente_contacto\": \"Ana Pérez - Jefe de Compras\",\n    \"inicio\": \"2025-11-01T10:05:00Z\",\n    \"fin\": \"2025-11-01T10:45:00Z\",\n    \"estado\": \"REALIZADA\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
