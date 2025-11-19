@@ -126,6 +126,13 @@ else
     echo "Topic already exists: order-projection-created"
 fi
 
+if ! gcloud pubsub topics describe inventory-events --quiet 2>/dev/null; then
+    echo "Creating Topic: inventory-events"
+    gcloud pubsub topics create inventory-events
+else
+    echo "Topic already exists: inventory-events"
+fi
+
 # Function to check if a GKE service exists
 check_gke_service() {
     local service_name=$1
@@ -268,6 +275,7 @@ if [ "$SKIP_TRIGGERS" = false ]; then
     setup_workload_identity "ordenes-commands-api-sa" "default"
     setup_workload_identity "ordenes-commands-handlers-sa" "default"
     setup_workload_identity "ordenes-queries-projection-sa" "default"
+    setup_workload_identity "auditoria-sa" "default"
     echo ""
     
     # Trigger 1: create-order-command -> ordenes-commands-handlers-service
@@ -278,6 +286,9 @@ if [ "$SKIP_TRIGGERS" = false ]; then
     
     # Trigger 3: order-projection-created -> ordenes-queries-api-service (cache invalidation)
     create_eventarc_trigger "order-projection-created-trigger" "ordenes-queries-api-service" "order-projection-created" "/orders/cache-invalidation"
+    
+    # Trigger 4: inventory-events -> auditoria-service
+    create_eventarc_trigger "inventory-events-audit-trigger" "auditoria-service" "inventory-events" "/api/auditoria/eventos/inventario"
 fi
 
 echo ""
@@ -285,7 +296,7 @@ echo "✅ Setup complete!"
 echo ""
 echo "📋 Summary:"
 echo "  - Service Account: $SERVICE_ACCOUNT_EMAIL (user-managed service account)"
-echo "  - Topics: create-order-command, order-created, order-projection-created"
+echo "  - Topics: create-order-command, order-created, order-projection-created, inventory-events"
 echo ""
 echo "⚠️  Important: According to Eventarc documentation, services should be ClusterIP type"
 echo "   Your services are currently NodePort. Consider updating them to ClusterIP:"
@@ -295,10 +306,11 @@ if [ "$SKIP_TRIGGERS" = true ]; then
     echo "  - Eventarc Triggers: Skipped (deploy services first)"
     echo ""
     echo "📝 Next Steps:"
-    echo "  1. Deploy your order services to GKE:"
+    echo "  1. Deploy your services to GKE:"
     echo "     - ordenes-commands-handlers-service"
     echo "     - ordenes-queries-projection-service"
     echo "     - ordenes-queries-api-service"
+    echo "     - auditoria-service"
     echo ""
     echo "  2. Re-run this script to create Eventarc triggers:"
     echo "     ./setup-gcp-pubsub.sh"
