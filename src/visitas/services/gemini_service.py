@@ -12,7 +12,7 @@ class GeminiService:
             logger.warning("GOOGLE_API_KEY is not set. Gemini features will be disabled.")
         else:
             genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            self.model = genai.GenerativeModel('gemini-2.0-flash-lite')
 
     async def generate_recommendation(self, visit_details: str, client_orders: List[Dict[str, Any]]) -> str:
         """
@@ -36,16 +36,13 @@ class GeminiService:
                 products_summary = "El cliente no tiene historial de pedidos."
 
             prompt = f"""
-            Actúa como un asistente de ventas experto para un vendedor que visita a un cliente.
+            Eres asesor de ventas en MediSupply, empresa que distribuye insumos médicos y equipos a instituciones de salud.
 
-            Detalles de la visita actual/reciente:
-            "{visit_details}"
+            etalles de la visita actual/reciente: {visit_details}
 
-            Productos favoritos del cliente (más pedidos históricamente):
-            {products_summary}
+            Productos favoritos del cliente (más pedidos históricamente): {products_summary}
 
-            Basado en esta información, genera una recomendación breve y accionable (máximo 2-3 frases) para el vendedor.
-            Sugiere qué productos ofrecer (priorizando sus favoritos o productos complementarios) o qué temas tratar en la próxima interacción para aumentar las ventas o mejorar la relación.
+            Dirige tus recomendaciones directamente al gerente de cuenta en 2-3 frases claras, sin introducción ni formato especial. Indica qué productos ofrecer o qué temas abordar en la próxima visita para aumentar ventas. Usa solo texto plano sin saltos de línea, negritas ni numeración.
             """
 
             response = await self.model.generate_content_async(prompt)
