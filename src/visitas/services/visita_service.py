@@ -154,25 +154,6 @@ class VisitaService:
             return None
         
 
-    async def _get_client_orders(self, cliente_id: str) -> List[Dict[str, Any]]:
-        """
-        Llama al servicio de Órdenes para obtener los pedidos recientes del cliente.
-        """
-        endpoint_url = f"{self.ordenes_service_url}/orders/by-client/{cliente_id}"
-        params = {"limit": 5}
-        
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(endpoint_url, params=params)
-            
-            if response.status_code == HTTPStatus.OK:
-                return response.json()
-            else:
-                logger.error(f"Error fetching client orders ({endpoint_url}): {response.status_code}")
-                return []
-        except Exception as e:
-            logger.error(f"Error fetching client orders: {e}")
-            return []
 
 
     async def crear_ruta_visita(self, data: CrearRutaVisitaSchema) -> Dict[str, Any]:
@@ -534,10 +515,10 @@ class VisitaService:
             # Generate recommendation if detalle is provided or status is REALIZADA
             if (update_data.get("detalle") or nuevo_estado == "REALIZADA") and not visita_db.recomendacion_llm:
                 try:
-                    client_orders = await self._get_client_orders(str(visita_db.cliente_id))
+                    top_products = await self._get_top_products_data(str(visita_db.cliente_id))
                     recommendation = await self.gemini_service.generate_recommendation(
                         visit_details=visita_db.detalle or "Visita realizada",
-                        client_orders=client_orders
+                        client_orders=top_products
                     )
                     visita_db.recomendacion_llm = recommendation
                 except Exception as e:

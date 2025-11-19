@@ -16,39 +16,43 @@ class GeminiService:
 
     async def generate_recommendation(self, visit_details: str, client_orders: List[Dict[str, Any]]) -> str:
         """
-        Generates a recommendation for the vendor based on the visit details and client orders.
+        Generates a recommendation for the vendor based on the visit details and top products.
         """
         if not self.api_key:
+            logger.warning("GOOGLE_API_KEY not configured - returning default message")
             return "Recomendación no disponible (API Key no configurada)."
 
         try:
-            # Format orders for the prompt
-            orders_summary = ""
+            # Format top products for the prompt
+            products_summary = ""
             if client_orders:
-                orders_summary = "Últimos pedidos del cliente:\n"
-                for order in client_orders[:5]: # Limit to last 5 orders
-                    products = order.get('detalles', [])
-                    product_names = [p.get('nombre_producto', 'Producto desconocido') for p in products]
-                    orders_summary += f"- Fecha: {order.get('fecha_creacion', 'N/A')}, Productos: {', '.join(product_names)}\n"
+                products_summary = "Productos más pedidos por este cliente (Top 5):\n"
+                for idx, product in enumerate(client_orders[:5], 1):
+                    product_name = product.get('nombre', 'Producto desconocido')
+                    quantity = product.get('cantidad_total', 0)
+                    products_summary += f"{idx}. {product_name} - Cantidad total pedida: {quantity} unidades\n"
+
             else:
-                orders_summary = "El cliente no tiene pedidos recientes."
+                products_summary = "El cliente no tiene historial de pedidos."
 
             prompt = f"""
             Actúa como un asistente de ventas experto para un vendedor que visita a un cliente.
-            
+
             Detalles de la visita actual/reciente:
             "{visit_details}"
-            
-            Historial de pedidos del cliente:
-            {orders_summary}
-            
-            Basado en esta información, genera una recomendación breve y accionable (máximo 2 frases) para el vendedor. 
-            Sugiere qué productos ofrecer o qué temas tratar en la próxima interacción para aumentar las ventas o mejorar la relación.
+
+            Productos favoritos del cliente (más pedidos históricamente):
+            {products_summary}
+
+            Basado en esta información, genera una recomendación breve y accionable (máximo 2-3 frases) para el vendedor.
+            Sugiere qué productos ofrecer (priorizando sus favoritos o productos complementarios) o qué temas tratar en la próxima interacción para aumentar las ventas o mejorar la relación.
             """
 
             response = await self.model.generate_content_async(prompt)
-            return response.text.strip()
+            recommendation = response.text.strip()
+
+            return recommendation
 
         except Exception as e:
-            logger.error(f"Error generating recommendation with Gemini: {e}")
+            logger.error(f"Error generating recommendation with Gemini: {e}", exc_info=True)
             return "Error al generar recomendación."
