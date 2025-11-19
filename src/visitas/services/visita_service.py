@@ -23,6 +23,7 @@ from schemas.visita_schema import (
     ProductoPreferidoSchema
 )
 from db.redis_client import get_redis_client
+from services.gemini_service import GeminiService
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ class VisitaService:
         self.auth_service_url = os.getenv(
             "AUTH_SERVICE_URL", "http://autenticacion-service:3000" 
         )
+        self.gemini_service = GeminiService()
 
     async def _get_cliente_data(self, cliente_id: str) -> Dict[str, Any]:
         """
@@ -151,6 +153,27 @@ class VisitaService:
             logger.error(f"Error de conexión al servicio de usuarios ({endpoint_url}): {e}")
             return None
         
+
+    async def _get_client_orders(self, cliente_id: str) -> List[Dict[str, Any]]:
+        """
+        Llama al servicio de Órdenes para obtener los pedidos recientes del cliente.
+        """
+        endpoint_url = f"{self.ordenes_service_url}/orders/by-client/{cliente_id}"
+        params = {"limit": 5}
+        
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(endpoint_url, params=params)
+            
+            if response.status_code == HTTPStatus.OK:
+                return response.json()
+            else:
+                logger.error(f"Error fetching client orders ({endpoint_url}): {response.status_code}")
+                return []
+        except Exception as e:
+            logger.error(f"Error fetching client orders: {e}")
+            return []
+
 
     async def crear_ruta_visita(self, data: CrearRutaVisitaSchema) -> Dict[str, Any]:
         """
@@ -508,6 +531,18 @@ class VisitaService:
             for key, value in update_data.items():
                 setattr(visita_db, key, value)
             
+            # Generate recommendation if detalle is provided or status is REALIZADA
+            if (update_data.get("detalle") or nuevo_estado == "REALIZADA") and not visita_db.recomendacion_llm:
+                try:
+                    client_orders = await self._get_client_orders(str(visita_db.cliente_id))
+                    recommendation = await self.gemini_service.generate_recommendation(
+                        visit_details=visita_db.detalle or "Visita realizada",
+                        client_orders=client_orders
+                    )
+                    visita_db.recomendacion_llm = recommendation
+                except Exception as e:
+                    logger.error(f"Error generating recommendation: {e}")
+
             self.db.add(visita_db)
 
             if nuevo_estado == "CANCELADA" and estado_actual != "CANCELADA":
