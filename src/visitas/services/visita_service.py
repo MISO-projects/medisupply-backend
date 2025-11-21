@@ -1,7 +1,7 @@
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, UploadFile
 from http import HTTPStatus
 from datetime import datetime, timezone, date, timedelta 
 import logging
@@ -11,14 +11,14 @@ from sqlalchemy import func, Date, cast, desc
 import json
 import random
 import uuid 
+from google.cloud import storage
 
 from db.database import get_db
 from db.visita import Visita
 from schemas.visita_schema import (
     CrearRutaVisitaSchema, 
     RutaVisitaItemSchema, 
-    VisitaDetalleResponseSchema, 
-    ActualizarVisitaSchema,
+    VisitaDetalleResponseSchema,
     VisitaResponseSchema,
     ProductoPreferidoSchema
 )
@@ -45,6 +45,8 @@ class VisitaService:
         self.auth_service_url = os.getenv(
             "AUTH_SERVICE_URL", "http://autenticacion-service:3000" 
         )
+        self.bucket_name = os.getenv("GCS_BUCKET_NAME", "medisupply-evidencias")
+        self.credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/app/credentials.json")
 
     async def _get_cliente_data(self, cliente_id: str) -> Dict[str, Any]:
         """
@@ -151,7 +153,31 @@ class VisitaService:
             logger.error(f"Error de conexión al servicio de usuarios ({endpoint_url}): {e}")
             return None
         
-
+    def _upload_file_to_gcs(self, file: UploadFile, folder="evidencias", custom_name: str = None) -> Optional[str]:
+        try:
+            if os.path.exists(self.credentials_path):
+                client = storage.Client.from_service_account_json(self.credentials_path)
+            else:
+                client = storage.Client()
+            
+            bucket = client.bucket(self.bucket_name)
+            ext = file.filename.split(".")[-1]
+            
+            if custom_name:
+                blob_name = f"{folder}/{custom_name}.{ext}"
+            else:
+                blob_name = f"{folder}/{uuid.uuid4()}.{ext}"
+                
+            blob = bucket.blob(blob_name)
+            blob.upload_from_file(file.file, content_type=file.content_type)
+            
+            url = f"https://storage.googleapis.com/{self.bucket_name}/{blob_name}"
+            logger.info(f"Archivo subido: {url}")
+            return url
+        except Exception as e:
+            logger.error(f"Error GCS: {e}")
+            return None
+        
     async def crear_ruta_visita(self, data: CrearRutaVisitaSchema) -> Dict[str, Any]:
         """
         Crea un nuevo registro de visita (ruta).
@@ -484,63 +510,75 @@ class VisitaService:
     async def actualizar_visita(
         self, 
         visita_id: uuid.UUID, 
-        data: ActualizarVisitaSchema
+        detalle: Optional[str] = None,
+        cliente_contacto: Optional[str] = None,
+        inicio_str: Optional[str] = None,
+        fin_str: Optional[str] = None,
+        estado: Optional[str] = None,
+        archivo_evidencia: Optional[UploadFile] = None
     ) -> VisitaDetalleResponseSchema:
-        """
-        Actualiza campos específicos de una visita existente.
-        Aplica validación de transiciones de estado.
-        """
         try:
             visita_db = self.db.query(Visita).filter(Visita.id == visita_id).first()
             if not visita_db:
                 raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Visita con ID {visita_id} no encontrada.")
-            update_data = data.model_dump(exclude_unset=True)
-            if not update_data:
-                raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="No se proporcionaron datos para actualizar.")
 
-            nuevo_estado = update_data.get("estado")
-            estado_actual = visita_db.estado
-            
-            if nuevo_estado:
-                if estado_actual in ("REALIZADA", "CANCELADA") and nuevo_estado != estado_actual:
-                    raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"No se puede cambiar el estado de una visita que ya está '{estado_actual}'.")
-            
-            for key, value in update_data.items():
-                setattr(visita_db, key, value)
+            if archivo_evidencia:
+                now = datetime.now()
+                custom_name = f"{now.year}-{now.month:02d}-{now.day:02d}-{str(visita_id)}"
+                url = self._upload_file_to_gcs(archivo_evidencia, custom_name=custom_name)
+                if url: visita_db.evidencia = url
+
+            if detalle: visita_db.detalle = detalle
+            if cliente_contacto: visita_db.cliente_contacto = cliente_contacto
+
+            fb = visita_db.fecha_visita_programada
+            if fb:
+                if inicio_str:
+                    try: h,m=map(int,inicio_str.split(':')); visita_db.inicio = fb.replace(hour=h, minute=m, second=0)
+                    except: pass
+                if fin_str:
+                    try: h,m=map(int,fin_str.split(':')); visita_db.fin = fb.replace(hour=h, minute=m, second=0)
+                    except: pass
+
+            if estado:
+                if estado == "CANCELADA" and visita_db.estado != "CANCELADA":
+                    
+                    fecha_origen = visita_db.fecha_visita_programada
+                    if fecha_origen.tzinfo is None:
+                        fecha_origen = fecha_origen.replace(tzinfo=timezone.utc)
+                    dia_semana = fecha_origen.weekday()
+                    dias_a_sumar = 1
+                    if dia_semana == 5: dias_a_sumar = 2
+                    elif dia_semana == 6: dias_a_sumar = 1
+                    fecha_nueva_base = fecha_origen + timedelta(days=dias_a_sumar)
+                    hora_aleatoria = random.randint(8, 18)
+                    minuto_aleatorio = random.choice([0, 15, 30, 45])
+                    fecha_reprogramada = fecha_nueva_base.replace(hour=hora_aleatoria, minute=minuto_aleatorio, second=0, microsecond=0)
+                    nueva_visita_reprogramada = Visita(
+                        cliente_id=visita_db.cliente_id, 
+                        vendedor_id=visita_db.vendedor_id, 
+                        fecha_visita_programada=fecha_reprogramada,
+                        estado="PENDIENTE"
+                    )
+                    self.db.add(nueva_visita_reprogramada)
+                    logger.info(f"Visita cancelada. Reprogramada nueva visita para: {fecha_reprogramada}")
+
+                visita_db.estado = estado
+            else:
+                if archivo_evidencia:
+                    visita_db.estado = "REALIZADA"
+            visita_db.updated_at = datetime.now(timezone.utc)
             
             self.db.add(visita_db)
-
-            if nuevo_estado == "CANCELADA" and estado_actual != "CANCELADA":
-                fecha_origen = visita_db.fecha_visita_programada
-                if fecha_origen.tzinfo is None:
-                    fecha_origen = fecha_origen.replace(tzinfo=timezone.utc)
-                dia_semana = fecha_origen.weekday()
-                dias_a_sumar = 1
-                if dia_semana == 5: dias_a_sumar = 2
-                elif dia_semana == 6: dias_a_sumar = 1
-                fecha_nueva_base = fecha_origen + timedelta(days=dias_a_sumar)
-                hora_aleatoria = random.randint(8, 18)
-                minuto_aleatorio = random.choice([0, 15, 30, 45])
-                fecha_reprogramada = fecha_nueva_base.replace(hour=hora_aleatoria, minute=minuto_aleatorio, second=0, microsecond=0)
-                nueva_visita_reprogramada = Visita(
-                    cliente_id=visita_db.cliente_id,
-                    vendedor_id=visita_db.vendedor_id,
-                    fecha_visita_programada=fecha_reprogramada,
-                    estado="PENDIENTE"
-                )
-                self.db.add(nueva_visita_reprogramada)
-                logger.info(f"Visita {visita_id} cancelada. Reprogramada para: {fecha_reprogramada}")
-
             self.db.commit()
             self.db.refresh(visita_db)
+            
             return await self.get_visita_detalle_por_id(visita_id)
-        except HTTPException as he:
-            self.db.rollback()
-            raise he
+
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Error al actualizar visita {visita_id}: {e}")
-            raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Error interno al actualizar la visita.")
+            logger.error(f"Error update unificado: {e}")
+            raise HTTPException(500, f"Error: {str(e)}")
 
 def get_visita_service(db: Session = Depends(get_db)) -> VisitaService:
     return VisitaService(db)

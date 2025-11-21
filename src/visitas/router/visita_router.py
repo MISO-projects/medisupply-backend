@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, Path, HTTPException
+from fastapi import APIRouter, Depends, Query, Path, HTTPException, Form, File, UploadFile
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict
 import logging
@@ -10,8 +10,7 @@ from schemas.visita_schema import (
     CrearRutaVisitaSchema, 
     VisitaResponseSchema,
     RutaVisitaItemSchema,
-    VisitaDetalleResponseSchema,
-    ActualizarVisitaSchema
+    VisitaDetalleResponseSchema
 )
 from typing import List
 
@@ -130,29 +129,31 @@ async def get_detalle_visita(
 @visita_router.put(
     "/{visita_id}",
     response_model=VisitaDetalleResponseSchema, 
-    summary="Actualizar una visita existente",
-    description="""
-    Actualiza uno o más campos de una visita.
-    Ideal para marcar una visita como 'REALIZADA' y registrar
-    el detalle, la evidencia (URL), y las horas de inicio/fin.
-    """
+    summary="Actualizar visita",
+    description="Actualiza detalles, estado y/o sube evidencia. Si se cancela, reprograma automáticamente."
 )
 async def actualizar_visita_endpoint(
-    data: ActualizarVisitaSchema, 
-    visita_id: UUID4 = Path(..., description="ID de la visita a actualizar"), 
+    visita_id: UUID4 = Path(..., description="ID de la visita"),
+    detalle: Optional[str] = Form(None),
+    cliente_contacto: Optional[str] = Form(None),
+    inicio: Optional[str] = Form(None),
+    fin: Optional[str] = Form(None),
+    estado: Optional[str] = Form(None),
+    evidencia: Optional[UploadFile] = File(None),
     service: VisitaService = Depends(get_visita_service)
 ):
-    """
-    Actualiza los detalles de una visita específica por su ID.
-    """
     try:
-        visita_actualizada = await service.actualizar_visita(visita_id, data)
-        return visita_actualizada
+        return await service.actualizar_visita(
+            visita_id=visita_id,
+            detalle=detalle,
+            cliente_contacto=cliente_contacto,
+            inicio_str=inicio,
+            fin_str=fin,
+            estado=estado,
+            archivo_evidencia=evidencia
+        )
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Error inesperado en endpoint PUT /visita/{visita_id}: {str(e)}")
-        raise HTTPException(
-            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-            detail=f"Error inesperado al actualizar la visita: {str(e)}"
-        )
+        logger.error(f"Error en PUT /visita/{visita_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al actualizar: {str(e)}")
