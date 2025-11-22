@@ -275,6 +275,7 @@ services:
       - PUBSUB_TOPIC_NAME=inventory-events
       - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
+      - PUBSUB_TOPIC_NAME=inventory-events
       - PRODUCTOS_SERVICE_URL=http://productos-service:3000
     volumes:
       - ./src/inventario:/app

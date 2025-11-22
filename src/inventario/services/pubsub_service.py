@@ -35,7 +35,7 @@ class PubSubService:
             topic_name: Pub/Sub topic name. If not provided, will use environment variable or default.
         """
         self.project_id = project_id or os.getenv("GOOGLE_CLOUD_PROJECT_ID")
-        self.topic_name = topic_name or os.getenv("PUBSUB_TOPIC_NAME")
+        self.topic_name = topic_name or os.getenv("PUBSUB_TOPIC_NAME", "inventory-events")
         self._publisher = None
         self._initialize_client()
 
