@@ -1,6 +1,5 @@
 # src/bff-movil/router/visitas_router.py
-
-from fastapi import APIRouter, Depends, Query, Path, HTTPException
+from fastapi import APIRouter, Depends, Query, Path, HTTPException, Form, File, UploadFile
 from typing import Optional, List, Dict
 import logging
 from datetime import date
@@ -12,8 +11,7 @@ from schemas.visitas_schema import (
     CrearRutaVisitaSchema, 
     VisitaResponseSchema,
     RutaVisitaItemSchema,
-    VisitaDetalleResponseSchema,
-    ActualizarVisitaSchema
+    VisitaDetalleResponseSchema
 )
 from services.visitas_service import VisitasService, get_visitas_service
 
@@ -116,18 +114,38 @@ def health_check(productos_service: VisitasService = Depends(get_visitas_service
     response_model=VisitaDetalleResponseSchema, 
     summary="[BFF] Actualizar una visita existente"
 )
+@visitas_router.put(
+    "/{visita_id}",
+    response_model=VisitaDetalleResponseSchema, 
+    summary="[BFF] Actualizar una visita existente (Multipart)"
+)
 async def actualizar_visita_endpoint(
-    data: ActualizarVisitaSchema, 
-    visita_id: UUID4 = Path(..., description="ID de la visita a actualizar"), 
+    visita_id: UUID4 = Path(..., description="ID de la visita"),
+    detalle: Optional[str] = Form(None),
+    cliente_contacto: Optional[str] = Form(None),
+    inicio: Optional[str] = Form(None), 
+    fin: Optional[str] = Form(None),    
+    estado: Optional[str] = Form(None),
+    evidencia: Optional[UploadFile] = File(None), 
     service: VisitasService = Depends(get_visitas_service)
 ):
     """
-    BFF Endpoint para actualizar los detalles de una visita.
+    BFF Endpoint para actualizar los detalles de una visita, incluyendo carga de evidencia.
     """
     try:
         logger.info(f"BFF Móvil: Solicitud de actualización para visita {visita_id}")
-        result = await service.actualizar_visita(visita_id, data)
-        logger.info(f"BFF Móvil: Visita {visita_id} actualizada")
+        
+        result = await service.actualizar_visita(
+            visita_id=visita_id,
+            detalle=detalle,
+            cliente_contacto=cliente_contacto,
+            inicio_str=inicio,
+            fin_str=fin,
+            estado=estado,
+            archivo_evidencia=evidencia
+        )
+        
+        logger.info(f"BFF Móvil: Visita {visita_id} actualizada correctamente")
         return result
     except HTTPException:
         raise
@@ -135,5 +153,5 @@ async def actualizar_visita_endpoint(
         logger.error(f"BFF Móvil: Error interno al actualizar visita {visita_id}: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="Error interno del servidor BFF móvil"
+            detail=f"Error interno del servidor BFF móvil: {str(e)}"
         )

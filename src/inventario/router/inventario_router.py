@@ -1,6 +1,6 @@
 # src/inventario/router/inventario_router.py
 
-from fastapi import APIRouter, Depends, Query, Path, HTTPException, Request
+from fastapi import APIRouter, Depends, Query, Path, HTTPException, Request, Body
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict
 import logging
@@ -132,13 +132,14 @@ def get_stock_batch(
 async def disminuir_stock_por_pedido( 
     data: CrearRegistroPedidoSchema,
     request: Request,
-    current_user: dict = Depends(get_current_user),
-    service: InventarioService = Depends(get_inventario_service)
+    service: InventarioService = Depends(get_inventario_service),
+    current_user: Optional[dict] = None
 ):
     """
     Disminuye el stock de un producto basado en una solicitud de pedido con auditoría.
+    El current_user es opcional para permitir llamadas de servicios internos.
     """
-    usuario_id = current_user.get("sub")
+    usuario_id = current_user.get("sub") if current_user else None
     ip_origen = request.client.host if request.client else None
     
     result = await service.disminuir_stock_por_pedido(

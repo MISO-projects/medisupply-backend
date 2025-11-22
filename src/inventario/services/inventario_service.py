@@ -10,11 +10,8 @@ import os
 from sqlalchemy import func, and_, or_, nullslast
 import json
 from uuid import UUID
-import sys
-
-# Importar modelo de auditoría
-sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
-from auditoria.db.models import AuditLog
+# Importar modelo de auditoría (versión local para evitar dependencia externa en build)
+from db.audit_model import AuditLog
 
 from db.database import get_db
 from db.inventario_model import Inventario
@@ -499,7 +496,7 @@ class InventarioService:
                     lote.estado = 'AGOTADO'
                 
                 lotes_afectados_info.append({
-                    "id": lote.id, 
+                    "id": str(lote.id),  # Convertir UUID a string para JSON
                     "lote": lote.lote,
                     "cantidad_disminuida": cantidad_disminuida_de_este_lote,
                     "cantidad_restante_lote": lote.cantidad

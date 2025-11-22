@@ -113,6 +113,7 @@ class TestInventarioRouter:
             "id": inventario_id,
             "producto_id": str(uuid4()),
             "lote": "LOTE-123",
+            "fecha_vencimiento": "2026-10-30",
             "cantidad": 150,
             "ubicacion": "BODEGA-B",
             "estado": "DISPONIBLE",

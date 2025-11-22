@@ -13,12 +13,12 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> dict:
     token = credentials.credentials
-    auth_service_url = os.getenv("AUTH_SERVICE_URL", "http://autenticacion-service:3000")
+    auth_service_url = os.getenv("AUTENTICACION_SERVICE_URL", "http://autenticacion-service:3000")
     
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(
-                f"{auth_service_url}/api/auth/me",
+                f"{auth_service_url}/auth/me",
                 headers={"Authorization": f"Bearer {token}"}
             )
             

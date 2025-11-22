@@ -31,13 +31,15 @@ class InventarioService:
             logger.error(f"Unexpected error checking Inventario health: {e}")
             raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
 
-    async def crear_registro_inventario(self, data: Dict[str, Any], token: str) -> Dict[str, Any]: # ¡MODIFICADO! Acepta token
+    async def crear_registro_inventario(self, data: Dict[str, Any], token: str = None) -> Dict[str, Any]: # ¡MODIFICADO! Acepta token
         """
         Llama al microservicio de inventario para crear un nuevo registro.
         Propaga el token de autenticación.
         """
         # Prepara el header de autenticación
-        auth_header = {"Authorization": token}
+        auth_header = {}
+        if token:
+            auth_header["Authorization"] = token
         
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:

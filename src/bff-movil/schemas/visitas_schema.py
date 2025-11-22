@@ -44,6 +44,7 @@ class VisitaResponseSchema(BaseModel):
     vendedor_id: UUID4
     detalle: Optional[str] = None
     evidencia: Optional[str] = None
+    recomendacion_llm: Optional[str] = None
     inicio: Optional[datetime] = None
     fin: Optional[datetime] = None
     estado: str
@@ -89,18 +90,6 @@ class VisitaDetalleResponseSchema(VisitaResponseSchema):
         None, 
         description="Tiempo de viaje estimado desde la ubicación actual del vendedor (ej: '15 min')."
     )
-
-    class Config:
-        from_attributes = True
-
-class ActualizarVisitaSchema(BaseModel):
-    """Schema para actualizar una visita (campos opcionales)."""
-    inicio: Optional[datetime] = Field(None, description="Hora y fecha de inicio real de la visita")
-    fin: Optional[datetime] = Field(None, description="Hora y fecha de fin real de la visita")
-    cliente_contacto: Optional[str] = Field(None, max_length=100, description="Nombre del contacto en el cliente")
-    detalle: Optional[str] = Field(None, max_length=100, description="Detalles o notas de la visita")
-    evidencia: Optional[str] = Field(None, max_length=100, description="URL de la foto o video de evidencia")
-    estado: Optional[EstadoVisitaEnum] = Field(None, description="Nuevo estado de la visita (PENDIENTE, REALIZADA, CANCELADA)")
 
     class Config:
         from_attributes = True

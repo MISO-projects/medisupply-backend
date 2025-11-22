@@ -1,0 +1,1332 @@
+{
+	"info": {
+		"_postman_id": "feda7503-a361-4b92-93ed-d2025091cba5",
+		"name": "medisupply-tests",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "11934607",
+		"_collection_link": "https://lunar-robot-137170.postman.co/workspace/160eeec6-e519-420d-a3b7-4a40c0740cc6/collection/11934607-feda7503-a361-4b92-93ed-d2025091cba5?action=share&source=collection_link&creator=11934607"
+	},
+	"item": [
+		{
+			"name": "health bff-web",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code es 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Servicios están saludables\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.autenticacion.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.clientes.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.inventario.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.logistica.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.ordenes_commands.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.ordenes_queries.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.productos.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.proveedores.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.reportes.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.ventas.status).to.equal('healthy');",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"url": {
+					"raw": "{{bff_web_url}}/health",
+					"host": [
+						"{{bff_web_url}}"
+					],
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "health bff-movil",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code es 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Servicios están saludables\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.autenticacion.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.clientes.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.ordenes_commands.status).to.equal('healthy');",
+							"    pm.expect(jsonData.services.ordenes_queries.status).to.equal('healthy');",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"url": {
+					"raw": "{{bff_movil_url}}/health",
+					"host": [
+						"{{bff_movil_url}}"
+					],
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crear plan de ventas",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();",
+							"const id = response.data?.id",
+							"pm.collectionVariables.set(\"id_plan_ventas\", id);",
+							"",
+							"pm.test(\"Status code es 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"plan de ventas es creado\", function () {",
+							"    const jsonData = pm.response.json();",
+							"     pm.expect(jsonData.data).to.have.property('id');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"nombre\": \"{{$randomCatchPhraseAdjective}} {{$randomNoun}}\",\n    \"fecha_inicio\": \"2025-11-20T05:00:00.000Z\",\n    \"fecha_fin\": \"2025-12-01T04:59:59.000Z\",\n    \"descripcion\": \"\",\n    \"meta_venta\": 5000,\n    \"zona_asignada\": \"{{pais}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{bff_web_url}}/ventas/planes",
+					"host": [
+						"{{bff_web_url}}"
+					],
+					"path": [
+						"ventas",
+						"planes"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crear vendedor",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();",
+							"const id = response.data?.id",
+							"pm.collectionVariables.set(\"id_vendedor\", id);",
+							"pm.collectionVariables.set(\"email_vendedor\", response.data?.email);",
+							"pm.collectionVariables.set(\"nombre_vendedor\", response.data?.nombre);",
+							"",
+							"pm.test(\"Status code es 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"vendedor es creado\", function () {",
+							"    const jsonData = pm.response.json();",
+							"     pm.expect(jsonData.data).to.have.property('id');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const lodash = require('lodash')",
+							"pm.environment.set(\"documento_identidad_vendedor\", lodash.random(10000000000, 10900000000))",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"nombre\": \"{{$randomFullName}}\",\n    \"documento_identidad\": \"{{documento_identidad_vendedor}}\",\n    \"email\": \"{{$randomEmail}}\",\n    \"zona_asignada\": \"{{pais}}\",\n    \"plan_venta_id\": \"{{id_plan_ventas}}\",\n    \"meta_venta\": {{$randomInt}}\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{bff_web_url}}/ventas/vendedores",
+					"host": [
+						"{{bff_web_url}}"
+					],
+					"path": [
+						"ventas",
+						"vendedores"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "registrar vendedor",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code es 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"vendedor es registrado\", function () {",
+							"    const jsonData = pm.response.json();",
+							"     pm.expect(jsonData).to.have.property('id');",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"{{email_vendedor}}\",\n    \"username\": \"{{nombre_vendedor}}\",\n    \"password\": \"Password123!\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{bff_web_url}}/autenticacion/register",
+					"host": [
+						"{{bff_web_url}}"
+					],
+					"path": [
+						"autenticacion",
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "login vendedor",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code es 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"access_token es generado\", function () {",
+							"    const jsonData = pm.response.json();",
+							"     pm.expect(jsonData).to.have.property('access_token');",
+							"});",
+							"",
+							"const response = pm.response.json();",
+							"const access_token = response?.access_token",
+							"pm.collectionVariables.set(\"token\", access_token);"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"{{email_vendedor}}\",\n    \"password\": \"Password123!\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{bff_movil_url}}/autenticacion/login",
+					"host": [
+						"{{bff_movil_url}}"
+					],
+					"path": [
+						"autenticacion",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crear proveedor",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"digitos_map = pm.collectionVariables.get('digitos_map')",
+							"pais = pm.collectionVariables.get('pais')",
+							"id_tributario = digitos_map[pais]",
+							"pm.collectionVariables.set(\"id_tributario\", id_tributario);"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();",
+							"const id = response.data?.id",
+							"pm.collectionVariables.set(\"id_proveedor\", id);",
+							"",
+							"pm.test(\"Status code es 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"proveedor es creado\", function () {",
+							"    const jsonData = pm.response.json();",
+							"     pm.expect(jsonData.data).to.have.property('id');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false,
+				"followOriginalHttpMethod": false
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"nombre\": \"{{$randomFullName}}\",\n\t\"id_tributario\": \"{{id_tributario}}\",\n\t\"tipo_proveedor\": \"Fabricante\",\n\t\"email\": \"{{$randomEmail}}\",\n\t\"pais\": \"{{pais}}\",\n\t\"contacto\": \"{{$randomFullName}} - {{$randomPhoneNumber}}\",\n\t\"condiciones_entrega\": \"Entrega en 5 días hábiles, cobertura nacional\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{bff_web_url}}/proveedores/",
+					"host": [
+						"{{bff_web_url}}"
+					],
+					"path": [
+						"proveedores",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crear producto",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();",
+							"const id = response?.id",
+							"const sku = response?.sku",
+							"pm.collectionVariables.set(\"id_producto\", id);",
+							"pm.collectionVariables.set(\"sku\", sku);",
+							"",
+							"",
+							"pm.test(\"Status code es 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"producto es creado\", function () {",
+							"    const jsonData = pm.response.json();",
+							"     pm.expect(jsonData).to.have.property('id');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"nombre\": \"{{$randomAdjective}} 500mg\",\n    \"descripcion\": \"{{$randomLoremParagraph}}\",\n    \"categoria\": \"Medicamentos\",\n    \"imagen_url\": \"{{$randomImageUrl}}\",\n    \"proveedor_id\": \"{{id_proveedor}}\",\n    \"precio_unitario\": 15,\n    \"stock_disponible\": {{$randomInt}},\n    \"disponible\": true,\n    \"unidad_medida\": \"Caja x 100 unidades\",\n    \"tipo_almacenamiento\": \"Ambiente\",\n    \"observaciones\": \"Mantener en lugar seco\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{bff_web_url}}/productos/",
+					"host": [
+						"{{bff_web_url}}"
+					],
+					"path": [
+						"productos",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crear inventario",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code es 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"inventario es creado\", function () {",
+							"    const jsonData = pm.response.json();",
+							"     pm.expect(jsonData).to.have.property('id');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"producto_id\": \"{{id_producto}}\",\n    \"lote\": \"LOTE-{{$randomInt}}-{{$randomInt}}\",\n    \"fecha_vencimiento\": \"2026-11-30\",\n    \"cantidad\": 200,\n    \"ubicacion\": \"Bodega Principal - Estante {{$randomInt}}\",\n    \"temperatura_requerida\": \"AMBIENTE\",\n    \"estado\": \"DISPONIBLE\",\n    \"observaciones\": \"\",\n    \"condiciones_especiales\": \"\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{bff_web_url}}/inventario/",
+					"host": [
+						"{{bff_web_url}}"
+					],
+					"path": [
+						"inventario",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crear cliente",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();",
+							"const id = response?.id",
+							"pm.collectionVariables.set(\"id_cliente\", id);",
+							"",
+							"pm.test(\"Status code es 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"cliente es creado\", function () {",
+							"    const jsonData = pm.response.json();",
+							"     pm.expect(jsonData).to.have.property('id');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"digitos_map = pm.collectionVariables.get('digitos_map')",
+							"pais = pm.collectionVariables.get('pais')",
+							"nit_cliente = digitos_map[pais]",
+							"pm.collectionVariables.set(\"nit_cliente\", nit_cliente);",
+							"",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"address\": \"{{$randomStreetAddress}}\",\n  \"logoUrl\": \"{{$randomImageUrl}}\",\n  \"nit\": \"{{nit_cliente}}\",\n  \"nombre\": \"Hospital {{$randomFullName}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{bff_movil_url}}/clientes/",
+					"host": [
+						"{{bff_movil_url}}"
+					],
+					"path": [
+						"clientes",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crear orden",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();",
+							"const id = response?.id",
+							"pm.collectionVariables.set(\"id_orden\", id);",
+							"",
+							"pm.test(\"Status code es 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"orden es creada\", function () {",
+							"    const jsonData = pm.response.json();",
+							"     pm.expect(jsonData).to.have.property('id');",
+							"     pm.expect(jsonData).to.have.property('numero_orden');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"id_cliente\": \"{{id_cliente}}\",\n\t\"id_vendedor\": \"{{id_vendedor}}\",\n\t\"observaciones\": \"Entrega urgente - cliente VIP\",\n\t\"detalles\": [\n\t\t{\n\t\t\t\"id_producto\": \"{{id_producto}}\",\n\t\t\t\"cantidad\": 2,\n\t\t\t\"precio_unitario\": 150.50\n\t\t}\n\t]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{bff_movil_url}}/ordenes/",
+					"host": [
+						"{{bff_movil_url}}"
+					],
+					"path": [
+						"ordenes",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "esperar y consultar orden",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code es 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const jsonData = pm.response.json();",
+							"id_cliente = pm.collectionVariables.get('id_cliente')",
+							"id_vendedor = pm.collectionVariables.get('id_vendedor')",
+							"id_producto = pm.collectionVariables.get('id_producto')",
+							"",
+							"",
+							"pm.test(\"orden es obtenida\", function () {",
+							"    pm.expect(jsonData.data).to.have.property('id');",
+							"    pm.expect(jsonData.data).to.have.property('numero_orden');",
+							"});",
+							"",
+							"pm.test(\"cliente asociado a la orden\", function () {",
+							"    pm.expect(jsonData.data.id_cliente).to.equal(id_cliente);",
+							"})",
+							"",
+							"pm.test(\"vendedor asociado a la orden\", function () {",
+							"    pm.expect(jsonData.data.id_vendedor).to.equal(id_vendedor);",
+							"})",
+							"",
+							"pm.test(\"producto dentro de la orden\", function () {",
+							"    pm.expect(jsonData.data.detalles[0]?.id_producto).to.equal(id_producto);",
+							"})",
+							"",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Esperar a que se cree la proyección de ordenes (CQRS)",
+							"console.log('⏳ Esperando a la sincronización de la proyección de ordenes...');",
+							"setTimeout(function(){}, 15000);"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"url": {
+					"raw": "{{bff_movil_url}}/ordenes/:id",
+					"host": [
+						"{{bff_movil_url}}"
+					],
+					"path": [
+						"ordenes",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "{{id_orden}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crear conductor",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const lodash = require('lodash')",
+							"pm.environment.set(\"documento_identidad_conductor\", lodash.random(10000000000, 10900000000))",
+							"pm.environment.set(\"licencia_conducir\", lodash.random(20000000000, 20900000000))"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();",
+							"const id = response?.id",
+							"pm.collectionVariables.set(\"id_conductor\", id);",
+							"pm.collectionVariables.set(\"nombre_conductor\", response?.nombre_completo);",
+							"",
+							"pm.test(\"Status code es 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"proveedor es creado\", function () {",
+							"    const jsonData = pm.response.json();",
+							"     pm.expect(jsonData).to.have.property('id');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false,
+				"followOriginalHttpMethod": false
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"nombre\": \"{{$randomFirstName}}\",\n    \"apellido\": \"{{$randomLastName}}\",\n    \"documento\": \"{{documento_identidad_conductor}}\",\n    \"telefono\": \"111111111111\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"licencia_conducir\": \"13131123312\",\n    \"activo\": true\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{bff_web_url}}/logistica/conductores",
+					"host": [
+						"{{bff_web_url}}"
+					],
+					"path": [
+						"logistica",
+						"conductores"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crear vehiculo",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const letters = Array.from({length: 3}, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');",
+							"const numbers = Array.from({length: 3}, () => Math.floor(Math.random() * 10)).join('');",
+							"const placa_vehiculo = letters + numbers;",
+							"",
+							"pm.collectionVariables.set(\"placa_vehiculo\", placa_vehiculo);",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();",
+							"const id = response?.id",
+							"const vehiculo_info = `${response?.marca} ${response?.modelo}`",
+							"",
+							"pm.collectionVariables.set(\"id_vehiculo\", id);",
+							"pm.collectionVariables.set(\"vehiculo_info\", vehiculo_info);",
+							"",
+							"pm.test(\"Status code es 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"proveedor es creado\", function () {",
+							"    const jsonData = pm.response.json();",
+							"     pm.expect(jsonData).to.have.property('id');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false,
+				"followOriginalHttpMethod": false
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"placa\": \"{{placa_vehiculo}}\",\n    \"marca\": \"Ford\",\n    \"modelo\": \"2020\",\n    \"año\": 2020,\n    \"tipo\": \"Furgón\",\n    \"capacidad_kg\": 5000,\n    \"activo\": true\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{bff_web_url}}/logistica/vehiculos",
+					"host": [
+						"{{bff_web_url}}"
+					],
+					"path": [
+						"logistica",
+						"vehiculos"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crear ruta",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();",
+							"const id = response?.id",
+							"pm.collectionVariables.set(\"id_ruta\", id);",
+							"",
+							"pm.test(\"Status code es 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"proveedor es creado\", function () {",
+							"    const jsonData = pm.response.json();",
+							"     pm.expect(jsonData).to.have.property('id');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false,
+				"followOriginalHttpMethod": false
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"fecha\": \"2026-12-21\",\n    \"bodega_origen\": \"Bodega Norte\",\n    \"estado\": \"En Curso\",\n    \"vehiculo_id\": {{id_vehiculo}},\n    \"conductor_id\": {{id_conductor}},\n    \"vehiculo_placa\": \"{{placa_vehiculo}}\",\n    \"vehiculo_info\": \"{{vehiculo_info}}\",\n    \"conductor_nombre\": \"{{nombre_conductor}}\",\n    \"condiciones_almacenamiento\": \"Ambiente\",\n    \"paradas\": [\n        {\n            \"pedido_id\": \"{{id_orden}}\",\n            \"direccion\": \"Calle falsa 123\",\n            \"contacto\": \"{{$randomFullName}}\",\n            \"latitud\": 4.74219,\n            \"longitud\": -74.02304,\n            \"orden\": 1\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{bff_web_url}}/logistica/rutas",
+					"host": [
+						"{{bff_web_url}}"
+					],
+					"path": [
+						"logistica",
+						"rutas"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "consultar ruta",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code es 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const jsonData = pm.response.json();",
+							"id_vehiculo = pm.collectionVariables.get('id_vehiculo')",
+							"id_conductor = pm.collectionVariables.get('id_conductor')",
+							"id_orden = pm.collectionVariables.get('id_orden')",
+							"",
+							"pm.test(\"orden es obtenida\", function () {",
+							"    pm.expect(jsonData).to.have.property('id');",
+							"    pm.expect(jsonData).to.have.property('paradas');",
+							"});",
+							"",
+							"pm.test(\"vehiculo asociado es correcto\", function () {",
+							"    pm.expect(jsonData.vehiculo_id).to.equal(id_vehiculo);",
+							"})",
+							"",
+							"pm.test(\"conductor asociado es correcto\", function () {",
+							"    pm.expect(jsonData.conductor_id).to.equal(id_conductor);",
+							"})",
+							"",
+							"pm.test(\"orden asociada es correcta\", function () {",
+							"    pm.expect(jsonData.paradas[0].pedido_id).to.equal(id_orden);",
+							"})"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.6.1"
+					}
+				],
+				"url": {
+					"raw": "{{bff_web_url}}/logistica/rutas/:id",
+					"host": [
+						"{{bff_web_url}}"
+					],
+					"path": [
+						"logistica",
+						"rutas",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "{{id_ruta}}"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					"const paises = ['Perú', 'Colombia', 'Ecuador', 'México']",
+					"const randomIndex = Math.floor(Math.random() * paises.length);",
+					"const pais = paises[randomIndex];",
+					"const getDigitosMap = () => ({",
+					"    Perú: (Math.floor(Math.random() * 9e10) + 1e10).toString(),",
+					"    Colombia: (Math.floor(Math.random() * 9e9) + 1e9).toString(), // ",
+					"    Ecuador: (Math.floor(Math.random() * 9e12) + 1e12).toString(),",
+					"    México: 'RFC' + (Math.floor(Math.random() * 9e8) + 1e8).toString(),",
+					"});",
+					"",
+					"pm.collectionVariables.set(\"digitos_map\", getDigitosMap());",
+					"pm.collectionVariables.set(\"pais\", pais)"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "pais",
+			"value": ""
+		},
+		{
+			"key": "id_tributario",
+			"value": ""
+		},
+		{
+			"key": "id_proveedor",
+			"value": ""
+		},
+		{
+			"key": "bff_web_url",
+			"value": "http://localhost:3013"
+		},
+		{
+			"key": "bff_movil_url",
+			"value": "http://localhost:3014"
+		},
+		{
+			"key": "id_producto",
+			"value": ""
+		},
+		{
+			"key": "sku",
+			"value": ""
+		},
+		{
+			"key": "id_vendedor",
+			"value": ""
+		},
+		{
+			"key": "id_plan_ventas",
+			"value": ""
+		},
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "id_cliente",
+			"value": ""
+		},
+		{
+			"key": "id_orden",
+			"value": ""
+		},
+		{
+			"key": "placa_vehiculo",
+			"value": ""
+		},
+		{
+			"key": "id_conductor",
+			"value": ""
+		},
+		{
+			"key": "nombre_conductor",
+			"value": ""
+		},
+		{
+			"key": "id_vehiculo",
+			"value": ""
+		},
+		{
+			"key": "vehiculo_info",
+			"value": ""
+		},
+		{
+			"key": "id_ruta",
+			"value": ""
+		},
+		{
+			"key": "nit_cliente",
+			"value": ""
+		},
+		{
+			"key": "digitos_map",
+			"value": ""
+		},
+		{
+			"key": "email_vendedor",
+			"value": ""
+		},
+		{
+			"key": "nombre_vendedor",
+			"value": ""
+		}
+	]
+}

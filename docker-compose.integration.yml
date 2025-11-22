@@ -1,0 +1,596 @@
+services:
+  # ============================================================================
+  # INFRASTRUCTURE SERVICES
+  # ============================================================================
+  pg_db:
+    image: postgres:17.6
+    environment:
+      POSTGRES_DB: "medisupply-db"
+      POSTGRES_USER: "root"
+      POSTGRES_PASSWORD: "medisupply-pass"
+      POSTGRES_ROOT_PASSWORD: "medisupply-pass"
+    networks:
+      - integration-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d medisupply-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - integration-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  pubsub-emulator:
+    image: google/cloud-sdk:latest
+    command: >
+      sh -c "gcloud beta emulators pubsub start --host-port=0.0.0.0:8085 --project=medisupply-474421"
+    networks:
+      - integration-network
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3s bash -c '</dev/tcp/localhost/8085' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+  pubsub-init:
+    image: google/cloud-sdk:latest
+    environment:
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - PUBSUB_PROJECT_ID=medisupply-474421
+      - PUBSUB_CONFIG_FILE=/config/pubsub-config.json
+    volumes:
+      - ./scripts/init-pubsub.sh:/init-pubsub.sh
+      - ./scripts/pubsub-config.json:/config/pubsub-config.json
+      - ./scripts/pubsub-init-healthcheck.sh:/healthcheck.sh
+    entrypoint: ["/bin/bash", "/init-pubsub.sh"]
+    networks:
+      - integration-network
+    depends_on:
+      pubsub-emulator:
+        condition: service_healthy
+      order-command-handler:
+        condition: service_healthy
+      order-query-projection:
+        condition: service_healthy
+      order-query-api:
+        condition: service_healthy
+      auditoria-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "/healthcheck.sh"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  # ============================================================================
+  # ORDERS MICROSERVICES (CQRS)
+  # ============================================================================
+  order-command-api:
+    build:
+      context: ./src/ordenes/commands/api
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/ordenes-commands-api:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - PUBSUB_TOPIC_NAME=create-order-command
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      pubsub-emulator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  order-command-handler:
+    build:
+      context: ./src/ordenes/commands/handlers
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/ordenes-commands-handlers:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - PUBSUB_TOPIC_NAME=order-created
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+      - INVENTARIO_SERVICE_URL=http://inventario-service:3000
+      - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
+      - JWT_SECRET_KEY=medisupply-secret-key
+      - JWT_ALGORITHM=HS256
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      pubsub-emulator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  order-query-api:
+    build:
+      context: ./src/ordenes/queries/api
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/ordenes-queries-api:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - PRODUCTOS_SERVICE_URL=http://productos-service:3000
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  order-query-projection:
+    build:
+      context: ./src/ordenes/queries/projection
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/ordenes-queries-projection:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      pubsub-emulator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  # ============================================================================
+  # CORE MICROSERVICES
+  # ============================================================================
+  productos-service:
+    build:
+      context: ./src/productos
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/productos:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - INVENTARIO_SERVICE_URL=http://inventario-service:3000
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  proveedores-service:
+    build:
+      context: ./src/proveedores
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/proveedores:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  inventario-service:
+    build:
+      context: ./src/inventario
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/inventario:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
+      - JWT_SECRET_KEY=medisupply-secret-key
+      - JWT_ALGORITHM=HS256
+      - PUBSUB_TOPIC_NAME=inventory-events
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - PRODUCTOS_SERVICE_URL=http://productos-service:3000
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      pubsub-emulator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  ventas-service:
+    build:
+      context: ./src/ventas
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/ventas:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  clientes-service:
+    build:
+      context: ./src/clientes
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/clientes:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
+      - VENTAS_SERVICE_URL=http://ventas-service:3000
+      - VISITAS_SERVICE_URL=http://visitas-service:3000
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  logistica-service:
+    build:
+      context: ./src/logistica
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/logistica:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  autenticacion-service:
+    build:
+      context: ./src/autenticacion
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/autenticacion:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - JWT_SECRET_KEY=medisupply-secret-key
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRATION_MINUTES=60
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  # ============================================================================
+  # SUPPORTING MICROSERVICES
+  # ============================================================================
+  reportes-service:
+    build:
+      context: ./src/reportes
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/reportes:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  auditoria-service:
+    build:
+      context: ./src/auditoria
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/auditoria:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  visitas-service:
+    build:
+      context: ./src/visitas
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/visitas:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
+      - PRODUCTOS_SERVICE_URL=http://productos-service:3000
+      - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
+      - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    networks:
+      - integration-network
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  # ============================================================================
+  # BFF SERVICES
+  # ============================================================================
+  bff-web:
+    build:
+      context: ./src/bff-web
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/bff-web:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    ports:
+      - "3013:3000"
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - AUDITORIA_SERVICE_URL=http://auditoria-service:3000
+      - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
+      - CLIENTES_SERVICE_URL=http://clientes-service:3000
+      - INVENTARIO_SERVICE_URL=http://inventario-service:3000
+      - LOGISTICA_SERVICE_URL=http://logistica-service:3000
+      - ORDENES_COMMANDS_SERVICE_URL=http://order-command-api:3000
+      - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
+      - PRODUCTOS_SERVICE_URL=http://productos-service:3000
+      - PROVEEDORES_SERVICE_URL=http://proveedores-service:3000
+      - REPORTES_SERVICE_URL=http://reportes-service:3000
+      - VENTAS_SERVICE_URL=http://ventas-service:3000
+    networks:
+      - integration-network
+    depends_on:
+      autenticacion-service:
+        condition: service_healthy
+      clientes-service:
+        condition: service_healthy
+      inventario-service:
+        condition: service_healthy
+      logistica-service:
+        condition: service_healthy
+      order-command-api:
+        condition: service_healthy
+      order-query-api:
+        condition: service_healthy
+      productos-service:
+        condition: service_healthy
+      proveedores-service:
+        condition: service_healthy
+      reportes-service:
+        condition: service_healthy
+      ventas-service:
+        condition: service_healthy
+      auditoria-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  bff-movil:
+    build:
+      context: ./src/bff-movil
+      dockerfile: Dockerfile
+    image: ${GCP_REGISTRY:-us-central1-docker.pkg.dev}/${GCP_PROJECT_ID:-medisupply-474421}/medisupply/bff-movil:${IMAGE_TAG:-latest}
+    command: ["fastapi", "run", "main.py", "--port", "3000"]
+    ports:
+      - "3014:3000"
+    environment:
+      - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
+      - CLIENTES_SERVICE_URL=http://clientes-service:3000
+      - PRODUCTOS_SERVICE_URL=http://productos-service:3000
+      - ORDENES_COMMANDS_SERVICE_URL=http://order-command-api:3000
+      - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
+      - VISITAS_SERVICE_URL=http://visitas-service:3000
+      - LOGISTICA_SERVICE_URL=http://logistica-service:3000
+      - INVENTARIO_SERVICE_URL=http://inventario-service:3000
+    networks:
+      - integration-network
+    depends_on:
+      autenticacion-service:
+        condition: service_healthy
+      clientes-service:
+        condition: service_healthy
+      productos-service:
+        condition: service_healthy
+      order-command-api:
+        condition: service_healthy
+      order-query-api:
+        condition: service_healthy
+      visitas-service:
+        condition: service_healthy
+      logistica-service:
+        condition: service_healthy
+      inventario-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import json; response = urllib.request.urlopen('http://localhost:3000/health'); data = json.loads(response.read().decode()); exit(0 if data.get('status') == 'healthy' else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  # ============================================================================
+  # NEWMAN TEST RUNNER
+  # ============================================================================
+  newman:
+    image: postman/newman:6-alpine
+    volumes:
+      - ./collection:/etc/newman
+      - ./newman-results:/newman-results
+    command: >
+      run /etc/newman/medisupply-tests.postman_collection.json
+      --env-var bff_web_url=http://bff-web:3000
+      --env-var bff_movil_url=http://bff-movil:3000
+      --reporters cli,json
+      --reporter-json-export /newman-results/newman-results.json
+      --color on
+      --bail
+    networks:
+      - integration-network
+    depends_on:
+      bff-web:
+        condition: service_healthy
+      bff-movil:
+        condition: service_healthy
+      pubsub-init:
+        condition: service_healthy
+
+networks:
+  integration-network:
+    driver: bridge
+

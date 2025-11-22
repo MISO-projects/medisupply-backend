@@ -21,6 +21,7 @@ class CrearRegistroInventarioSchema(BaseModel):
 class RegistroInventarioResponseSchema(CrearRegistroInventarioSchema):
     """Esquema de datos devueltos después de crear un registro de inventario."""
     id: UUID4
+    fecha_vencimiento: Optional[date] = Field(None, description="Fecha de vencimiento de este lote (YYYY-MM-DD).")
     fecha_recepcion: datetime
     created_at: datetime
     updated_at: Optional[datetime]

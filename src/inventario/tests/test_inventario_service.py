@@ -8,8 +8,8 @@ from uuid import uuid4
 import sys
 import os
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
-from auditoria.db.models import AuditLog
+# Importar AuditLog local
+from db.audit_model import AuditLog
 
 from services.inventario_service import InventarioService
 from db.inventario_model import Inventario

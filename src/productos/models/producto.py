@@ -17,6 +17,7 @@ class Producto(Base):
     categoria = Column(String(100), nullable=False)
     imagen_url = Column(String(500), nullable=True)
     precio_unitario = Column(Numeric(10, 2), nullable=False)
+    stock_disponible = Column(Integer, nullable=False, default=0)
     disponible = Column(Boolean, nullable=False, default=True)
     unidad_medida = Column(String(50), nullable=False, default="UNIDAD")
     sku = Column(String(100), nullable=False, unique=True)
@@ -36,6 +37,7 @@ class Producto(Base):
         precio_unitario,
         disponible,
         unidad_medida,
+        stock_disponible=0,
         tipo_almacenamiento="AMBIENTE",
         observaciones=None,
         sku=None,
@@ -47,6 +49,7 @@ class Producto(Base):
         self.categoria = categoria
         self.imagen_url = imagen_url
         self.precio_unitario = precio_unitario
+        self.stock_disponible = stock_disponible
         self.disponible = disponible
         self.unidad_medida = unidad_medida
         self.sku = sku or self._generate_sku()
@@ -79,6 +82,7 @@ class Producto(Base):
             "categoria": self.categoria,
             "imagen_url": self.imagen_url,
             "precio_unitario": str(self.precio_unitario),
+            "stock_disponible": self.stock_disponible,
             "disponible": self.disponible,
             "unidad_medida": self.unidad_medida,
             "tipo_almacenamiento": self.tipo_almacenamiento,
