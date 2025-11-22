@@ -15,6 +15,7 @@ class Visita(Base):
     vendedor_id = Column(UUID(as_uuid=True), nullable=False) 
     detalle = Column(String(100), nullable=True)
     evidencia = Column(String(100), nullable=True)
+    recomendacion_llm = Column(Text, nullable=True)
     inicio =  Column(DateTime(timezone=True), nullable=True) 
     fin = Column(DateTime(timezone=True), nullable=True)
     estado = Column(String(50), nullable=False, default='PENDIENTE')
@@ -60,6 +61,7 @@ class Visita(Base):
             "vendedor_id": str(self.vendedor_id),
             "detalle": self.detalle,
             "evidencia": self.evidencia,
+            "recomendacion_llm": self.recomendacion_llm,
             "inicio": self.inicio.isoformat() if self.inicio else None,
             "fin": self.fin.isoformat() if self.fin else None,
             "estado": self.estado,

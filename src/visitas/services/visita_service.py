@@ -23,6 +23,7 @@ from schemas.visita_schema import (
     ProductoPreferidoSchema
 )
 from db.redis_client import get_redis_client
+from services.gemini_service import GeminiService
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ class VisitaService:
         self.auth_service_url = os.getenv(
             "AUTH_SERVICE_URL", "http://autenticacion-service:3000" 
         )
+        self.gemini_service = GeminiService()
 
     async def _get_cliente_data(self, cliente_id: str) -> Dict[str, Any]:
         """
@@ -151,6 +153,8 @@ class VisitaService:
             logger.error(f"Error de conexión al servicio de usuarios ({endpoint_url}): {e}")
             return None
         
+
+
 
     async def crear_ruta_visita(self, data: CrearRutaVisitaSchema) -> Dict[str, Any]:
         """
@@ -508,6 +512,18 @@ class VisitaService:
             for key, value in update_data.items():
                 setattr(visita_db, key, value)
             
+            # Generate recommendation if detalle is provided or status is REALIZADA
+            if (update_data.get("detalle") or nuevo_estado == "REALIZADA") and not visita_db.recomendacion_llm:
+                try:
+                    top_products = await self._get_top_products_data(str(visita_db.cliente_id))
+                    recommendation = await self.gemini_service.generate_recommendation(
+                        visit_details=visita_db.detalle or "Visita realizada",
+                        client_orders=top_products
+                    )
+                    visita_db.recomendacion_llm = recommendation
+                except Exception as e:
+                    logger.error(f"Error generating recommendation: {e}")
+
             self.db.add(visita_db)
 
             if nuevo_estado == "CANCELADA" and estado_actual != "CANCELADA":
