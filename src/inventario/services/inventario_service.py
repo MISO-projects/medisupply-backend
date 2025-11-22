@@ -209,6 +209,24 @@ class InventarioService:
             self._invalidate_inventario_caches()
 
             await self._notificar_actualizacion_a_productos()
+            
+            # Publicar evento a Pub/Sub para auditoría
+            await self._publicar_evento_inventario(
+                operation="CREAR",
+                inventario_id=str(nuevo_inventario.id),
+                producto_id=str(nuevo_inventario.producto_id),
+                usuario_id=usuario_id,
+                ip_origen=ip_origen,
+                datos={
+                    "lote": nuevo_inventario.lote,
+                    "cantidad": nuevo_inventario.cantidad,
+                    "ubicacion": nuevo_inventario.ubicacion,
+                    "estado": nuevo_inventario.estado,
+                    "fecha_vencimiento": nuevo_inventario.fecha_vencimiento.isoformat() if nuevo_inventario.fecha_vencimiento else None
+                },
+                cambios=None
+            )
+            
             logger.info(f"Inventario creado: {nuevo_inventario.id} por usuario: {usuario_id}")
             return nuevo_inventario.to_dict()
         except IntegrityError as ie:
@@ -529,6 +547,25 @@ class InventarioService:
             self._invalidate_inventario_caches()
 
             await self._notificar_actualizacion_a_productos()
+            
+            # Publicar evento a Pub/Sub para auditoría
+            await self._publicar_evento_inventario(
+                operation="DISMINUIR",
+                inventario_id=str(lotes_disponibles[0].id) if lotes_disponibles else None,
+                producto_id=str(producto_id),
+                usuario_id=usuario_id,
+                ip_origen=ip_origen,
+                datos={
+                    "cantidad_disminuida": cantidad_a_disminuir,
+                    "stock_restante": total_stock_disponible - cantidad_a_disminuir,
+                    "lotes_afectados": len(lotes_afectados_info),
+                    "detalles_lotes": lotes_afectados_info
+                },
+                cambios={
+                    "cantidad_anterior": total_stock_disponible,
+                    "cantidad_nueva": total_stock_disponible - cantidad_a_disminuir
+                }
+            )
 
             logger.info(f"Stock disminuido exitosamente para {producto_id}. Cantidad: {cantidad_a_disminuir}")
             
@@ -673,6 +710,21 @@ class InventarioService:
             self._invalidate_inventario_caches(str(inventario.id))
             
             await self._notificar_actualizacion_a_productos()
+            
+            # Publicar evento a Pub/Sub para auditoría
+            await self._publicar_evento_inventario(
+                operation="MODIFICAR",
+                inventario_id=str(inventario.id),
+                producto_id=str(inventario.producto_id),
+                usuario_id=usuario_id,
+                ip_origen=ip_origen,
+                datos={
+                    "campos_modificados": list(cambios_realizados.keys()),
+                    "total_cambios": len(cambios_realizados)
+                },
+                cambios=cambios_realizados
+            )
+            
             logger.info(f"Inventario actualizado: {inventario_id} por usuario: {usuario_id}")
             return inventario.to_dict()
             
@@ -767,6 +819,18 @@ class InventarioService:
             self._invalidate_inventario_caches(inventario_id)
             
             await self._notificar_actualizacion_a_productos()
+            
+            # Publicar evento a Pub/Sub para auditoría
+            await self._publicar_evento_inventario(
+                operation="ELIMINAR",
+                inventario_id=inventario_id,
+                producto_id=str(producto_id),
+                usuario_id=usuario_id,
+                ip_origen=ip_origen,
+                datos=datos_eliminados,
+                cambios=None
+            )
+            
             logger.info(f"Inventario eliminado: {inventario_id} por usuario: {usuario_id}")
             return {"message": f"Registro de inventario {inventario_id} eliminado correctamente"}
             
@@ -791,7 +855,7 @@ class InventarioService:
         cambios: Optional[Dict[str, Any]] = None
     ):
         """
-        Publica un evento de inventario a Pub/Sub para ser procesado por auditoría.
+        Publica un evento de inventario a Pub/Sub y/o directamente al servicio de auditoría.
 
         Args:
             operation: Tipo de operación (CREAR, MODIFICAR, ELIMINAR, DISMINUIR)
@@ -815,16 +879,45 @@ class InventarioService:
                 "cambios": cambios
             }
 
-            success = self.pubsub_service.publish_event(evento)
+            # Intentar publicar a Pub/Sub
+            pubsub_success = self.pubsub_service.publish_event(evento)
 
-            if success:
-                logger.info(f"Evento de inventario publicado: {operation} - {inventario_id}")
+            if pubsub_success:
+                logger.info(f"Evento de inventario publicado a Pub/Sub: {operation} - {inventario_id}")
             else:
-                logger.warning(f"No se pudo publicar evento de inventario: {operation}")
+                logger.warning(f"No se pudo publicar a Pub/Sub, enviando directamente a auditoría...")
+                # Fallback: enviar directamente al servicio de auditoría
+                await self._enviar_evento_directo_auditoria(evento)
 
         except Exception as e:
             # No lanzar excepción para que no afecte la operación principal
             logger.error(f"Error publicando evento de inventario: {e}", exc_info=True)
+            # Intentar envío directo como último recurso
+            try:
+                await self._enviar_evento_directo_auditoria(evento)
+            except Exception as e2:
+                logger.error(f"Error en envío directo a auditoría: {e2}", exc_info=True)
+    
+    async def _enviar_evento_directo_auditoria(self, evento: Dict[str, Any]):
+        """
+        Envía el evento directamente al servicio de auditoría via HTTP.
+        Usado como fallback cuando Pub/Sub no está disponible.
+        """
+        auditoria_url = os.getenv("AUDITORIA_SERVICE_URL", "http://auditoria-service:3000")
+        
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    f"{auditoria_url}/api/auditoria/eventos/inventario",
+                    json=evento
+                )
+                
+                if response.status_code in [200, 201]:
+                    logger.info(f"Evento enviado directamente a auditoría: {evento.get('operation')}")
+                else:
+                    logger.warning(f"Error enviando evento a auditoría: HTTP {response.status_code}")
+        except Exception as e:
+            logger.error(f"Error en envío directo a auditoría: {e}")
 
 
 def get_inventario_service(db: Session = Depends(get_db)) -> InventarioService:
