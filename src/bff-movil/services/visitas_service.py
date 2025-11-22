@@ -3,14 +3,14 @@
 import httpx
 import os
 from typing import Dict, Any, Optional, List
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 import logging
 from datetime import date
 from pydantic import UUID4 # Usamos UUID4 para tipado
 import uuid # Usamos uuid para conversión
 
 # Importamos los schemas del BFF
-from schemas.visitas_schema import CrearRutaVisitaSchema, ActualizarVisitaSchema
+from schemas.visitas_schema import CrearRutaVisitaSchema
 
 logger = logging.getLogger(__name__)
 
@@ -111,28 +111,60 @@ class VisitasService:
             raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 
-    async def actualizar_visita(self, visita_id: UUID4, data: ActualizarVisitaSchema) -> Dict[str, Any]:
-        """Llama al PUT /api/visitas/{visita_id} del microservicio."""
+    async def actualizar_visita(self, 
+        visita_id: uuid.UUID, 
+        detalle: Optional[str] = None,
+        cliente_contacto: Optional[str] = None,
+        inicio_str: Optional[str] = None,
+        fin_str: Optional[str] = None,
+        estado: Optional[str] = None,
+        archivo_evidencia: Optional[UploadFile] = None
+    ) -> Dict[str, Any]:
+        """
+        Llama al PUT /api/visitas/{visita_id} del microservicio.
+        Reenvía los datos como Multipart/Form-Data.
+        """
         try:
-            # Enviamos solo los campos que no son None
-            update_data = data.model_dump(exclude_unset=True, mode='json')
-            
+            form_data = {}
+            if detalle:
+                form_data["detalle"] = detalle
+            if cliente_contacto:
+                form_data["cliente_contacto"] = cliente_contacto
+            if inicio_str:
+                form_data["inicio"] = inicio_str
+            if fin_str:
+                form_data["fin"] = fin_str
+            if estado:
+                form_data["estado"] = estado
+
+            files_payload = None
+            if archivo_evidencia:
+                file_content = await archivo_evidencia.read()
+                files_payload = {
+                    "evidencia": (
+                        archivo_evidencia.filename, 
+                        file_content, 
+                        archivo_evidencia.content_type
+                    )
+                }
+
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.put(
                     f"{self.base_url}/api/visitas/{visita_id}",
-                    json=update_data
+                    data=form_data,   
+                    files=files_payload 
                 )
                 response.raise_for_status()
                 return response.json()
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error al actualizar visita {visita_id}: {e.response.status_code} - {e.response.text}")
-            raise HTTPException(status_code=e.response.status_code, detail=e.response.json())
+            raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get('detail', str(e)))
         except httpx.RequestError as e:
             logger.error(f"Failed to connect to Visitas microservice (actualizar): {e}")
             raise HTTPException(status_code=503, detail="No se puede conectar con el servicio de visitas")
         except Exception as e:
-            logger.error(f"Unexpected error al actualizar visita: {e}")
-            raise HTTPException(status_code=500, detail="Error interno del servidor")
+            logger.error(f"Unexpected error al actualizar visita en BFF: {e}")
+            raise HTTPException(status_code=500, detail="Error interno en el BFF")
 
 
 def get_visitas_service() -> VisitasService:

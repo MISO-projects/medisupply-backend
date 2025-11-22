@@ -94,14 +94,5 @@ class VisitaDetalleResponseSchema(VisitaResponseSchema):
     class Config:
         from_attributes = True
 
-class ActualizarVisitaSchema(BaseModel):
-    
-    inicio: Optional[datetime] = Field(None, description="Hora y fecha de inicio real de la visita")
-    fin: Optional[datetime] = Field(None, description="Hora y fecha de fin real de la visita")
-    cliente_contacto: Optional[str] = Field(None, max_length=100, description="Nombre del contacto en el cliente")
-    detalle: Optional[str] = Field(None, max_length=100, description="Detalles o notas de la visita")
-    evidencia: Optional[str] = Field(None, max_length=100, description="URL de la foto o video de evidencia")
-    estado: Optional[EstadoVisitaEnum] = Field(None, description="Nuevo estado de la visita (PENDIENTE, REALIZADA, CANCELADA)")
-
     class Config:
         from_attributes = True

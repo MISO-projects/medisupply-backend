@@ -469,6 +469,7 @@ services:
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
       - PRODUCTOS_SERVICE_URL=http://productos-service:3000
       - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
+      - CLIENTES_SERVICE_URL=http://clientes-service:3000
     volumes:
       - ./src/visitas:/app
     networks:
