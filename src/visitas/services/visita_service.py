@@ -575,10 +575,12 @@ class VisitaService:
             
             return await self.get_visita_detalle_por_id(visita_id)
 
+        except HTTPException as he:
+            raise he
         except Exception as e:
             self.db.rollback()
             logger.error(f"Error update unificado: {e}")
-            raise HTTPException(500, f"Error: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 def get_visita_service(db: Session = Depends(get_db)) -> VisitaService:
     return VisitaService(db)
