@@ -2,6 +2,7 @@ name: Newman Integration Tests
 
 on:
   pull_request:
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       use_prebuilt_images:
@@ -32,27 +33,40 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set workflow variables
+        id: vars
+        run: |
+          # Use inputs if available (workflow_dispatch), otherwise use defaults (pull_request)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "use_prebuilt_images=${{ inputs.use_prebuilt_images }}" >> $GITHUB_OUTPUT
+            echo "image_tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            # For pull_request, build from source by default
+            echo "use_prebuilt_images=true" >> $GITHUB_OUTPUT
+            echo "image_tag=latest" >> $GITHUB_OUTPUT
+          fi
+
       - name: Authenticate to Google Cloud
-        if: ${{ inputs.use_prebuilt_images }}
+        if: ${{ steps.vars.outputs.use_prebuilt_images == 'true' }}
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
-        if: ${{ inputs.use_prebuilt_images }}
+        if: ${{ steps.vars.outputs.use_prebuilt_images == 'true' }}
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Configure Docker for Artifact Registry
-        if: ${{ inputs.use_prebuilt_images }}
+        if: ${{ steps.vars.outputs.use_prebuilt_images == 'true' }}
         run: |
           gcloud auth configure-docker us-central1-docker.pkg.dev
 
       - name: Pull images from Artifact Registry
-        if: ${{ inputs.use_prebuilt_images }}
+        if: ${{ steps.vars.outputs.use_prebuilt_images == 'true' }}
         env:
           PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          IMAGE_TAG: ${{ inputs.image_tag }}
+          IMAGE_TAG: ${{ steps.vars.outputs.image_tag }}
         run: |
           echo "Pulling images with tag: ${IMAGE_TAG}"
           
@@ -89,8 +103,9 @@ jobs:
         run: |
           docker --version
           docker compose version
-          echo "Using images: ${{ inputs.use_prebuilt_images && 'Pre-built from Artifact Registry' || 'Building from source' }}"
-          echo "Image tag: ${{ inputs.image_tag }}"
+          echo "Trigger: ${{ github.event_name }}"
+          echo "Using images: ${{ steps.vars.outputs.use_prebuilt_images == 'true' && 'Pre-built from Artifact Registry' || 'Building from source' }}"
+          echo "Image tag: ${{ steps.vars.outputs.image_tag }}"
 
       - name: Clean up any existing containers
         run: |
@@ -100,12 +115,12 @@ jobs:
       - name: Start integration services
         env:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          IMAGE_TAG: ${{ inputs.image_tag }}
+          IMAGE_TAG: ${{ steps.vars.outputs.image_tag }}
           COMPOSE_DOCKER_CLI_BUILD: 1
           DOCKER_BUILDKIT: 1
         run: |
           echo "Starting Docker Compose services..."
-          if [ "${{ inputs.use_prebuilt_images }}" = "true" ]; then
+          if [ "${{ steps.vars.outputs.use_prebuilt_images }}" = "true" ]; then
             echo "Using pre-built images from Artifact Registry"
             docker compose -f docker-compose.integration.yml up -d --no-build
           else
@@ -177,7 +192,7 @@ jobs:
       - name: Run Newman integration tests
         env:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          IMAGE_TAG: ${{ inputs.image_tag }}
+          IMAGE_TAG: ${{ steps.vars.outputs.image_tag }}
         run: |
           echo "Running Newman tests..."
           docker compose -f docker-compose.integration.yml run --rm newman
@@ -195,7 +210,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: newman-test-results-${{ inputs.image_tag }}-${{ github.run_number }}
+          name: newman-test-results-${{ steps.vars.outputs.image_tag }}-${{ github.run_number }}
           path: |
             newman-results.json
           retention-days: 30
@@ -237,8 +252,9 @@ jobs:
         run: |
           echo "### Newman Integration Tests Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image Source**: ${{ inputs.use_prebuilt_images && 'Artifact Registry' || 'Built from source' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image Tag**: ${{ inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Source**: ${{ steps.vars.outputs.use_prebuilt_images == 'true' && 'Artifact Registry' || 'Built from source' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: ${{ steps.vars.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Workflow Run**: #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
