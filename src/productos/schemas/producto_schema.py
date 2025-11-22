@@ -10,6 +10,7 @@ class ProductoBase(BaseModel):
     categoria: str = Field(..., min_length=1, max_length=100)
     imagen_url: Optional[str] = None
     precio_unitario: Decimal
+    stock_disponible: int = Field(default=0, ge=0)
     disponible: bool = True
     unidad_medida: str = Field("UNIDAD", max_length=50)
     sku: Optional[str] = None
@@ -28,6 +29,7 @@ class ProductoUpdate(BaseModel):
     categoria: Optional[str] = None
     imagen_url: Optional[str] = None
     precio_unitario: Optional[Decimal] = None
+    stock_disponible: Optional[int] = Field(None, ge=0)
     disponible: Optional[bool] = None
     unidad_medida: Optional[str] = None
     sku: Optional[str] = None

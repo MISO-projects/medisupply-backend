@@ -10,10 +10,12 @@ import os
 from sqlalchemy import func, and_, or_, nullslast
 import json
 from uuid import UUID
+# Importar modelo de auditoría (versión local para evitar dependencia externa en build)
+from db.audit_model import AuditLog
 
 from db.database import get_db
 from db.inventario_model import Inventario
-from schemas.inventario_schema import CrearRegistroInventarioSchema, CrearRegistroPedidoSchema
+from schemas.inventario_schema import CrearRegistroInventarioSchema, CrearRegistroPedidoSchema, ActualizarInventarioSchema
 from db.redis_client import get_redis_client
 from services.pubsub_service import get_pubsub_service
 
@@ -145,12 +147,20 @@ class InventarioService:
             return []
 
 
-    async def crear_registro_inventario(self, inventario_data: CrearRegistroInventarioSchema) -> Dict[str, Any]:
+    async def crear_registro_inventario(
+        self, 
+        inventario_data: CrearRegistroInventarioSchema,
+        usuario_id: Optional[str] = None,
+        ip_origen: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Crea un nuevo registro de inventario en el sistema.
+        Registra la operación en auditoría de forma atómica.
         
         Args:
             inventario_data: Datos del registro de inventario a crear
+            usuario_id: UUID del usuario que realiza la operación
+            ip_origen: IP desde donde se realiza la operación
             
         Returns:
             Dict con los datos del registro de inventario creado
@@ -171,25 +181,35 @@ class InventarioService:
                 observaciones=inventario_data.observaciones,
             )
             self.db.add(nuevo_inventario)
-            self.db.commit()
-            self.db.refresh(nuevo_inventario)
-            self._invalidate_inventario_caches()
+            self.db.flush()  # Para obtener el ID sin hacer commit todavía
 
-            # Publicar evento a auditoría
-            await self._publicar_evento_inventario(
+            # Registrar en auditoría (misma transacción)
+            audit_log = AuditLog(
+                event_type="inventory_operation",
                 operation="CREAR",
-                inventario_id=str(nuevo_inventario.id),
-                producto_id=str(nuevo_inventario.producto_id),
-                datos={
+                inventario_id=nuevo_inventario.id,
+                producto_id=nuevo_inventario.producto_id,
+                usuario_id=UUID(usuario_id) if usuario_id else None,
+                ip_origen=ip_origen,
+                datos_operacion={
                     "lote": nuevo_inventario.lote,
                     "cantidad": nuevo_inventario.cantidad,
                     "ubicacion": nuevo_inventario.ubicacion,
                     "estado": nuevo_inventario.estado,
                     "fecha_vencimiento": nuevo_inventario.fecha_vencimiento.isoformat() if nuevo_inventario.fecha_vencimiento else None
-                }
+                },
+                cambios=None,
+                timestamp=datetime.now(timezone.utc)
             )
+            self.db.add(audit_log)
+            
+            # Commit único para ambas operaciones
+            self.db.commit()
+            self.db.refresh(nuevo_inventario)
+            self._invalidate_inventario_caches()
 
             await self._notificar_actualizacion_a_productos()
+            logger.info(f"Inventario creado: {nuevo_inventario.id} por usuario: {usuario_id}")
             return nuevo_inventario.to_dict()
         except IntegrityError as ie:
             self.db.rollback()
@@ -397,9 +417,15 @@ class InventarioService:
         except Exception as e:
             logger.warning(f"No se pudo notificar a productos-service: {e}")
 
-    async def disminuir_stock_por_pedido(self, data: CrearRegistroPedidoSchema) -> Dict[str, Any]:
+    async def disminuir_stock_por_pedido(
+        self, 
+        data: CrearRegistroPedidoSchema,
+        usuario_id: Optional[str] = None,
+        ip_origen: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Disminuye el stock de un producto basado en una solicitud de pedido (FIFO/FEFO).
+        Registra la operación en auditoría de forma atómica.
 
         La lógica sigue un orden estricto de prioridad:
         1. Lotes con fecha_vencimiento más próxima (no vencidos).
@@ -407,6 +433,11 @@ class InventarioService:
         
         Solo se consideran lotes DISPONIBLES, con cantidad > 0 y no vencidos.
         Esta operación es transaccional y usa FOR UPDATE para evitar race conditions.
+        
+        Args:
+            data: Datos de la solicitud de pedido
+            usuario_id: UUID del usuario que realiza la operación
+            ip_origen: IP desde donde se realiza la operación
         """
         
         if not data.producto_id:
@@ -465,30 +496,37 @@ class InventarioService:
                     lote.estado = 'AGOTADO'
                 
                 lotes_afectados_info.append({
-                    "id": lote.id, 
+                    "id": str(lote.id),  # Convertir UUID a string para JSON
                     "lote": lote.lote,
                     "cantidad_disminuida": cantidad_disminuida_de_este_lote,
                     "cantidad_restante_lote": lote.cantidad
                 })
             
-            self.db.commit()
-            self._invalidate_inventario_caches()
-
-            # Publicar evento a auditoría
-            await self._publicar_evento_inventario(
+            # Registrar en auditoría (misma transacción)
+            audit_log = AuditLog(
+                event_type="inventory_operation",
                 operation="DISMINUIR",
-                inventario_id=str(lotes_disponibles[0].id) if lotes_disponibles else None,
-                producto_id=str(producto_id),
-                datos={
+                inventario_id=lotes_disponibles[0].id if lotes_disponibles else None,
+                producto_id=UUID(producto_id) if isinstance(producto_id, str) else producto_id,
+                usuario_id=UUID(usuario_id) if usuario_id else None,
+                ip_origen=ip_origen,
+                datos_operacion={
                     "cantidad_disminuida": cantidad_a_disminuir,
                     "stock_restante": total_stock_disponible - cantidad_a_disminuir,
-                    "lotes_afectados": len(lotes_afectados_info)
+                    "lotes_afectados": len(lotes_afectados_info),
+                    "detalles_lotes": lotes_afectados_info
                 },
                 cambios={
                     "cantidad_anterior": total_stock_disponible,
                     "cantidad_nueva": total_stock_disponible - cantidad_a_disminuir
-                }
+                },
+                timestamp=datetime.now(timezone.utc)
             )
+            self.db.add(audit_log)
+            
+            # Commit único para ambas operaciones
+            self.db.commit()
+            self._invalidate_inventario_caches()
 
             await self._notificar_actualizacion_a_productos()
 
@@ -517,6 +555,229 @@ class InventarioService:
             raise HTTPException(
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 detail="Error interno al editar el registro de inventario."
+            )
+
+    async def actualizar_registro_inventario(
+        self,
+        inventario_id: str,
+        datos_actualizacion: ActualizarInventarioSchema,
+        usuario_id: Optional[str] = None,
+        ip_origen: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Actualiza un registro de inventario existente.
+        Registra la operación en auditoría de forma atómica, incluyendo valores anteriores y nuevos.
+        
+        Args:
+            inventario_id: UUID del registro a actualizar
+            datos_actualizacion: Datos a actualizar
+            usuario_id: UUID del usuario que realiza la operación
+            ip_origen: IP desde donde se realiza la operación
+            
+        Returns:
+            Dict con los datos del registro actualizado
+            
+        Raises:
+            HTTPException: Si el registro no existe o hay un error
+        """
+        try:
+            # Buscar el registro
+            inventario = self.db.query(Inventario).filter(
+                Inventario.id == UUID(inventario_id)
+            ).first()
+            
+            if not inventario:
+                raise HTTPException(
+                    status_code=HTTPStatus.NOT_FOUND,
+                    detail=f"Registro de inventario {inventario_id} no encontrado"
+                )
+            
+            # Guardar valores anteriores para auditoría
+            valores_anteriores = {
+                "lote": inventario.lote,
+                "fecha_vencimiento": inventario.fecha_vencimiento.isoformat() if inventario.fecha_vencimiento else None,
+                "cantidad": inventario.cantidad,
+                "ubicacion": inventario.ubicacion,
+                "temperatura_requerida": inventario.temperatura_requerida,
+                "estado": inventario.estado,
+                "condiciones_especiales": inventario.condiciones_especiales,
+                "observaciones": inventario.observaciones
+            }
+            
+            # Aplicar cambios
+            cambios_realizados = {}
+            if datos_actualizacion.lote is not None:
+                inventario.lote = datos_actualizacion.lote
+                cambios_realizados["lote"] = {"anterior": valores_anteriores["lote"], "nuevo": datos_actualizacion.lote}
+            
+            if datos_actualizacion.fecha_vencimiento is not None:
+                inventario.fecha_vencimiento = datos_actualizacion.fecha_vencimiento
+                cambios_realizados["fecha_vencimiento"] = {
+                    "anterior": valores_anteriores["fecha_vencimiento"],
+                    "nuevo": datos_actualizacion.fecha_vencimiento.isoformat()
+                }
+            
+            if datos_actualizacion.cantidad is not None:
+                inventario.cantidad = datos_actualizacion.cantidad
+                cambios_realizados["cantidad"] = {"anterior": valores_anteriores["cantidad"], "nuevo": datos_actualizacion.cantidad}
+            
+            if datos_actualizacion.ubicacion is not None:
+                inventario.ubicacion = datos_actualizacion.ubicacion
+                cambios_realizados["ubicacion"] = {"anterior": valores_anteriores["ubicacion"], "nuevo": datos_actualizacion.ubicacion}
+            
+            if datos_actualizacion.temperatura_requerida is not None:
+                inventario.temperatura_requerida = datos_actualizacion.temperatura_requerida
+                cambios_realizados["temperatura_requerida"] = {
+                    "anterior": valores_anteriores["temperatura_requerida"],
+                    "nuevo": datos_actualizacion.temperatura_requerida
+                }
+            
+            if datos_actualizacion.estado is not None:
+                inventario.estado = datos_actualizacion.estado
+                cambios_realizados["estado"] = {"anterior": valores_anteriores["estado"], "nuevo": datos_actualizacion.estado}
+            
+            if datos_actualizacion.condiciones_especiales is not None:
+                inventario.condiciones_especiales = datos_actualizacion.condiciones_especiales
+                cambios_realizados["condiciones_especiales"] = {
+                    "anterior": valores_anteriores["condiciones_especiales"],
+                    "nuevo": datos_actualizacion.condiciones_especiales
+                }
+            
+            if datos_actualizacion.observaciones is not None:
+                inventario.observaciones = datos_actualizacion.observaciones
+                cambios_realizados["observaciones"] = {
+                    "anterior": valores_anteriores["observaciones"],
+                    "nuevo": datos_actualizacion.observaciones
+                }
+            
+            # Registrar en auditoría (misma transacción)
+            audit_log = AuditLog(
+                event_type="inventory_operation",
+                operation="MODIFICAR",
+                inventario_id=inventario.id,
+                producto_id=inventario.producto_id,
+                usuario_id=UUID(usuario_id) if usuario_id else None,
+                ip_origen=ip_origen,
+                datos_operacion={
+                    "campos_modificados": list(cambios_realizados.keys()),
+                    "total_cambios": len(cambios_realizados)
+                },
+                cambios=cambios_realizados,
+                timestamp=datetime.now(timezone.utc)
+            )
+            self.db.add(audit_log)
+            
+            # Commit único para ambas operaciones
+            self.db.commit()
+            self.db.refresh(inventario)
+            self._invalidate_inventario_caches(str(inventario.id))
+            
+            await self._notificar_actualizacion_a_productos()
+            logger.info(f"Inventario actualizado: {inventario_id} por usuario: {usuario_id}")
+            return inventario.to_dict()
+            
+        except HTTPException:
+            raise
+        except IntegrityError as ie:
+            self.db.rollback()
+            logger.error(f"Integrity error updating inventario: {ie}")
+            raise HTTPException(
+                status_code=HTTPStatus.CONFLICT,
+                detail="Error de integridad al actualizar el registro de inventario."
+            )
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error updating inventario: {e}")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="Error interno al actualizar el registro de inventario."
+            )
+
+    async def eliminar_registro_inventario(
+        self,
+        inventario_id: str,
+        usuario_id: Optional[str] = None,
+        ip_origen: Optional[str] = None
+    ) -> Dict[str, str]:
+        """
+        Elimina un registro de inventario.
+        Registra la operación en auditoría de forma atómica, guardando todos los datos del registro eliminado.
+        
+        Args:
+            inventario_id: UUID del registro a eliminar
+            usuario_id: UUID del usuario que realiza la operación
+            ip_origen: IP desde donde se realiza la operación
+            
+        Returns:
+            Dict con mensaje de confirmación
+            
+        Raises:
+            HTTPException: Si el registro no existe o hay un error
+        """
+        try:
+            # Buscar el registro
+            inventario = self.db.query(Inventario).filter(
+                Inventario.id == UUID(inventario_id)
+            ).first()
+            
+            if not inventario:
+                raise HTTPException(
+                    status_code=HTTPStatus.NOT_FOUND,
+                    detail=f"Registro de inventario {inventario_id} no encontrado"
+                )
+            
+            # Guardar todos los datos para auditoría antes de eliminar
+            datos_eliminados = {
+                "id": str(inventario.id),
+                "producto_id": str(inventario.producto_id),
+                "lote": inventario.lote,
+                "fecha_vencimiento": inventario.fecha_vencimiento.isoformat() if inventario.fecha_vencimiento else None,
+                "cantidad": inventario.cantidad,
+                "ubicacion": inventario.ubicacion,
+                "temperatura_requerida": inventario.temperatura_requerida,
+                "estado": inventario.estado,
+                "condiciones_especiales": inventario.condiciones_especiales,
+                "observaciones": inventario.observaciones,
+                "fecha_recepcion": inventario.fecha_recepcion.isoformat() if inventario.fecha_recepcion else None,
+                "created_at": inventario.created_at.isoformat() if inventario.created_at else None,
+                "updated_at": inventario.updated_at.isoformat() if inventario.updated_at else None
+            }
+            
+            producto_id = inventario.producto_id
+            
+            # Registrar en auditoría ANTES de eliminar (misma transacción)
+            audit_log = AuditLog(
+                event_type="inventory_operation",
+                operation="ELIMINAR",
+                inventario_id=inventario.id,
+                producto_id=producto_id,
+                usuario_id=UUID(usuario_id) if usuario_id else None,
+                ip_origen=ip_origen,
+                datos_operacion=datos_eliminados,
+                cambios=None,
+                timestamp=datetime.now(timezone.utc)
+            )
+            self.db.add(audit_log)
+            
+            # Eliminar el registro
+            self.db.delete(inventario)
+            
+            # Commit único para ambas operaciones
+            self.db.commit()
+            self._invalidate_inventario_caches(inventario_id)
+            
+            await self._notificar_actualizacion_a_productos()
+            logger.info(f"Inventario eliminado: {inventario_id} por usuario: {usuario_id}")
+            return {"message": f"Registro de inventario {inventario_id} eliminado correctamente"}
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error deleting inventario: {e}")
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail="Error interno al eliminar el registro de inventario."
             )
 
     async def _publicar_evento_inventario(

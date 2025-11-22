@@ -1,6 +1,6 @@
 # src/inventario/router/inventario_router.py
 
-from fastapi import APIRouter, Depends, Query, Path, HTTPException
+from fastapi import APIRouter, Depends, Query, Path, HTTPException, Request, Body
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict
 import logging
@@ -14,11 +14,13 @@ from schemas.inventario_schema import (
     StockBatchRequest, 
     StockBatchResponse,
     CrearRegistroPedidoSchema,
-    DisminuirStockResponseSchema
+    DisminuirStockResponseSchema,
+    ActualizarInventarioSchema
 )
 from typing import List
 
 from services.inventario_service import InventarioService, get_inventario_service
+from services.auth_dependency import get_current_user
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -85,10 +87,19 @@ async def get_registros_inventario_paginado( # ¡async!
 )
 async def crear_registro(
     data: CrearRegistroInventarioSchema,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
     service: InventarioService = Depends(get_inventario_service)
 ):
-    """Crea un nuevo registro de inventario."""
-    registro_dict = await service.crear_registro_inventario(data)
+    """Crea un nuevo registro de inventario con auditoría."""
+    usuario_id = current_user.get("sub")
+    ip_origen = request.client.host if request.client else None
+    
+    registro_dict = await service.crear_registro_inventario(
+        data, 
+        usuario_id=usuario_id, 
+        ip_origen=ip_origen
+    )
     return registro_dict
 
 @inventario_router.post(
@@ -120,10 +131,76 @@ def get_stock_batch(
 )
 async def disminuir_stock_por_pedido( 
     data: CrearRegistroPedidoSchema,
+    request: Request,
+    service: InventarioService = Depends(get_inventario_service),
+    current_user: Optional[dict] = None
+):
+    """
+    Disminuye el stock de un producto basado en una solicitud de pedido con auditoría.
+    El current_user es opcional para permitir llamadas de servicios internos.
+    """
+    usuario_id = current_user.get("sub") if current_user else None
+    ip_origen = request.client.host if request.client else None
+    
+    result = await service.disminuir_stock_por_pedido(
+        data, 
+        usuario_id=usuario_id, 
+        ip_origen=ip_origen
+    )
+    return result
+
+@inventario_router.put(
+    "/{inventario_id}",
+    response_model=RegistroInventarioResponseSchema,
+    status_code=HTTPStatus.OK,
+    summary="Actualizar registro de inventario",
+    description="Actualiza un registro de inventario existente. Registra la operación en auditoría."
+)
+async def actualizar_registro(
+    inventario_id: str = Path(..., description="UUID del registro de inventario"),
+    data: ActualizarInventarioSchema = ...,
+    request: Request = ...,
+    current_user: dict = Depends(get_current_user),
     service: InventarioService = Depends(get_inventario_service)
 ):
     """
-    Disminuye el stock de un producto basado en una solicitud de pedido.
+    Actualiza un registro de inventario existente.
+    Solo los campos proporcionados serán actualizados.
+    Registra todos los cambios en auditoría.
     """
-    result = await service.disminuir_stock_por_pedido(data)
+    usuario_id = current_user.get("sub")
+    ip_origen = request.client.host if request.client else None
+    
+    registro_dict = await service.actualizar_registro_inventario(
+        inventario_id=inventario_id,
+        datos_actualizacion=data,
+        usuario_id=usuario_id,
+        ip_origen=ip_origen
+    )
+    return registro_dict
+
+@inventario_router.delete(
+    "/{inventario_id}",
+    status_code=HTTPStatus.OK,
+    summary="Eliminar registro de inventario",
+    description="Elimina un registro de inventario. Registra la operación en auditoría con todos los datos del registro."
+)
+async def eliminar_registro(
+    inventario_id: str = Path(..., description="UUID del registro de inventario"),
+    request: Request = ...,
+    current_user: dict = Depends(get_current_user),
+    service: InventarioService = Depends(get_inventario_service)
+):
+    """
+    Elimina un registro de inventario.
+    Todos los datos del registro serán guardados en auditoría antes de la eliminación.
+    """
+    usuario_id = current_user.get("sub")
+    ip_origen = request.client.host if request.client else None
+    
+    result = await service.eliminar_registro_inventario(
+        inventario_id=inventario_id,
+        usuario_id=usuario_id,
+        ip_origen=ip_origen
+    )
     return result

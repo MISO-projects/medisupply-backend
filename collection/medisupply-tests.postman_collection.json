@@ -828,7 +828,7 @@
 						"exec": [
 							"// Esperar a que se cree la proyección de ordenes (CQRS)",
 							"console.log('⏳ Esperando a la sincronización de la proyección de ordenes...');",
-							"setTimeout(function(){}, 10000);"
+							"setTimeout(function(){}, 15000);"
 						],
 						"type": "text/javascript",
 						"packages": {},

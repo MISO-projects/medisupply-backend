@@ -37,8 +37,10 @@ class OrderHandler:
         async with httpx.AsyncClient(timeout=10.0) as client:
             for detalle in orden.detalles:
                 payload = {
-                    "producto_id": str(detalle.id_producto),
-                    "cantidad_producto_solicitada": detalle.cantidad
+                    "data": {
+                        "producto_id": str(detalle.id_producto),
+                        "cantidad_producto_solicitada": detalle.cantidad
+                    }
                 }
                 try:
                     response = await client.put(
