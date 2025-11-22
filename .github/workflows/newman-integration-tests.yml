@@ -1,0 +1,249 @@
+name: Newman Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      use_prebuilt_images:
+        description: 'Use pre-built images from Artifact Registry'
+        required: false
+        type: boolean
+        default: true
+      image_tag:
+        description: 'Image tag to use (e.g., latest, main, commit SHA)'
+        required: false
+        type: string
+        default: 'latest'
+
+concurrency:
+  group: newman-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  newman-tests:
+    name: Run Newman Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        if: ${{ inputs.use_prebuilt_images }}
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        if: ${{ inputs.use_prebuilt_images }}
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        if: ${{ inputs.use_prebuilt_images }}
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev
+
+      - name: Pull images from Artifact Registry
+        if: ${{ inputs.use_prebuilt_images }}
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          echo "Pulling images with tag: ${IMAGE_TAG}"
+          
+          # List of all services to pull
+          services=(
+            "ordenes-commands-api"
+            "ordenes-commands-handlers"
+            "ordenes-queries-api"
+            "ordenes-queries-projection"
+            "productos"
+            "proveedores"
+            "inventario"
+            "ventas"
+            "clientes"
+            "logistica"
+            "autenticacion"
+            "reportes"
+            "auditoria"
+            "visitas"
+            "bff-web"
+            "bff-movil"
+          )
+          
+          for service in "${services[@]}"; do
+            image="us-central1-docker.pkg.dev/${PROJECT_ID}/medisupply/${service}:${IMAGE_TAG}"
+            echo "Pulling ${image}..."
+            docker pull "${image}" || echo "⚠️  Warning: Could not pull ${image}, will build from source"
+          done
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log Docker info
+        run: |
+          docker --version
+          docker compose version
+          echo "Using images: ${{ inputs.use_prebuilt_images && 'Pre-built from Artifact Registry' || 'Building from source' }}"
+          echo "Image tag: ${{ inputs.image_tag }}"
+
+      - name: Clean up any existing containers
+        run: |
+          docker compose -f docker-compose.integration.yml down -v || true
+          docker system prune -f || true
+
+      - name: Start integration services
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          COMPOSE_DOCKER_CLI_BUILD: 1
+          DOCKER_BUILDKIT: 1
+        run: |
+          echo "Starting Docker Compose services..."
+          if [ "${{ inputs.use_prebuilt_images }}" = "true" ]; then
+            echo "Using pre-built images from Artifact Registry"
+            docker compose -f docker-compose.integration.yml up -d --no-build
+          else
+            echo "Building images from source"
+            docker compose -f docker-compose.integration.yml up -d --build
+          fi
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for services to become healthy..."
+          MAX_WAIT=300
+          ELAPSED=0
+          INTERVAL=10
+          
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            echo "Checking service health (elapsed: ${ELAPSED}s/${MAX_WAIT}s)..."
+            
+            # Check if BFF services are responding
+            BFF_WEB_HEALTHY=false
+            BFF_MOVIL_HEALTHY=false
+            
+            if curl -sf http://localhost:3013/health > /dev/null 2>&1; then
+              BFF_WEB_HEALTHY=true
+              echo "✅ BFF Web is healthy"
+            else
+              echo "⏳ BFF Web not ready yet"
+            fi
+            
+            if curl -sf http://localhost:3014/health > /dev/null 2>&1; then
+              BFF_MOVIL_HEALTHY=true
+              echo "✅ BFF Movil is healthy"
+            else
+              echo "⏳ BFF Movil not ready yet"
+            fi
+            
+            if [ "$BFF_WEB_HEALTHY" = true ] && [ "$BFF_MOVIL_HEALTHY" = true ]; then
+              echo ""
+              echo "✅ All required services are healthy and responding!"
+              break
+            fi
+            
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+          
+          if [ $ELAPSED -ge $MAX_WAIT ]; then
+            echo "❌ Services did not become healthy in time"
+            echo ""
+            echo "Service status:"
+            docker compose -f docker-compose.integration.yml ps
+            echo ""
+            echo "Recent logs from BFF services:"
+            docker compose -f docker-compose.integration.yml logs --tail=50 bff-web bff-movil
+            exit 1
+          fi
+
+      - name: Show service status
+        run: |
+          echo "=== Service Status ==="
+          docker compose -f docker-compose.integration.yml ps
+          echo ""
+          echo "=== Health Check Results ==="
+          echo "BFF Web:"
+          curl -s http://localhost:3013/health | jq '.' || echo "Failed to get health status"
+          echo ""
+          echo "BFF Movil:"
+          curl -s http://localhost:3014/health | jq '.' || echo "Failed to get health status"
+
+      - name: Run Newman integration tests
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          echo "Running Newman tests..."
+          docker compose -f docker-compose.integration.yml run --rm newman
+
+      - name: Copy Newman results
+        if: always()
+        run: |
+          # Get the newman container ID and copy results
+          CONTAINER_ID=$(docker compose -f docker-compose.integration.yml ps -q newman | head -1)
+          if [ -n "$CONTAINER_ID" ]; then
+            docker cp ${CONTAINER_ID}:/tmp/newman-results.json ./newman-results.json || echo "Could not copy results"
+          fi
+
+      - name: Upload Newman test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-test-results-${{ inputs.image_tag }}-${{ github.run_number }}
+          path: |
+            newman-results.json
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Show service logs on failure
+        if: failure()
+        run: |
+          echo "=== BFF Web Logs ==="
+          docker compose -f docker-compose.integration.yml logs --tail=200 bff-web
+          echo ""
+          echo "=== BFF Movil Logs ==="
+          docker compose -f docker-compose.integration.yml logs --tail=200 bff-movil
+          echo ""
+          echo "=== Order Command API Logs ==="
+          docker compose -f docker-compose.integration.yml logs --tail=100 order-command-api
+          echo ""
+          echo "=== Order Query API Logs ==="
+          docker compose -f docker-compose.integration.yml logs --tail=100 order-query-api
+          echo ""
+          echo "=== Autenticacion Service Logs ==="
+          docker compose -f docker-compose.integration.yml logs --tail=100 autenticacion-service
+          echo ""
+          echo "=== PostgreSQL Logs ==="
+          docker compose -f docker-compose.integration.yml logs --tail=100 pg_db
+          echo ""
+          echo "=== Pub/Sub Emulator Logs ==="
+          docker compose -f docker-compose.integration.yml logs --tail=100 pubsub-emulator
+
+      - name: Clean up
+        if: always()
+        run: |
+          echo "Cleaning up Docker Compose services..."
+          docker compose -f docker-compose.integration.yml down -v
+          docker system prune -f || true
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Newman Integration Tests Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Source**: ${{ inputs.use_prebuilt_images && 'Artifact Registry' || 'Built from source' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: ${{ inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workflow Run**: #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f newman-results.json ]; then
+            echo "✅ Newman results available in artifacts" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Newman results not found" >> $GITHUB_STEP_SUMMARY
+          fi
+
