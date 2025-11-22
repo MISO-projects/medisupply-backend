@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 import pytest
 from types import SimpleNamespace
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, MagicMock 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from uuid import uuid4
@@ -11,6 +11,10 @@ from typing import Generator
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
+
+
+sys.modules["google.cloud"] = MagicMock()
+sys.modules["google.cloud.storage"] = MagicMock()
 
 from services.visita_service import VisitaService, get_visita_service
 from services.health_service import HealthService, get_health_service
