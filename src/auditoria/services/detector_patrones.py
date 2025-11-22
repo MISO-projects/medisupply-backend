@@ -82,7 +82,7 @@ class DetectorPatrones:
     async def _detectar_ajustes_masivos(self, evento: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Detecta si hay múltiples ajustes en corto tiempo por el mismo usuario"""
         operation = evento.get("operation", "")
-        if operation not in ["AJUSTAR", "MODIFICAR", "ACTUALIZAR"]:
+        if operation not in ["AJUSTAR", "MODIFICAR", "ACTUALIZAR", "CREAR"]:
             return None
         
         usuario_id = evento.get("usuario_id")
@@ -95,7 +95,7 @@ class DetectorPatrones:
         count = self.db.query(func.count(AuditLog.id)).filter(
             and_(
                 AuditLog.usuario_id == usuario_id,
-                AuditLog.operation.in_(["AJUSTAR", "MODIFICAR", "ACTUALIZAR"]),
+                AuditLog.operation.in_(["AJUSTAR", "MODIFICAR", "ACTUALIZAR", "CREAR"]),
                 AuditLog.timestamp >= hace_n_min
             )
         ).scalar()
@@ -182,7 +182,8 @@ class DetectorPatrones:
             return None
         
         cambios = evento.get("cambios", {})
-        if "estado_anterior" not in cambios and "estado_nuevo" not in cambios:
+        # Verificar si hay cambios de estado (formato: {"estado": {"anterior": ..., "nuevo": ...}})
+        if not cambios or "estado" not in cambios:
             return None
         
         # Buscar cambios de estado en la última hora
