@@ -127,6 +127,22 @@ jobs:
             echo "Building images from source"
             docker compose -f docker-compose.integration.yml up -d --build
           fi
+          
+          # Check if docker compose command succeeded
+          if [ $? -ne 0 ]; then
+            echo "❌ Docker Compose failed to start services"
+            echo ""
+            echo "=== Service Status ==="
+            docker compose -f docker-compose.integration.yml ps
+            echo ""
+            echo "=== Logs from all services ==="
+            docker compose -f docker-compose.integration.yml logs --tail=100
+            exit 1
+          fi
+          
+          echo ""
+          echo "Services starting, initial status:"
+          docker compose -f docker-compose.integration.yml ps
 
       - name: Wait for services to be healthy
         run: |
@@ -137,6 +153,37 @@ jobs:
           
           while [ $ELAPSED -lt $MAX_WAIT ]; do
             echo "Checking service health (elapsed: ${ELAPSED}s/${MAX_WAIT}s)..."
+            
+            # Check for any exited or unhealthy containers
+            EXITED=$(docker compose -f docker-compose.integration.yml ps --status exited --format json 2>/dev/null | jq -r '.Name' 2>/dev/null || echo "")
+            if [ -n "$EXITED" ]; then
+              echo "❌ Some services have exited unexpectedly:"
+              docker compose -f docker-compose.integration.yml ps --status exited
+              echo ""
+              echo "Showing logs from exited services:"
+              for service in $EXITED; do
+                echo ""
+                echo "=== Logs for $service ==="
+                docker compose -f docker-compose.integration.yml logs --tail=150 "$service" 2>/dev/null || echo "Could not get logs for $service"
+              done
+              exit 1
+            fi
+            
+            # Check for unhealthy services (including pubsub-init)
+            UNHEALTHY=$(docker compose -f docker-compose.integration.yml ps --format json 2>/dev/null | jq -r 'select(.Health == "unhealthy") | .Name' 2>/dev/null || echo "")
+            if [ -n "$UNHEALTHY" ]; then
+              echo "⚠️  Unhealthy services detected:"
+              echo "$UNHEALTHY"
+              echo ""
+              echo "Showing logs from unhealthy services:"
+              for service in $UNHEALTHY; do
+                echo ""
+                echo "=== Logs for $service ==="
+                docker compose -f docker-compose.integration.yml logs --tail=150 "$service" 2>/dev/null || echo "Could not get logs for $service"
+              done
+              echo ""
+              echo "Note: Some services may still be starting up. Continuing to wait..."
+            fi
             
             # Check if BFF services are responding
             BFF_WEB_HEALTHY=false
@@ -173,7 +220,11 @@ jobs:
             docker compose -f docker-compose.integration.yml ps
             echo ""
             echo "Recent logs from BFF services:"
-            docker compose -f docker-compose.integration.yml logs --tail=50 bff-web bff-movil
+            docker compose -f docker-compose.integration.yml logs --tail=100 bff-web bff-movil
+            echo ""
+            echo "Checking infrastructure services:"
+            docker compose -f docker-compose.integration.yml logs --tail=100 pubsub-init
+            docker compose -f docker-compose.integration.yml logs --tail=50 pubsub-emulator
             exit 1
           fi
 
@@ -224,26 +275,48 @@ jobs:
       - name: Show service logs on failure
         if: failure()
         run: |
-          echo "=== BFF Web Logs ==="
-          docker compose -f docker-compose.integration.yml logs --tail=200 bff-web
+          echo "=== Final Service Status ==="
+          docker compose -f docker-compose.integration.yml ps
           echo ""
-          echo "=== BFF Movil Logs ==="
-          docker compose -f docker-compose.integration.yml logs --tail=200 bff-movil
+          echo "=== Infrastructure Services ==="
           echo ""
-          echo "=== Order Command API Logs ==="
-          docker compose -f docker-compose.integration.yml logs --tail=100 order-command-api
+          echo "--- PostgreSQL Logs ---"
+          docker compose -f docker-compose.integration.yml logs --tail=100 pg_db || echo "Could not get pg_db logs"
           echo ""
-          echo "=== Order Query API Logs ==="
-          docker compose -f docker-compose.integration.yml logs --tail=100 order-query-api
+          echo "--- Redis Logs ---"
+          docker compose -f docker-compose.integration.yml logs --tail=50 redis || echo "Could not get redis logs"
           echo ""
-          echo "=== Autenticacion Service Logs ==="
-          docker compose -f docker-compose.integration.yml logs --tail=100 autenticacion-service
+          echo "--- Pub/Sub Emulator Logs ---"
+          docker compose -f docker-compose.integration.yml logs --tail=150 pubsub-emulator || echo "Could not get pubsub-emulator logs"
           echo ""
-          echo "=== PostgreSQL Logs ==="
-          docker compose -f docker-compose.integration.yml logs --tail=100 pg_db
+          echo "--- Pub/Sub Init Logs ---"
+          docker compose -f docker-compose.integration.yml logs --tail=200 pubsub-init || echo "Could not get pubsub-init logs"
           echo ""
-          echo "=== Pub/Sub Emulator Logs ==="
-          docker compose -f docker-compose.integration.yml logs --tail=100 pubsub-emulator
+          echo "=== Application Services ==="
+          echo ""
+          echo "--- BFF Web Logs ---"
+          docker compose -f docker-compose.integration.yml logs --tail=150 bff-web || echo "Could not get bff-web logs"
+          echo ""
+          echo "--- BFF Movil Logs ---"
+          docker compose -f docker-compose.integration.yml logs --tail=150 bff-movil || echo "Could not get bff-movil logs"
+          echo ""
+          echo "--- Order Command API Logs ---"
+          docker compose -f docker-compose.integration.yml logs --tail=100 order-command-api || echo "Could not get order-command-api logs"
+          echo ""
+          echo "--- Order Command Handler Logs ---"
+          docker compose -f docker-compose.integration.yml logs --tail=100 order-command-handler || echo "Could not get order-command-handler logs"
+          echo ""
+          echo "--- Order Query API Logs ---"
+          docker compose -f docker-compose.integration.yml logs --tail=100 order-query-api || echo "Could not get order-query-api logs"
+          echo ""
+          echo "--- Order Query Projection Logs ---"
+          docker compose -f docker-compose.integration.yml logs --tail=100 order-query-projection || echo "Could not get order-query-projection logs"
+          echo ""
+          echo "--- Autenticacion Service Logs ---"
+          docker compose -f docker-compose.integration.yml logs --tail=100 autenticacion-service || echo "Could not get autenticacion-service logs"
+          echo ""
+          echo "--- Inventario Service Logs ---"
+          docker compose -f docker-compose.integration.yml logs --tail=100 inventario-service || echo "Could not get inventario-service logs"
 
       - name: Clean up
         if: always()
