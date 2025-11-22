@@ -209,6 +209,24 @@ class InventarioService:
             self._invalidate_inventario_caches()
 
             await self._notificar_actualizacion_a_productos()
+            
+            # Publicar evento a Pub/Sub para auditoría
+            await self._publicar_evento_inventario(
+                operation="CREAR",
+                inventario_id=str(nuevo_inventario.id),
+                producto_id=str(nuevo_inventario.producto_id),
+                usuario_id=usuario_id,
+                ip_origen=ip_origen,
+                datos={
+                    "lote": nuevo_inventario.lote,
+                    "cantidad": nuevo_inventario.cantidad,
+                    "ubicacion": nuevo_inventario.ubicacion,
+                    "estado": nuevo_inventario.estado,
+                    "fecha_vencimiento": nuevo_inventario.fecha_vencimiento.isoformat() if nuevo_inventario.fecha_vencimiento else None
+                },
+                cambios=None
+            )
+            
             logger.info(f"Inventario creado: {nuevo_inventario.id} por usuario: {usuario_id}")
             return nuevo_inventario.to_dict()
         except IntegrityError as ie:
@@ -529,6 +547,25 @@ class InventarioService:
             self._invalidate_inventario_caches()
 
             await self._notificar_actualizacion_a_productos()
+            
+            # Publicar evento a Pub/Sub para auditoría
+            await self._publicar_evento_inventario(
+                operation="DISMINUIR",
+                inventario_id=str(lotes_disponibles[0].id) if lotes_disponibles else None,
+                producto_id=str(producto_id),
+                usuario_id=usuario_id,
+                ip_origen=ip_origen,
+                datos={
+                    "cantidad_disminuida": cantidad_a_disminuir,
+                    "stock_restante": total_stock_disponible - cantidad_a_disminuir,
+                    "lotes_afectados": len(lotes_afectados_info),
+                    "detalles_lotes": lotes_afectados_info
+                },
+                cambios={
+                    "cantidad_anterior": total_stock_disponible,
+                    "cantidad_nueva": total_stock_disponible - cantidad_a_disminuir
+                }
+            )
 
             logger.info(f"Stock disminuido exitosamente para {producto_id}. Cantidad: {cantidad_a_disminuir}")
             
@@ -673,6 +710,21 @@ class InventarioService:
             self._invalidate_inventario_caches(str(inventario.id))
             
             await self._notificar_actualizacion_a_productos()
+            
+            # Publicar evento a Pub/Sub para auditoría
+            await self._publicar_evento_inventario(
+                operation="MODIFICAR",
+                inventario_id=str(inventario.id),
+                producto_id=str(inventario.producto_id),
+                usuario_id=usuario_id,
+                ip_origen=ip_origen,
+                datos={
+                    "campos_modificados": list(cambios_realizados.keys()),
+                    "total_cambios": len(cambios_realizados)
+                },
+                cambios=cambios_realizados
+            )
+            
             logger.info(f"Inventario actualizado: {inventario_id} por usuario: {usuario_id}")
             return inventario.to_dict()
             
@@ -767,6 +819,18 @@ class InventarioService:
             self._invalidate_inventario_caches(inventario_id)
             
             await self._notificar_actualizacion_a_productos()
+            
+            # Publicar evento a Pub/Sub para auditoría
+            await self._publicar_evento_inventario(
+                operation="ELIMINAR",
+                inventario_id=inventario_id,
+                producto_id=str(producto_id),
+                usuario_id=usuario_id,
+                ip_origen=ip_origen,
+                datos=datos_eliminados,
+                cambios=None
+            )
+            
             logger.info(f"Inventario eliminado: {inventario_id} por usuario: {usuario_id}")
             return {"message": f"Registro de inventario {inventario_id} eliminado correctamente"}
             
