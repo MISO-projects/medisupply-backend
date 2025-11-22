@@ -189,6 +189,10 @@ jobs:
           echo "BFF Movil:"
           curl -s http://localhost:3014/health | jq '.' || echo "Failed to get health status"
 
+      - name: Create Newman results directory
+        run: |
+          mkdir -p newman-results
+
       - name: Run Newman integration tests
         env:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -197,13 +201,15 @@ jobs:
           echo "Running Newman tests..."
           docker compose -f docker-compose.integration.yml run --rm newman
 
-      - name: Copy Newman results
+      - name: Check Newman results
         if: always()
         run: |
-          # Get the newman container ID and copy results
-          CONTAINER_ID=$(docker compose -f docker-compose.integration.yml ps -q newman | head -1)
-          if [ -n "$CONTAINER_ID" ]; then
-            docker cp ${CONTAINER_ID}:/tmp/newman-results.json ./newman-results.json || echo "Could not copy results"
+          if [ -f newman-results/newman-results.json ]; then
+            echo "✅ Newman results file found"
+            ls -lh newman-results/newman-results.json
+          else
+            echo "⚠️ Newman results file not found"
+            ls -la newman-results/ || echo "newman-results directory not found"
           fi
 
       - name: Upload Newman test results
@@ -211,8 +217,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: newman-test-results-${{ steps.vars.outputs.image_tag }}-${{ github.run_number }}
-          path: |
-            newman-results.json
+          path: newman-results/newman-results.json
           retention-days: 30
           if-no-files-found: warn
 
@@ -258,8 +263,19 @@ jobs:
           echo "- **Workflow Run**: #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          if [ -f newman-results.json ]; then
+          if [ -f newman-results/newman-results.json ]; then
             echo "✅ Newman results available in artifacts" >> $GITHUB_STEP_SUMMARY
+            
+            # Parse and display summary from results
+            TOTAL=$(jq '.run.stats.requests.total' newman-results/newman-results.json 2>/dev/null || echo "N/A")
+            FAILED=$(jq '.run.stats.requests.failed' newman-results/newman-results.json 2>/dev/null || echo "N/A")
+            ASSERTIONS_TOTAL=$(jq '.run.stats.assertions.total' newman-results/newman-results.json 2>/dev/null || echo "N/A")
+            ASSERTIONS_FAILED=$(jq '.run.stats.assertions.failed' newman-results/newman-results.json 2>/dev/null || echo "N/A")
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "- **Requests**: ${TOTAL} total, ${FAILED} failed" >> $GITHUB_STEP_SUMMARY
+            echo "- **Assertions**: ${ASSERTIONS_TOTAL} total, ${ASSERTIONS_FAILED} failed" >> $GITHUB_STEP_SUMMARY
           else
             echo "⚠️ Newman results not found" >> $GITHUB_STEP_SUMMARY
           fi
