@@ -277,6 +277,7 @@ services:
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
       - PUBSUB_TOPIC_NAME=inventory-events
       - PRODUCTOS_SERVICE_URL=http://productos-service:3000
+      - AUDITORIA_SERVICE_URL=http://auditoria-service:3000
     volumes:
       - ./src/inventario:/app
     networks:

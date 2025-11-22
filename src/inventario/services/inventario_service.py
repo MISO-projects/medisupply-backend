@@ -855,7 +855,7 @@ class InventarioService:
         cambios: Optional[Dict[str, Any]] = None
     ):
         """
-        Publica un evento de inventario a Pub/Sub para ser procesado por auditoría.
+        Publica un evento de inventario a Pub/Sub y/o directamente al servicio de auditoría.
 
         Args:
             operation: Tipo de operación (CREAR, MODIFICAR, ELIMINAR, DISMINUIR)
@@ -879,16 +879,45 @@ class InventarioService:
                 "cambios": cambios
             }
 
-            success = self.pubsub_service.publish_event(evento)
+            # Intentar publicar a Pub/Sub
+            pubsub_success = self.pubsub_service.publish_event(evento)
 
-            if success:
-                logger.info(f"Evento de inventario publicado: {operation} - {inventario_id}")
+            if pubsub_success:
+                logger.info(f"Evento de inventario publicado a Pub/Sub: {operation} - {inventario_id}")
             else:
-                logger.warning(f"No se pudo publicar evento de inventario: {operation}")
+                logger.warning(f"No se pudo publicar a Pub/Sub, enviando directamente a auditoría...")
+                # Fallback: enviar directamente al servicio de auditoría
+                await self._enviar_evento_directo_auditoria(evento)
 
         except Exception as e:
             # No lanzar excepción para que no afecte la operación principal
             logger.error(f"Error publicando evento de inventario: {e}", exc_info=True)
+            # Intentar envío directo como último recurso
+            try:
+                await self._enviar_evento_directo_auditoria(evento)
+            except Exception as e2:
+                logger.error(f"Error en envío directo a auditoría: {e2}", exc_info=True)
+    
+    async def _enviar_evento_directo_auditoria(self, evento: Dict[str, Any]):
+        """
+        Envía el evento directamente al servicio de auditoría via HTTP.
+        Usado como fallback cuando Pub/Sub no está disponible.
+        """
+        auditoria_url = os.getenv("AUDITORIA_SERVICE_URL", "http://auditoria-service:3000")
+        
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    f"{auditoria_url}/api/auditoria/eventos/inventario",
+                    json=evento
+                )
+                
+                if response.status_code in [200, 201]:
+                    logger.info(f"Evento enviado directamente a auditoría: {evento.get('operation')}")
+                else:
+                    logger.warning(f"Error enviando evento a auditoría: HTTP {response.status_code}")
+        except Exception as e:
+            logger.error(f"Error en envío directo a auditoría: {e}")
 
 
 def get_inventario_service(db: Session = Depends(get_db)) -> InventarioService:
