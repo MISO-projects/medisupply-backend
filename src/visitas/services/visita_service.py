@@ -39,12 +39,12 @@ class VisitaService:
         self.ordenes_service_url = os.getenv(
             "ORDENES_QUERIES_SERVICE_URL","http://order-query-api:3000"
         )
-        self.google_maps_api_key = 'AIzaSyDb6LS5PiW2HmwoCmwDN2BTjoaxGiB9EGU'
+        self.google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY",'AIzaSyDb6LS5PiW2HmwoCmwDN2BTjoaxGiB9EGU')
         if not self.google_maps_api_key:
             logger.warning("GOOGLE_MAPS_API_KEY no está configurada en las variables de entorno. La optimización de ruta fallará.")
 
         self.auth_service_url = os.getenv(
-            "AUTH_SERVICE_URL", "http://autenticacion-service:3000" 
+            "AUTENTICACION_SERVICE_URL", "http://autenticacion-service:3000" 
         )
         self.bucket_name = os.getenv("GCS_BUCKET_NAME", "medisupply-evidencias")
         self.credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/app/credentials.json")
