@@ -1,6 +1,7 @@
 name: Newman Integration Tests
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       use_prebuilt_images:
