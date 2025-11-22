@@ -44,6 +44,7 @@ class VisitaResponseSchema(BaseModel):
     vendedor_id: UUID4
     detalle: Optional[str] = None
     evidencia: Optional[str] = None
+    recomendacion_llm: Optional[str] = None
     inicio: Optional[datetime] = None
     fin: Optional[datetime] = None
     estado: str
