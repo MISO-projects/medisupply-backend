@@ -272,6 +272,8 @@ services:
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - PUBSUB_TOPIC_NAME=inventory-events
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
       - PUBSUB_TOPIC_NAME=inventory-events
       - PRODUCTOS_SERVICE_URL=http://productos-service:3000
@@ -282,6 +284,7 @@ services:
     depends_on:
       - pg_db
       - redis
+      - pubsub-emulator
 
   ventas-service:
     profiles: [ "ventas", "dev" ]
@@ -347,6 +350,13 @@ services:
         python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 -m fastapi run main.py --port 3000 --reload
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
+      - PUBSUB_SUBSCRIPTION_NAME=inventory-events-sub
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM=${SMTP_FROM:-alertas@medisupply.com}
     volumes:
       - ./src/auditoria:/app
     networks:
@@ -354,6 +364,7 @@ services:
     depends_on:
       - pg_db
       - redis
+      - pubsub-emulator
 
   autenticacion-service:
     profiles: [ "autenticacion", "dev" ]
@@ -459,6 +470,7 @@ services:
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
       - PRODUCTOS_SERVICE_URL=http://productos-service:3000
       - ORDENES_QUERIES_SERVICE_URL=http://order-query-api:3000
+      - CLIENTES_SERVICE_URL=http://clientes-service:3000
     volumes:
       - ./src/visitas:/app
     networks:

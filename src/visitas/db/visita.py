@@ -14,7 +14,7 @@ class Visita(Base):
     fecha_visita_programada =  Column(DateTime(timezone=True), nullable=False)
     vendedor_id = Column(UUID(as_uuid=True), nullable=False) 
     detalle = Column(String(100), nullable=True)
-    evidencia = Column(String(100), nullable=True)
+    evidencia = Column(Text, nullable=True)
     recomendacion_llm = Column(Text, nullable=True)
     inicio =  Column(DateTime(timezone=True), nullable=True) 
     fin = Column(DateTime(timezone=True), nullable=True)
