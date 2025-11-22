@@ -460,7 +460,7 @@ class VisitaService:
                 Visita.fecha_visita_programada, Visita.detalle
             ).filter(
                 Visita.cliente_id == visita_db.cliente_id, 
-                Visita.id != visita_id,                     
+                # Visita.id != visita_id,
                 Visita.detalle.isnot(None),             
                 Visita.estado.in_(['REALIZADA', 'CANCELADA']) 
             ).order_by(desc(Visita.fecha_visita_programada)).limit(5).all() 
@@ -478,8 +478,7 @@ class VisitaService:
                 coords = direccion_cliente.split(",")
                 if len(coords) >= 3 and coords[0] != "NA" and coords[1] != "NA":
                     try:
-                        float(coords[0])
-                        float(coords[1])
+                        float(coords[0]); float(coords[1])
                         origen = f"{lat_actual},{lon_actual}"
                         destino = f"{coords[0]},{coords[1]}"
                         
