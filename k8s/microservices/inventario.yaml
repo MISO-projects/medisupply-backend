@@ -55,8 +55,8 @@ spec:
               value: "1"
             - name: PRODUCTOS_SERVICE_URL
               value: "http://productos-service"
-            - name: AUDITORIA_SERVICE_URL
-              value: "http://auditoria-service"
+            - name: AUTENTICACION_SERVICE_URL
+              value: "http://autenticacion-service"
             - name: REDIS_HOST
               value: "redis-service"
             - name: REDIS_PORT
