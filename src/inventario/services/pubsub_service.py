@@ -4,6 +4,7 @@ from typing import Dict, Any
 from datetime import datetime, date
 from google.cloud import pubsub_v1
 from google.auth import default
+from google.auth.credentials import AnonymousCredentials
 from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
 
@@ -43,10 +44,15 @@ class PubSubService:
         try:
             # Check if using Pub/Sub emulator
             emulator_host = os.getenv("PUBSUB_EMULATOR_HOST")
+            print(f"[PubSubService] Emulator host env value: {emulator_host}")
             if emulator_host:
-                # Use emulator without credentials
-                self._publisher = pubsub_v1.PublisherClient()
-                print(f"PubSub client initialized with emulator at {emulator_host}")
+                # Use emulator with anonymous credentials to bypass authentication
+                client_options = {"api_endpoint": emulator_host}
+                self._publisher = pubsub_v1.PublisherClient(
+                    client_options=client_options,
+                    credentials=AnonymousCredentials()
+                )
+                print(f"✅ PubSub client initialized with emulator at {emulator_host}")
             elif os.path.exists("credentials.json"):
                 credentials = Credentials.from_service_account_file("credentials.json")
                 self._publisher = pubsub_v1.PublisherClient(credentials=credentials)
