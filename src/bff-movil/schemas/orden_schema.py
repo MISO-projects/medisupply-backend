@@ -216,3 +216,21 @@ class PaginadoEntregasProgramadas(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+class IdsResponse(BaseModel):
+    """Schema para respuesta con lista de IDs"""
+    data: List[str] = Field(..., description="Lista de IDs de órdenes")
+    
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "data": [
+                        "123e4567-e89b-12d3-a456-426614174000",
+                        "987fcdeb-51a2-43c7-9876-543210fedcba"
+                    ]
+                }
+            ]
+        }
+    }

@@ -135,6 +135,28 @@ class OrdenesQueriesService:
                 status_code=503,
                 detail="Ordenes queries service is not available"
             )
+
+    async def obtener_todos_ids_ordenes(self) -> Dict[str, Any]:
+        """Get all order IDs from the queries service"""
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(
+                    f"{self.base_url}/orders/ids"
+                )
+                
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"Error from ordenes queries service: {response.text}"
+                    )
+        except httpx.RequestError as e:
+            logger.error(f"Error connecting to ordenes queries service: {str(e)}")
+            raise HTTPException(
+                status_code=503,
+                detail="Ordenes queries service is not available"
+            )
         
 
 

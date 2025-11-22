@@ -17,6 +17,7 @@ from schemas.orden_schema import (
     PaginadoOrdenesCliente,
     RespuestaOrden,
     PaginadoEntregasProgramadas,
+    IdsResponse,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -31,6 +32,43 @@ def health_check_commands(ordenes_commands_service: OrdenesCommandsService = Dep
 @ordenes_router.get("/health/queries")
 def health_check_queries(ordenes_queries_service: OrdenesQueriesService = Depends(get_ordenes_queries_service)):
     return ordenes_queries_service.health_check()
+
+@ordenes_router.get(
+    "/ids",
+    response_model=IdsResponse,
+    summary="Obtener todos los IDs de órdenes",
+    description="Obtiene una lista con todos los IDs de órdenes existentes en el sistema"
+)
+async def obtener_todos_ids_ordenes(
+    ordenes_queries_service: OrdenesQueriesService = Depends(get_ordenes_queries_service)
+):
+    """
+    Obtiene todos los IDs de órdenes del sistema.
+    
+    Útil para operaciones de sincronización, validación o listados rápidos.
+    
+    Returns:
+        IdsResponse: Lista de IDs de órdenes
+        
+    Raises:
+        HTTPException 503: Si el servicio de órdenes no está disponible
+    """
+    try:
+        logger.info("BFF Móvil: Obteniendo todos los IDs de órdenes")
+        
+        result = await ordenes_queries_service.obtener_todos_ids_ordenes()
+        
+        logger.info(f"BFF Móvil: {len(result.get('data', []))} IDs de órdenes obtenidos")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"BFF Móvil: Error al obtener IDs de órdenes: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error inesperado al obtener IDs de órdenes: {str(e)}"
+        )
 
 @ordenes_router.post(
     "/",

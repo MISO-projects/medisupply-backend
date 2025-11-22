@@ -146,7 +146,7 @@ class OrderService:
             list[str]: List of order IDs
         """
         orders = self.db.query(OrderProjection.id).all()
-        return [order.id for order in orders]
+        return [str(order.id) for order in orders]
 
     def list_orders(
         self,
