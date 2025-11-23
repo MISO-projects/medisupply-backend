@@ -3,10 +3,13 @@ import { check, sleep } from "k6";
 import { uuidv4 } from 'https://jslib.k6.io/k6-utils/1.4.0/index.js';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.2/index.js'; 
 
-const BFF_WEB_URL = "http://localhost:3013";
-const BFF_MOVIL_URL = "http://localhost:3014";
-const EMAIL = "alejo@mail.com"
-const PASSWORD = "Password123!"
+// Environment variables with defaults
+const BFF_WEB_URL = __ENV.BFF_WEB_URL || "http://localhost:3013";
+const BFF_MOVIL_URL = __ENV.BFF_MOVIL_URL || "http://localhost:3014";
+const EMAIL = __ENV.EMAIL || "alejo@mail.com";
+const PASSWORD = __ENV.PASSWORD || "Password123!";
+
+// Derived URLs
 const ORDERS_URL = `${BFF_MOVIL_URL}/ordenes/`;
 const LOGIN_URL = `${BFF_MOVIL_URL}/autenticacion/login`;
 const CLIENTES_URL = `${BFF_MOVIL_URL}/clientes/`;
@@ -19,10 +22,8 @@ export const options = {
     constant_load: {
       executor: "constant-arrival-rate",
       rate: 7, // ~400 órdenes por minuto (7 por segundo)
-      // rate: 1,
       timeUnit: "1s",
       duration: "1m",
-      // duration: "2s",
       preAllocatedVUs: 20,
       maxVUs: 100,
     },
@@ -35,6 +36,13 @@ export const options = {
 
 // Setup function - runs once per VU before the default function
 export function setup() {
+  // Log configuration
+  console.log("=== K6 Load Test Configuration ===");
+  console.log(`BFF Web URL: ${BFF_WEB_URL}`);
+  console.log(`BFF Móvil URL: ${BFF_MOVIL_URL}`);
+  console.log(`Email: ${EMAIL}`);
+  console.log("==================================");
+
   const headers = {
     "Content-Type": "application/json",
   };

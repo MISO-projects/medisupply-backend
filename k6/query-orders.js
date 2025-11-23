@@ -2,11 +2,14 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.2/index.js';
 
-const BASE_URL = "http://localhost:3014";
-const EMAIL = "alejo@mail.com"
-const PASSWORD = "Password123!";
-const ORDERS_URL = `${BASE_URL}/ordenes/`;
-const LOGIN_URL = `${BASE_URL}/autenticacion/login`;
+// Environment variables with defaults
+const BFF_MOVIL_URL = __ENV.BFF_MOVIL_URL || "http://localhost:3014";
+const EMAIL = __ENV.EMAIL || "alejo@mail.com";
+const PASSWORD = __ENV.PASSWORD || "Password123!";
+
+// Derived URLs
+const ORDERS_URL = `${BFF_MOVIL_URL}/ordenes/`;
+const LOGIN_URL = `${BFF_MOVIL_URL}/autenticacion/login`;
 
 export const options = {
   scenarios: {
@@ -26,6 +29,12 @@ export const options = {
 
 // Función setup que k6 ejecutará antes de las pruebas
 export function setup() {
+  // Log configuration
+  console.log("=== K6 Query Orders Test Configuration ===");
+  console.log(`BFF Móvil URL: ${BFF_MOVIL_URL}`);
+  console.log(`Email: ${EMAIL}`);
+  console.log("==========================================");
+
   // Step 1: Login to get authentication token
   const loginPayload = {
     email: EMAIL,
