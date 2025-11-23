@@ -3,17 +3,15 @@ import { check, sleep } from "k6";
 import { uuidv4 } from 'https://jslib.k6.io/k6-utils/1.4.0/index.js';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.2/index.js'; 
 
-const BASE_URL = "http://localhost:3014";
-const ORDERS_URL = `${BASE_URL}/ordenes/`;
-const LOGIN_URL = `${BASE_URL}/autenticacion/login`;
-const CLIENT_ID ="039afa14-f75b-4f32-8f44-71c924443c6a"
-const SELLER_ID = "412cb8a1-fb3e-4b22-ad98-9c99c826648f"
-const PRODUCT_ID = "77977de4-228f-4774-97a2-f1b10f359a66";
-const EMAIL = "Stacey_Ebert98@hotmail.com"
+const BFF_WEB_URL = "http://localhost:3013";
+const BFF_MOVIL_URL = "http://localhost:3014";
+const EMAIL = "alejo@mail.com"
 const PASSWORD = "Password123!"
-
-// Global variable to store the token
-let authToken = null;
+const ORDERS_URL = `${BFF_MOVIL_URL}/ordenes/`;
+const LOGIN_URL = `${BFF_MOVIL_URL}/autenticacion/login`;
+const CLIENTES_URL = `${BFF_MOVIL_URL}/clientes/`;
+const VENDEDORES_URL = `${BFF_WEB_URL}/ventas/vendedores`;
+const INVENTARIO_URL = `${BFF_MOVIL_URL}/inventario/`;
 
 // Configuración de la prueba
 export const options = {
@@ -30,22 +28,24 @@ export const options = {
     },
   },
   thresholds: {
-    http_req_duration: ["p(95)<2000"], // 95% de las peticiones deben completarse en menos de 2s
+    http_req_duration: ["p(95)<2000", "p(99)<3000", "avg<1000"], // 95% under 2s, 99% under 3s, average under 1s
+    http_req_failed: ["rate<0.01"], // Less than 1% of requests should fail
   },
 };
 
 // Setup function - runs once per VU before the default function
 export function setup() {
-  const loginPayload = {
-    email: EMAIL,
-    password: PASSWORD,
-  };
-
   const headers = {
     "Content-Type": "application/json",
   };
 
+  // Step 1: Login to get authentication token
   console.log("Attempting to login...");
+  const loginPayload = {
+    email: EMAIL,
+    password: PASSWORD,
+  };
+  
   const loginResponse = http.post(LOGIN_URL, JSON.stringify(loginPayload), { headers });
   
   if (loginResponse.status !== 200 && loginResponse.status !== 201) {
@@ -70,23 +70,114 @@ export function setup() {
     throw e;
   }
 
-  return { token: token };
+  const authHeaders = {
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  // Step 2: Fetch all clients
+  console.log("Fetching clients...");
+  const clientsResponse = http.get(CLIENTES_URL, { headers: authHeaders });
+  let clients = [];
+  
+  if (clientsResponse.status === 200) {
+    try {
+      const clientsData = JSON.parse(clientsResponse.body);
+      clients = clientsData.clientes || clientsData;
+      console.log(`Fetched ${clients.length} clients`);
+    } catch (e) {
+      console.error(`Failed to parse clients: ${e}`);
+    }
+  } else {
+    console.error(`Failed to fetch clients: ${clientsResponse.status}`);
+  }
+
+  // Step 3: Fetch all sellers
+  console.log("Fetching sellers...");
+  const sellersResponse = http.get(`${VENDEDORES_URL}?page=1&page_size=100`, { headers: authHeaders });
+  let sellers = [];
+  
+  if (sellersResponse.status === 200) {
+    try {
+      const sellersData = JSON.parse(sellersResponse.body);
+      sellers = sellersData.data || [];
+      console.log(`Fetched ${sellers.length} sellers`);
+    } catch (e) {
+      console.error(`Failed to parse sellers: ${e}`);
+    }
+  } else {
+    console.error(`Failed to fetch sellers: ${sellersResponse.status}`);
+    console.log(`selleers endpoint: ${VENDEDORES_URL}`);
+  }
+
+  // Step 4: Fetch inventory/products
+  console.log("Fetching products from inventory...");
+  const inventoryResponse = http.get(`${INVENTARIO_URL}?page=1&page_size=100`, { headers: authHeaders });
+  let products = [];
+  
+  if (inventoryResponse.status === 200) {
+    try {
+      const inventoryData = JSON.parse(inventoryResponse.body);
+      // Extract unique product IDs from inventory items
+      const items = inventoryData.items || [];
+      const productMap = new Map();
+      
+      items.forEach(item => {
+        if (item.producto_id && item.estado === 'DISPONIBLE' && item.cantidad > 0) {
+          productMap.set(item.producto_id, {
+            id: item.producto_id,
+            nombre: item.producto_nombre || 'Unknown',
+            sku: item.producto_sku || 'Unknown'
+          });
+        }
+      });
+      
+      products = Array.from(productMap.values());
+      console.log(`Fetched ${products.length} available products`);
+    } catch (e) {
+      console.error(`Failed to parse inventory: ${e}`);
+    }
+  } else {
+    console.error(`Failed to fetch inventory: ${inventoryResponse.status}`);
+  }
+
+  // Validate we have data
+  if (clients.length === 0 || sellers.length === 0 || products.length === 0) {
+    console.error(`Missing data - Clients: ${clients.length}, Sellers: ${sellers.length}, Products: ${products.length}`);
+    throw new Error("Failed to fetch required data for test");
+  }
+
+  return { 
+    token: token,
+    clients: clients,
+    sellers: sellers,
+    products: products
+  };
 }
 
 
 export default function (data) {
-  // Get the token from setup
-  const token = data.token;
+  // Get data from setup
+  const { token, clients, sellers, products } = data;
+
+  // Select random client, seller, and product
+  const randomClient = clients[Math.floor(Math.random() * clients.length)];
+  const randomSeller = sellers[Math.floor(Math.random() * sellers.length)];
+  const randomProduct = products[Math.floor(Math.random() * products.length)];
+
+  // Generate random quantity and price
+  const cantidad = Math.floor(Math.random() * 10) + 1; // 1-10 units
+  const precioUnitario = Math.floor(Math.random() * 1000) + 100; // 100-1100
 
   const payload = {
-    id_cliente: CLIENT_ID,
-    id_vendedor: SELLER_ID,
-    observaciones: "Test order",
+    id_cliente: randomClient.id,
+    id_vendedor: randomSeller.id,
+    observaciones: `Load test order - ${new Date().toISOString()}`,
     detalles: [
       {
-        id_producto: PRODUCT_ID,
-        cantidad: 1,
-        precio_unitario: 100,
+        id_producto: randomProduct.id,
+        cantidad: cantidad,
+        precio_unitario: precioUnitario,
       },
     ],
   };
@@ -98,11 +189,13 @@ export default function (data) {
 
   const response = http.post(ORDERS_URL, JSON.stringify(payload), { headers });
 
-  // Log response details for debugging 422 errors
+  // Log response details for debugging errors
   if (response.status === 422) {
     console.log(`422 Error - Status: ${response.status}`);
     console.log(`Response Body: ${response.body}`);
     console.log(`Request Payload: ${JSON.stringify(payload, null, 2)}`);
+  } else if (response.status >= 400) {
+    console.log(`Error ${response.status}: ${response.body}`);
   }
 
   check(response, {
@@ -118,7 +211,6 @@ export default function (data) {
       }
       return false;
     },
-    "response time < 2s": (r) => r.timings.duration < 2000,
   });
 
   sleep(0.1);

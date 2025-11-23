@@ -3,10 +3,10 @@ import { check, sleep } from 'k6';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.2/index.js';
 
 const BASE_URL = "http://localhost:3014";
+const EMAIL = "alejo@mail.com"
+const PASSWORD = "Password123!";
 const ORDERS_URL = `${BASE_URL}/ordenes/`;
 const LOGIN_URL = `${BASE_URL}/autenticacion/login`;
-const EMAIL = "Stacey_Ebert98@hotmail.com";
-const PASSWORD = "Password123!";
 
 export const options = {
   scenarios: {
@@ -20,7 +20,7 @@ export const options = {
     },
   },
   thresholds: {
-    http_req_duration: ['p(95)<1000'],
+    http_req_duration: ['p(95)<1000', 'p(99)<2000', 'avg<500'], // 95% under 1s, 99% under 2s, average under 500ms
   },
 };
 
@@ -101,7 +101,6 @@ export default function (data) {
         return false;
       }
     },
-    'response time < 1s': (r) => r.timings.duration < 1000,
   });
 
   sleep(0.1);
