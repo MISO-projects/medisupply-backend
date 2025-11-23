@@ -1,3 +1,11 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: inventario-sa
+  namespace: default
+  annotations:
+    iam.gke.io/gcp-service-account: medisupply-service-account@medisupply-474421.iam.gserviceaccount.com
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -13,6 +21,7 @@ spec:
       labels:
         app: inventario-service
     spec:
+      serviceAccountName: inventario-sa
       containers:
         - name: inventario-container
           image: us-central1-docker.pkg.dev/medisupply-474421/medisupply/inventario:latest
@@ -55,6 +64,8 @@ spec:
               value: "1"
             - name: PRODUCTOS_SERVICE_URL
               value: "http://productos-service"
+            - name: AUTENTICACION_SERVICE_URL
+              value: "http://autenticacion-service"
             - name: REDIS_HOST
               value: "redis-service"
             - name: REDIS_PORT

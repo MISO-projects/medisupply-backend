@@ -138,3 +138,4 @@ dmypy.json
 .DS_Store
 credentials.json
 k8s/secrets.yaml
+newman-results

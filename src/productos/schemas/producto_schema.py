@@ -28,6 +28,7 @@ class ProductoUpdate(BaseModel):
     categoria: Optional[str] = None
     imagen_url: Optional[str] = None
     precio_unitario: Optional[Decimal] = None
+    stock_disponible: Optional[int] = Field(None, ge=0)
     disponible: Optional[bool] = None
     unidad_medida: Optional[str] = None
     sku: Optional[str] = None

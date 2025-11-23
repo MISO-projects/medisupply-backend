@@ -12,13 +12,13 @@
     {
       "name": "create-order-command-sub",
       "topic": "create-order-command",
-      "pushEndpoint": "order-command-handler:3000",
+      "pushEndpoint": "order-command-handler:3000/",
       "ackDeadlineSeconds": 60
     },
     {
       "name": "order-created-sub",
       "topic": "order-created",
-      "pushEndpoint": "order-query-projection:3000",
+      "pushEndpoint": "order-query-projection:3000/",
       "ackDeadlineSeconds": 60
     },
     {

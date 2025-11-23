@@ -58,15 +58,19 @@ services:
       pubsub-emulator:
         condition: service_healthy
       order-command-handler:
-        condition: service_started
+        condition: service_healthy
       order-query-projection:
-        condition: service_started
+        condition: service_healthy
+      order-query-api:
+        condition: service_healthy
+      auditoria-service:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "bash", "/healthcheck.sh"]
       interval: 5s
-      timeout: 3s
-      retries: 3
-      start_period: 60s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
 
   # ============================================================================
   # ORDERS MICROSERVICES (CQRS)
@@ -108,6 +112,9 @@ services:
       - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
       - DATABASE_URL=postgresql://root:medisupply-pass@pg_db:5432/medisupply-db
       - INVENTARIO_SERVICE_URL=http://inventario-service:3000
+      - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
+      - JWT_SECRET_KEY=medisupply-secret-key
+      - JWT_ALGORITHM=HS256
     networks:
       - integration-network
     depends_on:
@@ -238,6 +245,8 @@ services:
     environment:
       - GOOGLE_CLOUD_PROJECT_ID=medisupply-474421
       - AUTENTICACION_SERVICE_URL=http://autenticacion-service:3000
+      - JWT_SECRET_KEY=medisupply-secret-key
+      - JWT_ALGORITHM=HS256
       - PUBSUB_TOPIC_NAME=inventory-events
       - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
       - PRODUCTOS_SERVICE_URL=http://productos-service:3000

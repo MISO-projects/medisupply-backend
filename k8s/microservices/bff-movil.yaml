@@ -37,6 +37,10 @@ spec:
               value: "http://autenticacion-service"
             - name: CLIENTES_SERVICE_URL
               value: "http://clientes-service"
+            - name: INVENTARIO_SERVICE_URL
+              value: "http://inventario-service"
+            - name: LOGISTICA_SERVICE_URL
+              value: "http://logistica-service"
             - name: PRODUCTOS_SERVICE_URL
               value: "http://productos-service"
             - name: ORDENES_COMMANDS_SERVICE_URL

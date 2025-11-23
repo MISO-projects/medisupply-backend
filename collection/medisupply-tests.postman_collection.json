@@ -553,7 +553,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"nombre\": \"{{$randomAdjective}} 500mg\",\n    \"descripcion\": \"{{$randomLoremParagraph}}\",\n    \"categoria\": \"Medicamentos\",\n    \"imagen_url\": \"{{$randomImageUrl}}\",\n    \"proveedor_id\": \"{{id_proveedor}}\",\n    \"precio_unitario\": 15,\n    \"stock_disponible\": {{$randomInt}},\n    \"disponible\": true,\n    \"unidad_medida\": \"Caja x 100 unidades\",\n    \"tipo_almacenamiento\": \"Ambiente\",\n    \"observaciones\": \"Mantener en lugar seco\"\n}",
+					"raw": "{\n    \"nombre\": \"{{$randomAdjective}} 500mg\",\n    \"descripcion\": \"{{$randomLoremParagraph}}\",\n    \"categoria\": \"Medicamentos\",\n    \"imagen_url\": \"{{$randomImageUrl}}\",\n    \"proveedor_id\": \"{{id_proveedor}}\",\n    \"precio_unitario\": 15,\n    \"disponible\": true,\n    \"unidad_medida\": \"Caja x 100 unidades\",\n    \"tipo_almacenamiento\": \"Ambiente\",\n    \"observaciones\": \"Mantener en lugar seco\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -828,7 +828,7 @@
 						"exec": [
 							"// Esperar a que se cree la proyección de ordenes (CQRS)",
 							"console.log('⏳ Esperando a la sincronización de la proyección de ordenes...');",
-							"setTimeout(function(){}, 10000);"
+							"setTimeout(function(){}, 15000);"
 						],
 						"type": "text/javascript",
 						"packages": {},

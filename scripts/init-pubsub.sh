@@ -109,7 +109,7 @@ for i in $(seq 0 $((subs_count - 1))); do
     -d '{
       "topic": "projects/'${PROJECT_ID}'/topics/'${topic}'",
       "pushConfig": {
-        "pushEndpoint": "http://'${push_endpoint}'/"
+        "pushEndpoint": "http://'${push_endpoint}'"
       },
       "ackDeadlineSeconds": '${ack_deadline}',
       "retryPolicy": {

@@ -54,55 +54,6 @@ async def listar_alertas(
 
 
 @alertas_router.get(
-    "/{alerta_id}",
-    response_model=AlertaDetalleResponse,
-    summary="Obtener detalle de alerta",
-    description="Obtiene los detalles completos de una alerta específica"
-)
-async def obtener_alerta(
-    alerta_id: str,
-    service: AlertasService = Depends(get_alertas_service)
-):
-    """Obtiene el detalle completo de una alerta"""
-    try:
-        alerta = await service.obtener_alerta(alerta_id)
-        return alerta
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error obteniendo alerta: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-            detail="Error al obtener la alerta"
-        )
-
-
-@alertas_router.put(
-    "/{alerta_id}/revisar",
-    response_model=AlertaDetalleResponse,
-    summary="Revisar alerta",
-    description="Marca una alerta como revisada, resuelta o falsa alarma"
-)
-async def revisar_alerta(
-    alerta_id: str,
-    revision_data: RevisarAlertaRequest,
-    service: AlertasService = Depends(get_alertas_service)
-):
-    """Actualiza el estado de una alerta después de revisión"""
-    try:
-        alerta = await service.revisar_alerta(alerta_id, revision_data)
-        return alerta
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error revisando alerta: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-            detail="Error al revisar la alerta"
-        )
-
-
-@alertas_router.get(
     "/estadisticas/resumen",
     response_model=EstadisticasAlertasResponse,
     summary="Estadísticas de alertas",
@@ -192,6 +143,57 @@ async def eliminar_email(
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail="Error al eliminar el email"
+        )
+
+
+# ============= ENDPOINTS DE ALERTAS INDIVIDUALES (DEBEN IR AL FINAL) =============
+
+@alertas_router.get(
+    "/{alerta_id}",
+    response_model=AlertaDetalleResponse,
+    summary="Obtener detalle de alerta",
+    description="Obtiene los detalles completos de una alerta específica"
+)
+async def obtener_alerta(
+    alerta_id: str,
+    service: AlertasService = Depends(get_alertas_service)
+):
+    """Obtiene el detalle completo de una alerta"""
+    try:
+        alerta = await service.obtener_alerta(alerta_id)
+        return alerta
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error obteniendo alerta: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail="Error al obtener la alerta"
+        )
+
+
+@alertas_router.put(
+    "/{alerta_id}/revisar",
+    response_model=AlertaDetalleResponse,
+    summary="Revisar alerta",
+    description="Marca una alerta como revisada, resuelta o falsa alarma"
+)
+async def revisar_alerta(
+    alerta_id: str,
+    revision_data: RevisarAlertaRequest,
+    service: AlertasService = Depends(get_alertas_service)
+):
+    """Actualiza el estado de una alerta después de revisión"""
+    try:
+        alerta = await service.revisar_alerta(alerta_id, revision_data)
+        return alerta
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error revisando alerta: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail="Error al revisar la alerta"
         )
 
 
